@@ -1,39 +1,19 @@
 {
+	"$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
 	"Name": "Deckify",
 	"Version": "0.1.0.0",
 	"Author": "MARTIN.G",
-	"Actions": [
-		{
-			"Name": "Counter",
-			"UUID": "com.marting.deckify.increment",
-			"Icon": "imgs/actions/counter/icon",
-			"Tooltip": "Displays a count, which increments by one on press.",
-			"PropertyInspectorPath": "ui/increment-counter.html",
-			"Controllers": [
-				"Keypad"
-			],
-			"States": [
-				{
-					"Image": "imgs/actions/counter/key",
-					"TitleAlignment": "middle"
-				}
-			]
-		}
-	],
+	"Description": "A dynamic Spotify control center for Elgato Stream Deck.",
+	"UUID": "com.marting.deckify",
 	"Category": "Deckify",
 	"CategoryIcon": "imgs/plugin/category-icon",
-	"CodePath": "bin/plugin.js",
-	"Description": "A dynamic Spotify control center for Elgato Stream Deck.",
 	"Icon": "imgs/plugin/marketplace",
+	"CodePath": "bin/plugin.js",
 	"SDKVersion": 3,
 	"Software": {
 		"MinimumVersion": "7.1"
 	},
 	"OS": [
-		{
-			"Platform": "mac",
-			"MinimumVersion": "12"
-		},
 		{
 			"Platform": "windows",
 			"MinimumVersion": "10"
@@ -43,5 +23,35 @@
 		"Version": "24",
 		"Debug": "enabled"
 	},
-	"UUID": "com.marting.deckify"
+	"Actions": [
+		{
+			"Name": "Deckify Status",
+			"UUID": "com.marting.deckify.status",
+			"Icon": "imgs/actions/status/icon",
+			"Tooltip": "Proof-of-life key: toggles between Deckify and Ready on each press.",
+			"Controllers": [
+				"Keypad"
+			],
+			"DisableAutomaticStates": true,
+			"SupportedInMultiActions": false,
+			"States": [
+				{
+					"Name": "Deckify",
+					"Image": "imgs/actions/status/deckify",
+					"Title": "Deckify",
+					"ShowTitle": true,
+					"TitleAlignment": "bottom",
+					"TitleColor": "#FFFFFF"
+				},
+				{
+					"Name": "Ready",
+					"Image": "imgs/actions/status/ready",
+					"Title": "Ready",
+					"ShowTitle": true,
+					"TitleAlignment": "bottom",
+					"TitleColor": "#FFFFFF"
+				}
+			]
+		}
+	]
 }

@@ -1,22 +1,46 @@
 {
-    "scripts": {
-        "build": "rollup -c",
-        "watch": "rollup -c -w --watch.onEnd=\"streamdeck restart com.marting.deckify\""
-    },
-    "type": "module",
-    "devDependencies": {
-        "@elgato/cli": "^1.10.1",
-        "@rollup/plugin-commonjs": "^29.0.2",
-        "@rollup/plugin-node-resolve": "^15.2.2",
-        "@rollup/plugin-terser": "^1.0.0",
-        "@rollup/plugin-typescript": "^12.1.0",
-        "@tsconfig/node20": "^20.1.2",
-        "@types/node": "~24.1.0",
-        "rollup": "^4.0.2",
-        "tslib": "^2.6.2",
-        "typescript": "^5.2.2"
-    },
-    "dependencies": {
-        "@elgato/streamdeck": "^3.0.1"
-    }
+	"name": "deckify",
+	"version": "0.1.0",
+	"private": true,
+	"description": "A dynamic Spotify control center for Elgato Stream Deck.",
+	"author": "MARTIN.G",
+	"license": "UNLICENSED",
+	"type": "module",
+	"engines": {
+		"node": ">=24"
+	},
+	"scripts": {
+		"build": "rollup -c",
+		"watch": "rollup -c -w --watch.onEnd=\"streamdeck restart com.marting.deckify\"",
+		"typecheck": "tsc --noEmit",
+		"lint": "eslint .",
+		"validate": "streamdeck validate com.marting.deckify.sdPlugin",
+		"check": "npm run typecheck && npm run lint && npm run build && npm run validate && npm run smoke",
+		"assets": "node scripts/export-brand-assets.mjs",
+		"link": "streamdeck link com.marting.deckify.sdPlugin",
+		"restart": "streamdeck restart com.marting.deckify",
+		"pack": "npm run build && streamdeck pack com.marting.deckify.sdPlugin --output dist --force",
+		"smoke": "node scripts/smoke-test.mjs"
+	},
+	"devDependencies": {
+		"@elgato/cli": "^1.10.1",
+		"@eslint/js": "^9.39.0",
+		"@rollup/plugin-commonjs": "^29.0.3",
+		"@rollup/plugin-node-resolve": "^16.0.3",
+		"@rollup/plugin-terser": "^1.0.0",
+		"@rollup/plugin-typescript": "^12.3.0",
+		"@tsconfig/node24": "^24.0.5",
+		"@types/node": "~24.19.0",
+		"eslint": "^9.39.0",
+		"globals": "^17.13.0",
+		"rollup": "^4.63.6",
+		"sharp": "^0.35.5",
+		"tslib": "^2.8.1",
+		"typescript": "~5.9.3",
+		"typescript-eslint": "^8.71.0",
+		"ws": "^8.22.0"
+	},
+	"dependencies": {
+		"@elgato/streamdeck": "^3.0.1"
+	}
 }

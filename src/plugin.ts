@@ -1,12 +1,18 @@
 import streamDeck from "@elgato/streamdeck";
 
-import { IncrementCounter } from "./actions/increment-counter";
+import { StatusAction } from "./actions/status";
 
-// We can enable "trace" logging so that all messages between the Stream Deck, and the plugin are recorded. When storing sensitive information
-streamDeck.logger.setLevel("trace");
+// Log files are written to "<plugin>.sdPlugin/logs". The SDK defaults to "debug" when the manifest enables Node.js debugging and "info" otherwise;
+// raise to "trace" locally to record every message exchanged with Stream Deck.
+const logger = streamDeck.logger;
 
-// Register the increment action.
-streamDeck.actions.registerAction(new IncrementCounter());
+// Errors must never fail silently: a rejected promise that escapes an event handler would otherwise terminate the plugin process.
+// (Uncaught exceptions are already logged by the SDK.)
+process.on("unhandledRejection", (reason) => logger.error("Unhandled promise rejection.", reason));
 
-// Finally, connect to the Stream Deck.
-streamDeck.connect();
+streamDeck.actions.registerAction(new StatusAction());
+
+streamDeck
+	.connect()
+	.then(() => logger.info(`Deckify ${streamDeck.info.plugin.version} connected to Stream Deck ${streamDeck.info.application.version}.`))
+	.catch((err: unknown) => logger.error("Failed to connect to Stream Deck.", err));
