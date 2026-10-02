@@ -17,8 +17,8 @@ describe("redirect URI", () => {
 });
 
 describe("scopes", () => {
-	it("requests exactly the profile and playback scopes", () => {
-		expect(SPOTIFY_SCOPES).toEqual(["user-read-private", "user-read-playback-state", "user-modify-playback-state"]);
+	it("requests exactly the profile, playback and library scopes", () => {
+		expect(SPOTIFY_SCOPES).toEqual(["user-read-private", "user-read-playback-state", "user-modify-playback-state", "user-library-read", "user-library-modify"]);
 	});
 });
 
@@ -37,7 +37,7 @@ describe("buildAuthorizationUrl", () => {
 			code_challenge_method: "S256",
 			code_challenge: "test-challenge",
 			state: "test-state",
-			scope: "user-read-private user-read-playback-state user-modify-playback-state",
+			scope: "user-read-private user-read-playback-state user-modify-playback-state user-library-read user-library-modify",
 		});
 	});
 

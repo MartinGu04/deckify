@@ -23,9 +23,9 @@ import { createPkceAttempt, type PkceAttempt } from "./pkce";
 import { getMissingScopes, SPOTIFY_SCOPES } from "./scopes";
 import { exchangeAuthorizationCode, refreshAccessToken } from "./token-client";
 
-/** Shown when a stored session lacks scopes Deckify now requires (e.g. a Phase 2 session after playback scopes were added). */
+/** Shown when a stored session lacks scopes Deckify now requires (e.g. a session from before playback or library scopes were added). */
 export const SCOPE_UPGRADE_MESSAGE =
-	"Deckify needs additional Spotify permissions for playback control. Press Reconnect Spotify to authorize Deckify again.";
+	"Deckify needs additional Spotify permissions for new features (playback, volume and Liked Songs). Press Reconnect Spotify to authorize Deckify again.";
 
 /**
  * Dependencies of {@link SpotifyAuthService}; everything with side effects is injectable for tests.

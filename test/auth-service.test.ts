@@ -143,7 +143,7 @@ describe("connect", () => {
 		expect(params?.get("code_challenge_method")).toBe("S256");
 		expect(params?.get("code_challenge")).toBe(PKCE.codeChallenge);
 		expect(params?.get("state")).toBe(PKCE.state);
-		expect(params?.get("scope")).toBe("user-read-private user-read-playback-state user-modify-playback-state");
+		expect(params?.get("scope")).toBe("user-read-private user-read-playback-state user-modify-playback-state user-library-read user-library-modify");
 
 		// The listener validates the same state; the code is exchanged with the verifier and the same redirect URI.
 		expect(ctx.listener.starts[0]?.expectedState).toBe(PKCE.state);
@@ -163,7 +163,7 @@ describe("connect", () => {
 			refreshToken: FAKE.refreshToken,
 			accessTokenExpiresAt: ctx.clock.now() + HOUR,
 			authorizedAt: ctx.clock.now(),
-			scopes: ["user-read-private", "user-read-playback-state", "user-modify-playback-state"],
+			scopes: ["user-read-private", "user-read-playback-state", "user-modify-playback-state", "user-library-read", "user-library-modify"],
 		});
 		expect(ctx.listener.close).toHaveBeenCalled();
 		expectNoLeaks(ctx);

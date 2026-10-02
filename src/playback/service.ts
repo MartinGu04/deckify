@@ -675,7 +675,7 @@ function premiumNoticeFor(): PlaybackNotice {
 function signedOutNotice(snapshot: SpotifyAuthSnapshot): PlaybackNotice {
 	switch (snapshot.status) {
 		case "reauthorization-required":
-			return { code: "reauthorization-required", message: "Reconnect Spotify in the Spotify Account key to enable playback control." };
+			return { code: "reauthorization-required", message: "Reconnect Spotify in the Spotify Account key to enable Deckify's Spotify controls." };
 		case "connecting":
 			return { code: "not-connected", message: "Connecting to Spotify..." };
 		case "not-configured":
