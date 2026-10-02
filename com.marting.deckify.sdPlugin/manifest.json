@@ -52,6 +52,25 @@
 					"TitleColor": "#FFFFFF"
 				}
 			]
+		},
+		{
+			"Name": "Spotify Account",
+			"UUID": "com.marting.deckify.spotify.account",
+			"Icon": "imgs/actions/spotify-account/icon",
+			"Tooltip": "Connect Deckify to your Spotify account and show the connection status.",
+			"PropertyInspectorPath": "ui/spotify-account/index.html",
+			"Controllers": [
+				"Keypad"
+			],
+			"SupportedInMultiActions": false,
+			"States": [
+				{
+					"Image": "imgs/actions/spotify-account/disconnected",
+					"ShowTitle": true,
+					"TitleAlignment": "bottom",
+					"TitleColor": "#FFFFFF"
+				}
+			]
 		}
 	]
 }

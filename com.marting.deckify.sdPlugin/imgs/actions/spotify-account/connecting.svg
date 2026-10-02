@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 144 144">
+	<!-- Spotify Account key: connecting (waiting for the browser sign-in) -->
+	<rect width="144" height="144" fill="#121212"/>
+	<circle cx="66" cy="44" r="17" fill="#5E5E5E"/>
+	<path d="M34 96a32 30 0 0 1 64 0Z" fill="#5E5E5E"/>
+	<circle cx="100" cy="84" r="17" fill="#F5B83D"/>
+	<circle cx="92" cy="84" r="3.5" fill="#121212"/><circle cx="100" cy="84" r="3.5" fill="#121212"/><circle cx="108" cy="84" r="3.5" fill="#121212"/>
+</svg>

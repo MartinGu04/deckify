@@ -1,22 +1,27 @@
 /**
  * Hardware-free smoke test for the built plugin.
  *
- * Starts a minimal stand-in for the Stream Deck application (a local WebSocket server), launches `bin/plugin.js` the way Stream Deck does, then places
- * a Deckify Status key and presses it three times. Passes when the plugin registers and requests the states 1 -> 0 -> 1.
+ * Starts a minimal stand-in for the Stream Deck application (a local WebSocket server) and launches `bin/plugin.js` the way Stream Deck does.
+ * It then:
+ *   1. places a Deckify Status key and presses it three times, expecting the states 1 -> 0 -> 1;
+ *   2. answers the plugin's global-settings request with no Spotify Client ID and places a Spotify Account key, expecting it to render the
+ *      "Set Up" (not configured) state.
  *
- * This only exercises the plugin <-> Stream Deck protocol; it does not replace testing in the Stream Deck app on real hardware.
- * Run `npm run build` first. Log output is written to `com.marting.deckify.sdPlugin/logs/`.
+ * No Spotify request is made (no Client ID is configured). This only exercises the plugin <-> Stream Deck protocol; it does not replace
+ * testing in the Stream Deck app on real hardware. Run `npm run build` first. Log output is written to `com.marting.deckify.sdPlugin/logs/`.
  */
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { WebSocketServer } from "ws";
 
 const PLUGIN_DIR = path.resolve("com.marting.deckify.sdPlugin");
-const ACTION_UUID = "com.marting.deckify.status";
+const STATUS_UUID = "com.marting.deckify.status";
+const SPOTIFY_ACCOUNT_UUID = "com.marting.deckify.spotify.account";
 const EXPECTED_STATES = [1, 0, 1];
 const TIMEOUT_MS = 10_000;
 
-const context = "smoke-test-key";
+const statusContext = "smoke-status-key";
+const spotifyContext = "smoke-spotify-account-key";
 const device = "smoke-test-mk2";
 const info = {
 	application: { font: "Segoe UI", language: "en", platform: "windows", platformVersion: "10.0", version: "7.1.0" },
@@ -32,19 +37,19 @@ await new Promise((resolve) => server.once("listening", resolve));
 
 server.on("connection", (socket) => {
 	let state = 0;
-	const send = (event) =>
+	const send = (action, context, event, column) =>
 		socket.send(
 			JSON.stringify({
-				action: ACTION_UUID,
+				action,
 				event,
 				context,
 				device,
-				payload: { controller: "Keypad", coordinates: { column: 0, row: 0 }, isInMultiAction: false, settings: {}, state, resources: {} },
+				payload: { controller: "Keypad", coordinates: { column, row: 0 }, isInMultiAction: false, settings: {}, state, resources: {} },
 			}),
 		);
 	const press = () => {
-		send("keyDown");
-		send("keyUp");
+		send(STATUS_UUID, statusContext, "keyDown", 0);
+		send(STATUS_UUID, statusContext, "keyUp", 0);
 	};
 
 	socket.on("message", (data) => {
@@ -52,12 +57,18 @@ server.on("connection", (socket) => {
 		received.push(message);
 
 		if (message.event === "registerPlugin") {
-			send("willAppear");
+			send(STATUS_UUID, statusContext, "willAppear", 0);
+			send(SPOTIFY_ACCOUNT_UUID, spotifyContext, "willAppear", 1);
 			press();
-		} else if (message.event === "setState" && message.context === context) {
+		} else if (message.event === "getGlobalSettings") {
+			socket.send(JSON.stringify({ event: "didReceiveGlobalSettings", id: message.id, payload: { settings: {} } }));
+		} else if (message.event === "setState" && message.context === statusContext) {
 			state = message.payload.state;
 			if (states().length < EXPECTED_STATES.length) press();
-			else finish();
+		}
+
+		if (states().length >= EXPECTED_STATES.length && spotifyRendered()) {
+			finish();
 		}
 	});
 });
@@ -73,7 +84,15 @@ plugin.once("exit", (code) => {
 const timeout = setTimeout(() => finish("timed out"), TIMEOUT_MS);
 
 function states() {
-	return received.filter((m) => m.event === "setState").map((m) => m.payload.state);
+	return received.filter((m) => m.event === "setState" && m.context === statusContext).map((m) => m.payload.state);
+}
+
+function spotifyRendered() {
+	const forKey = received.filter((m) => m.context === spotifyContext);
+	return (
+		forKey.some((m) => m.event === "setTitle" && m.payload.title === "Set Up") &&
+		forKey.some((m) => m.event === "setImage" && m.payload.image === "imgs/actions/spotify-account/not-configured.svg")
+	);
 }
 
 function finish(error) {
@@ -83,9 +102,12 @@ function finish(error) {
 	server.close();
 
 	const registered = received.some((m) => m.event === "registerPlugin");
-	const passed = !error && registered && JSON.stringify(states()) === JSON.stringify(EXPECTED_STATES);
+	const statusOk = JSON.stringify(states()) === JSON.stringify(EXPECTED_STATES);
+	const spotifyOk = spotifyRendered();
+	const passed = !error && registered && statusOk && spotifyOk;
 	console.log(`registered: ${registered}`);
-	console.log(`setState sequence: ${JSON.stringify(states())} (expected ${JSON.stringify(EXPECTED_STATES)})`);
+	console.log(`Deckify Status setState sequence: ${JSON.stringify(states())} (expected ${JSON.stringify(EXPECTED_STATES)})`);
+	console.log(`Spotify Account rendered "Set Up" (not configured): ${spotifyOk}`);
 	console.log(passed ? "Smoke test passed." : `Smoke test FAILED${error ? `: ${error}` : ""}.`);
 	process.exit(passed ? 0 : 1);
 }
