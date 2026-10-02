@@ -76,6 +76,20 @@ Phase 3 adds Spotify playback control through the Spotify Web API, targeting you
 - **Quota-aware polling:** Spotify Development Mode apps have request quotas as well as rate limits, so one shared poller serves every key. It runs only while Spotify is connected and a playback key is visible, about every 3 s while playing, 8 s while paused and 15 s when nothing is playing. After a press, Deckify re-reads the state shortly afterwards. Requests never overlap. On a rate limit (HTTP 429), Deckify waits for `Retry-After` and keeps showing the last state. If the quota is exhausted, it pauses updates (keys show **Limited**) and resumes on its own once the quota window has passed.
 - **OAuth stays explicit:** playback keys never open the browser. If Spotify isn't connected, they show **Connect** or **Reconnect** and alert on press.
 
+## Phase 4 — Windows media bridge
+
+Phase 4 makes Play / Pause, Next Track and Previous Track feel instant on Windows. Each command first goes to the **Spotify desktop app** through Windows' own media controls (*Global System Media Transport Controls*, GSMTC), the same mechanism as the keyboard media keys. The Spotify Web API remains the state source (Now Playing, play/pause state) and the fallback command path.
+
+- **Spotify only.** Deckify picks the Windows media session whose app is Spotify (desktop `Spotify.exe` or the Microsoft Store app `SpotifyAB.SpotifyMusic_…!Spotify`). It never controls a browser, YouTube or any other media app. If Spotify isn't running, the local path reports *unavailable* and nothing local is sent.
+- **Exact routing per press:**
+  1. Account checks (connected, Premium) as before.
+  2. Local Spotify session via GSMTC: Play / Pause uses `TryTogglePlayPauseAsync`, Next `TrySkipNextAsync`, Previous `TrySkipPreviousAsync`. No Web API read happens first.
+  3. Only if the local path reports **unavailable** (no Spotify session, helper missing, Windows refused the command) is the same command sent through the Spotify Web API (Phase 3 behavior).
+  4. If the local outcome is **unknown** (the helper timed out or crashed mid-command), nothing is retried, so a press can never skip twice.
+- **After a press:** Play / Pause flips optimistically; Next / Previous keep the old metadata until Spotify reports the new item. A Web API read then reconciles the keys.
+- **Rate limits:** local commands keep working while the Web API is rate-limited or its quota is exhausted; reconciliation waits until the back-off ends. Without a local Spotify session, Phase 3 back-off applies unchanged.
+- **The helper** is a small bundled Rust program (`bin/native/deckify-media-bridge.exe`), started once, hidden (no console window), and spoken to over stdin/stdout with one JSON message per line. It accepts only `toggle`, `play`, `pause`, `next`, `previous` and `ping`, and never receives tokens, the Client ID or any Spotify data. If it is missing or keeps failing, Deckify logs that once and works exactly as in Phase 3. End users need nothing extra installed.
+
 ## Spotify Developer setup
 
 Deckify only needs a **Client ID**. It never needs, accepts or stores a Client Secret.
@@ -106,6 +120,7 @@ Deckify only needs a **Client ID**. It never needs, accepts or stores a Client S
 - Windows 10 or later with the Stream Deck app **7.1+**
 - Node.js **24+** (only for building; Stream Deck runs the plugin on its own bundled Node.js 24 runtime)
 - Git
+- Rust via [rustup](https://rustup.rs) with the MSVC toolchain (Visual Studio Build Tools, "Desktop development with C++"), only to build the Windows media bridge. `native/media-bridge/rust-toolchain.toml` pins the Rust version; rustup installs it on first use.
 
 Plugin UUID `com.marting.deckify` and every action UUID (`com.marting.deckify.status`, `com.marting.deckify.spotify.account`, `.spotify.play-pause`, `.spotify.next`, `.spotify.previous`, `.spotify.now-playing`) are permanent. Never rename them, because existing keys in users' profiles depend on them.
 
@@ -122,7 +137,22 @@ Individual steps: `npm run typecheck`, `npm run lint`, `npm test`, `npm run vali
 - `npm test` runs the Vitest suite. Every Spotify HTTP request is mocked, so tests never contact Spotify and use only obviously fake credentials.
 - The smoke test runs the built plugin against a simulated Stream Deck connection, presses the Deckify Status key, and checks that a Spotify Account key renders *Not Configured* and a Play / Pause key renders *Connect*. It needs no hardware.
 
-CI (`.github/workflows/ci.yml`) runs `npm ci` and `npm run check` on Node.js 24 for every pull request to `main` and every push to `main`.
+CI (`.github/workflows/ci.yml`) runs on every pull request to `main` and every push to `main`:
+
+- **Ubuntu:** `npm ci` and `npm run check` on Node.js 24.
+- **Windows:** builds the release media bridge, runs its Rust tests, `cargo fmt --check` and `cargo clippy`, runs `npm run pack` (which verifies the helper is inside the package), runs `npm run check` (including a test that drives the real helper), and uploads the `.streamDeckPlugin` as a build artifact.
+
+### Windows media bridge (native helper)
+
+```powershell
+npm run native:test    # cargo test: protocol parsing/serialization, Spotify-only session selection, command dispatch
+npm run native:build   # cargo build --release, then copy the exe to com.marting.deckify.sdPlugin/bin/native/
+```
+
+- Source: `native/media-bridge/` (Rust, `windows` crate). The Rust tests use fakes and never touch real media sessions.
+- `npm run native:build` is a no-op with a message on non-Windows machines; the plugin then runs without the local path.
+- For a linked development plugin, run `npm run native:build` once (and after changing the Rust code), then `npm run restart`.
+- `test/media-bridge-binary.test.ts` drives the real helper through the TypeScript bridge when a build exists (or `DECKIFY_MEDIA_BRIDGE_PATH` points to one) and is skipped otherwise.
 
 ### Develop against the Stream Deck app (link workflow)
 
@@ -141,10 +171,10 @@ The manifest enables Node.js debugging (`Nodejs.Debug`). Use the **Attach to Plu
 ### Package
 
 ```powershell
-npm run pack          # builds, validates and writes dist/com.marting.deckify.streamDeckPlugin
+npm run pack          # builds the native helper (Windows), bundles, packs and verifies dist/com.marting.deckify.streamDeckPlugin
 ```
 
-Double-clicking the `.streamDeckPlugin` file installs it into Stream Deck. Unlink a development copy first, because both use the same UUID.
+On Windows, `npm run pack` builds the release helper, stages it at `com.marting.deckify.sdPlugin/bin/native/deckify-media-bridge.exe`, runs the Stream Deck CLI pack (which validates the manifest), and then checks that the package contains `bin/plugin.js`, the manifest and the helper; it fails otherwise. On other systems it packs without the helper (Phase 3 behavior only). Double-clicking the `.streamDeckPlugin` file installs it into Stream Deck. Unlink a development copy first, because both use the same UUID.
 
 ### Logs
 
@@ -152,6 +182,18 @@ Double-clicking the `.streamDeckPlugin` file installs it into Stream Deck. Unlin
 | --- | --- |
 | Deckify plugin | `com.marting.deckify.sdPlugin\logs\com.marting.deckify.0.log` (when linked, this is inside the repository). For an installed package, look in `%APPDATA%\Elgato\StreamDeck\Plugins\com.marting.deckify.sdPlugin\logs\` |
 | Stream Deck app | `%APPDATA%\Elgato\StreamDeck\logs\` |
+
+**Local vs Web API routing.** Each playback press logs which path it took (at `debug` level, which is on for the development manifest):
+
+| Log line | Meaning |
+| --- | --- |
+| `Playback next sent via windows-gsmtc in 4 ms.` | sent to the Spotify desktop app through Windows media controls; no Web API command |
+| `Playback next not available via windows-gsmtc (spotify-session-unavailable); using the Spotify Web API.` | no local Spotify session; the Web API sent it |
+| `Playback next via windows-gsmtc has an unknown outcome (timeout); not retrying it.` | the helper didn't answer; nothing was retried |
+| `Windows media bridge ready (local Spotify session: found).` | logged once after start |
+| `Windows media bridge unavailable (helper not found); using Spotify Web API fallback.` | the helper is missing; Phase 3 behavior |
+
+To see the fallback, quit the Spotify desktop app and play on another Spotify device (phone, web player): presses then log *not available via windows-gsmtc* and go through the Web API.
 
 The plugin logs at `debug` level while `Nodejs.Debug` is enabled and at `info` otherwise. Raise it with `streamDeck.logger.setLevel("trace")` in `src/plugin.ts` to record every message exchanged with Stream Deck.
 
@@ -190,7 +232,9 @@ src/
     spotify-account.ts      "Spotify Account" key + Property Inspector messaging
     play-pause.ts, skip-track.ts, now-playing.ts
                             playback keys (shared base: playback-key-action.ts; views and Now Playing SVG renderer)
-  playback/                 transport-independent playback: model, PlaybackTransport interface, shared state, PlaybackService (polling, commands)
+  playback/                 transport-independent playback: model, PlaybackTransport interface, shared state, PlaybackService (polling, commands, local-first routing)
+    local-commands.ts       LocalPlaybackCommandTransport contract (handled / unavailable / uncertain)
+  windows/                  Windows media bridge client: spawns the bundled helper, JSON-lines IPC, timeouts, restarts
   settings/                 Stream Deck global settings (Client ID only)
   shared/                   logger contract, SDK type helpers
   spotify/
@@ -206,13 +250,12 @@ com.marting.deckify.sdPlugin/
   manifest.json             plugin + action definitions
   imgs/                     Stream Deck images (plugin icon, category icon, action/key images)
   ui/spotify-account/       Spotify Account Property Inspector (no remote scripts, no browser storage)
-  bin/, logs/               build output and runtime logs (git-ignored)
+  bin/, logs/               build output (bin/plugin.js, bin/native/deckify-media-bridge.exe) and runtime logs (git-ignored)
+native/media-bridge/        Rust helper: GSMTC Spotify session selection and commands (protocol.rs, selection.rs, dispatch.rs, gsmtc.rs)
 assets/brand/               original Deckify brand files (see assets/brand/README.md)
-scripts/                    brand-asset export, smoke test, dev-only token expiry helper
+scripts/                    brand-asset export, smoke test, dev-only token expiry helper, native build, pack + package verification
 test/                       Vitest suite (Spotify HTTP fully mocked)
 ```
-
-Phase 4 will add a low-latency local Windows media transport behind the same `PlaybackTransport` interface (for example, sending basic commands locally while still reading Spotify-specific state from the Web API), without changing the playback keys.
 
 ## Brand
 
