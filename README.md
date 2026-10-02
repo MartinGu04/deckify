@@ -183,7 +183,7 @@ On Windows, `npm run pack` builds the release helper, stages it at `com.marting.
 | Deckify plugin | `com.marting.deckify.sdPlugin\logs\com.marting.deckify.0.log` (when linked, this is inside the repository). For an installed package, look in `%APPDATA%\Elgato\StreamDeck\Plugins\com.marting.deckify.sdPlugin\logs\` |
 | Stream Deck app | `%APPDATA%\Elgato\StreamDeck\logs\` |
 
-**Local vs Web API routing.** Each playback press logs which path it took (at `debug` level, which is on for the development manifest):
+**Local vs Web API routing.** Each playback press logs which path it took, at `info` level, so the lines also appear in an installed package's log. They contain no track, artist or device names:
 
 | Log line | Meaning |
 | --- | --- |

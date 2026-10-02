@@ -340,13 +340,42 @@ describe("local availability", () => {
 		expect(ctx.service.state.value.localControl).toBe(false);
 	});
 
-	it("logs which path performed a command (debug only, no metadata)", async () => {
+	it("logs which path performed a command at info level, without metadata", async () => {
 		const ctx = setup();
 		ctx.service.addViewer("k");
 		await tick(0);
 		await ctx.service.command("next");
 		const line = ctx.logger.lines.find((l) => l.includes("sent via fake-local"));
-		expect(line).toMatch(/^debug Playback next sent via fake-local in \d+ ms\.$/);
-		expect(ctx.logger.lines.join("\n")).not.toContain("Song A");
+		expect(line).toMatch(/^info Playback next sent via fake-local in \d+ ms\.$/);
+		expectNoMetadata(ctx.logger.lines);
+	});
+
+	it("logs the Web API fallback at info level, without metadata", async () => {
+		const ctx = setup();
+		ctx.service.addViewer("k");
+		await tick(0);
+		ctx.control.localResult = { status: "unavailable", reason: "spotify-session-unavailable" };
+		await ctx.service.command("next");
+		const line = ctx.logger.lines.find((l) => l.includes("not available via fake-local"));
+		expect(line).toBe("info Playback next not available via fake-local (spotify-session-unavailable); using the Spotify Web API.");
+		expectNoMetadata(ctx.logger.lines);
+	});
+
+	it("logs an uncertain local outcome as a warning, without metadata", async () => {
+		const ctx = setup();
+		ctx.service.addViewer("k");
+		await tick(0);
+		ctx.control.localResult = { status: "uncertain", reason: "timeout" };
+		await ctx.service.command("next");
+		const line = ctx.logger.lines.find((l) => l.includes("unknown outcome"));
+		expect(line).toBe("warn Playback next via fake-local has an unknown outcome (timeout); not retrying it.");
+		expectNoMetadata(ctx.logger.lines);
 	});
 });
+
+function expectNoMetadata(lines: readonly string[]): void {
+	const text = lines.join("\n");
+	for (const value of [SONG_A.title, SONG_A.subtitle, SONG_B.title, SONG_B.subtitle, "Desktop", "spotify:track:"]) {
+		expect(text).not.toContain(value);
+	}
+}

@@ -242,7 +242,7 @@ export class PlaybackService {
 
 		switch (result.status) {
 			case "handled":
-				this.#logger.debug(`Playback ${requested} sent via ${local.id} in ${String(this.#clock() - started)} ms.`);
+				this.#logger.info(`Playback ${requested} sent via ${local.id} in ${String(this.#clock() - started)} ms.`);
 				this.#setLocalControl(true);
 				this.#completeCommand(expected, before);
 				return true;
@@ -254,7 +254,7 @@ export class PlaybackService {
 				this.#schedule(this.#timing.reconcileDelayMs, { replace: true });
 				return true;
 			case "unavailable":
-				this.#logger.debug(`Playback ${requested} not available via ${local.id} (${result.reason}); using the Spotify Web API.`);
+				this.#logger.info(`Playback ${requested} not available via ${local.id} (${result.reason}); using the Spotify Web API.`);
 				if (result.reason !== "command-rejected") {
 					this.#setLocalControl(false);
 				}
