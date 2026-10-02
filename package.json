@@ -21,7 +21,8 @@
 		"restart": "streamdeck restart com.marting.deckify",
 		"pack": "npm run build && streamdeck pack com.marting.deckify.sdPlugin --output dist --force",
 		"smoke": "node scripts/smoke-test.mjs",
-		"test": "vitest run"
+		"test": "vitest run",
+		"dev:expire-spotify-token": "node scripts/dev-expire-spotify-token.mjs"
 	},
 	"devDependencies": {
 		"@elgato/cli": "^1.10.1",
