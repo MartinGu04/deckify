@@ -54,11 +54,31 @@ function pack() {
 		console.error("The package is missing the plugin code or manifest.");
 		process.exit(1);
 	}
+	const missing = manifestFiles(JSON.parse(readFileSync(MANIFEST, "utf8"))).filter(
+		(file) => !(file.endsWith(".html") ? [file] : [`${file}.svg`, `${file}.png`]).some((candidate) => entries.includes(`com.marting.deckify.sdPlugin/${candidate}`)),
+	);
+	if (missing.length > 0) {
+		console.error(`The package is missing files the manifest references: ${missing.join(", ")}`);
+		process.exit(1);
+	}
 	if (withNative && !entries.includes(HELPER_ENTRY)) {
 		console.error(`The package does not contain ${HELPER_ENTRY}.`);
 		process.exit(1);
 	}
 	console.log(withNative ? `Verified: package includes ${HELPER_ENTRY}` : "Note: package built without the Windows media bridge (not built on Windows).");
+}
+
+/**
+ * Lists the images (without extension) and Property Inspector pages the manifest references.
+ * @param {Record<string, unknown>} manifest Parsed manifest.
+ * @returns {string[]} Plugin-relative paths.
+ */
+export function manifestFiles(manifest) {
+	const files = [manifest.Icon, manifest.CategoryIcon];
+	for (const action of Array.isArray(manifest.Actions) ? manifest.Actions : []) {
+		files.push(action.Icon, action.PropertyInspectorPath, ...(Array.isArray(action.States) ? action.States.map((state) => state.Image) : []));
+	}
+	return [...new Set(files.filter((file) => typeof file === "string"))];
 }
 
 /**
