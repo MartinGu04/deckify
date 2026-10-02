@@ -18,6 +18,6 @@ This writes, without altering the artwork beyond resizing:
 - `com.marting.deckify.sdPlugin/imgs/plugin/marketplace.png` (256×256) and `marketplace@2x.png` (512×512): plugin icon
 - `com.marting.deckify.sdPlugin/imgs/actions/status/deckify.png` (72×72) and `deckify@2x.png` (144×144): "Deckify" key state, icon on the dark key background
 
-The action-list icon (`imgs/actions/status/icon.svg`) and category icon (`imgs/plugin/category-icon.svg`) stay as placeholders. Elgato's guidelines require those to be monochrome white glyphs on a transparent background, so they need a dedicated monochrome version of the mark rather than a conversion of the full-colour icon.
+The action-list icon (`imgs/actions/status/icon.svg`) and category icon (`imgs/plugin/category-icon.svg`) are still placeholders. Elgato's guidelines require those to be monochrome white glyphs on a transparent background, so they need a dedicated monochrome version of the mark rather than a conversion of the full-colour icon.
 
-`../placeholder/` holds the source of the temporary placeholder artwork that is used until the originals are added here.
+The "Ready" key state (`imgs/actions/status/ready.svg`) is a generic status visual, not brand artwork.

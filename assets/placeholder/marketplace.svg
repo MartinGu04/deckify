@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-	<!-- Placeholder Deckify plugin icon. Source for imgs/plugin/marketplace(.png|@2x.png). Replace with final brand artwork. -->
-	<rect width="512" height="512" rx="112" fill="#121212"/>
-	<path fill="#22D46E" fill-rule="evenodd" d="M150 106h96a150 150 0 0 1 0 300h-96Z M210 166v180h36a90 90 0 0 0 0-180Z"/>
-</svg>

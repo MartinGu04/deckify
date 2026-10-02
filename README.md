@@ -114,7 +114,6 @@ com.marting.deckify.sdPlugin/
   imgs/                 Stream Deck images (plugin icon, category icon, action/key images)
   bin/, logs/           build output and runtime logs (git-ignored)
 assets/brand/           original Deckify brand files (see assets/brand/README.md)
-assets/placeholder/     source of temporary placeholder artwork
 scripts/                brand-asset export and hardware-free smoke test
 ```
 
