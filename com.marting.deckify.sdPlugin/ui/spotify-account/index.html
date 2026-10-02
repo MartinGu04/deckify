@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="referrer" content="no-referrer" />
+		<title>Spotify Account</title>
+		<link rel="stylesheet" href="inspector.css" />
+	</head>
+	<body>
+		<!--
+			Spotify Account Property Inspector. Shows and edits only non-sensitive state: the Client ID and the connection status.
+			Tokens never reach this page, and nothing is written to browser storage.
+		-->
+		<div class="row">
+			<span class="label">Status</span>
+			<span class="value"><span id="status" class="badge" data-status="loading">Loading...</span></span>
+		</div>
+
+		<div class="row" id="account-row" hidden>
+			<span class="label">Account</span>
+			<span class="value">
+				<span id="account-name"></span>
+				<span id="account-detail" class="muted"></span>
+			</span>
+		</div>
+
+		<div class="row" id="message-row" hidden>
+			<span class="label"></span>
+			<span class="value"><span id="message" class="message"></span></span>
+		</div>
+
+		<div class="row">
+			<label class="label" for="client-id">Client ID</label>
+			<span class="value">
+				<span class="inline">
+					<input id="client-id" type="text" maxlength="64" autocomplete="off" spellcheck="false" placeholder="Spotify app Client ID" />
+					<button id="save-client-id" type="button">Save</button>
+				</span>
+				<span id="client-id-error" class="message error" hidden></span>
+				<span class="muted">From your app in the Spotify Developer Dashboard. Deckify never needs your Client Secret.</span>
+			</span>
+		</div>
+
+		<div class="row">
+			<span class="label">Redirect URI</span>
+			<span class="value">
+				<code id="redirect-uri"></code>
+				<span class="muted">Add exactly this URI to your Spotify app.</span>
+			</span>
+		</div>
+
+		<div class="row">
+			<span class="label"></span>
+			<span class="value inline">
+				<button id="connect" type="button" hidden>Connect Spotify</button>
+				<button id="disconnect" type="button" hidden>Disconnect</button>
+			</span>
+		</div>
+
+		<script src="inspector.js"></script>
+	</body>
+</html>

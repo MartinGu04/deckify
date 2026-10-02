@@ -49,6 +49,39 @@ The first milestone is intentionally small:
 
 Spotify authentication and playback integration come after the native plugin foundation is verified on hardware.
 
+## Phase 2 — Spotify account
+
+Phase 2 connects a Spotify account with the **Authorization Code flow with PKCE**:
+
+- New **Spotify Account** key (`com.marting.deckify.spotify.account`). Every instance shows the same shared state: Not Configured, Disconnected, Connecting, Connected or Error.
+- Its Property Inspector holds the Spotify **Client ID** (stored in Deckify's global settings), the connection status, the connected account name, and Connect / Disconnect buttons.
+- Fixed redirect URI `http://127.0.0.1:43821/callback`. A one-shot local listener binds only to `127.0.0.1:43821` and accepts only `/callback`.
+- Only the `user-read-private` scope is requested. There is no playback yet.
+- Tokens are stored encrypted with Windows DPAPI (current user). They are refreshed automatically, and the session is restored on startup without opening a browser.
+
+## Spotify Developer setup
+
+Deckify only needs a **Client ID**. It never needs, accepts or stores a Client Secret.
+
+1. Open the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and create an app named **Deckify**.
+2. Under *Which API/SDKs are you planning to use?*, select **Web API**.
+3. Add this Redirect URI exactly (no trailing slash, `127.0.0.1` rather than `localhost`) and save:
+
+   ```text
+   http://127.0.0.1:43821/callback
+   ```
+
+4. Open the app's settings and copy the **Client ID**.
+5. Do **not** copy or enter the Client Secret anywhere. Deckify uses PKCE, which doesn't need one.
+6. In the Stream Deck app, place **Deckify → Spotify Account** on a key, paste the Client ID into its Property Inspector and press **Save**.
+7. Press **Connect Spotify** (or the key). Your browser opens Spotify's consent page. After you approve, the page shows *Deckify is connected to Spotify* and the key changes to **Connected**.
+
+**Development Mode.** New Spotify apps start in Development Mode. Only the app owner and accounts added under the app's *User Management* (a short allowlist) can connect. Any other account gets an error such as HTTP 403, which Deckify shows on the key and in the Property Inspector. Check the dashboard for the current user limit and requirements.
+
+**Session lifetime.** Access tokens last about an hour and are refreshed automatically. Spotify user refresh tokens expire about **six months after you first authorize**, and refreshing does not extend that. When Spotify rejects the refresh token (`invalid_grant`), Deckify deletes the stored session and shows **Connect** again. To revoke Deckify's access yourself, use **Disconnect** and remove Deckify at <https://www.spotify.com/account/apps/>. Spotify has no API for Deckify to revoke tokens.
+
+**Port 43821 in use.** If something else is using port 43821, connecting fails with *"Deckify could not start its local Spotify callback listener because port 43821 … is already in use"*. Deckify never falls back to another port, because Spotify only accepts the registered redirect URI. To find the other program, run `Get-NetTCPConnection -LocalPort 43821 | Select-Object OwningProcess` in PowerShell. If Windows itself has reserved the port (for example Hyper-V), it appears in `netsh interface ipv4 show excludedportrange protocol=tcp`.
+
 ## Development
 
 ### Prerequisites
@@ -57,17 +90,20 @@ Spotify authentication and playback integration come after the native plugin fou
 - Node.js **24+** (only for building; Stream Deck runs the plugin on its own bundled Node.js 24 runtime)
 - Git
 
-Plugin UUID `com.marting.deckify` and action UUID `com.marting.deckify.status` are permanent. Never rename them, because existing keys in users' profiles depend on them.
+Plugin UUID `com.marting.deckify` and action UUIDs `com.marting.deckify.status` and `com.marting.deckify.spotify.account` are permanent. Never rename them, because existing keys in users' profiles depend on them.
 
 ### Install and build
 
 ```powershell
 npm ci             # install exact dependency versions from package-lock.json
 npm run build      # bundle src/ into com.marting.deckify.sdPlugin/bin/plugin.js
-npm run check      # typecheck + lint + build + manifest validation + smoke test
+npm run check      # typecheck + lint + tests + build + manifest validation + smoke test
 ```
 
-Individual steps: `npm run typecheck`, `npm run lint`, `npm run validate` and `npm run smoke`. The smoke test runs the built plugin against a simulated Stream Deck connection and presses the Deckify Status key, so it needs no hardware.
+Individual steps: `npm run typecheck`, `npm run lint`, `npm test`, `npm run validate` and `npm run smoke`.
+
+- `npm test` runs the Vitest suite. Every Spotify HTTP request is mocked, so tests never contact Spotify and use only obviously fake credentials.
+- The smoke test runs the built plugin against a simulated Stream Deck connection, presses the Deckify Status key, and checks that a Spotify Account key renders *Not Configured*. It needs no hardware.
 
 CI (`.github/workflows/ci.yml`) runs `npm ci` and `npm run check` on Node.js 24 for every pull request to `main` and every push to `main`.
 
@@ -102,22 +138,60 @@ Double-clicking the `.streamDeckPlugin` file installs it into Stream Deck. Unlin
 
 The plugin logs at `debug` level while `Nodejs.Debug` is enabled and at `info` otherwise. Raise it with `streamDeck.logger.setLevel("trace")` in `src/plugin.ts` to record every message exchanged with Stream Deck.
 
+### Spotify token storage
+
+| What | Where | Protection |
+| --- | --- | --- |
+| Client ID | Stream Deck global settings | none needed (public identifier) |
+| Access and refresh tokens | `%LOCALAPPDATA%\Deckify\spotify-session.json` | AES-256-GCM with a random data key; the data key is protected with Windows DPAPI (CurrentUser) |
+| Expiry time, authorization time, scopes | same file, outside the ciphertext | not secret |
+
+- Tokens are encrypted inside the plugin process. Only the 32-byte data key is passed to `ProtectedData` through built-in Windows PowerShell, over stdin and never as a command-line argument. Token plaintext never leaves the process.
+- Only the same Windows user can decrypt the file.
+- Tokens are never written to Stream Deck settings, the Property Inspector, browser storage, logs or git.
+- **Disconnect** deletes the file. On non-Windows development machines, the session is kept in memory only.
+
+### Development-only refresh test
+
+You can trigger a real token refresh on Windows without waiting about an hour for the access token to expire:
+
+```powershell
+npm run dev:expire-spotify-token   # marks the stored access token as expired (rewrites only accessTokenExpiresAt)
+npm run restart                    # Deckify restores the session and must refresh it
+```
+
+The plugin log should then show `Spotify access token refreshed (refresh token rotated: yes|no)`, and the key returns to **Connected**. The script is a development helper in `scripts/` and is not part of the plugin bundle. It never decrypts or prints tokens, and it only works for the Windows user who owns the session.
+
 ### Project layout
 
 ```text
 src/
-  plugin.ts             entry point: logging, error handlers, action registration, connect
-  identifiers.ts        permanent plugin / action UUIDs
-  actions/status.ts     "Deckify Status" proof-of-life key action
+  plugin.ts                 entry point: logging, error handlers, shared services, action registration, startup restore
+  identifiers.ts            permanent plugin / action UUIDs
+  actions/
+    status.ts               "Deckify Status" proof-of-life key action
+    spotify-account.ts      "Spotify Account" key + Property Inspector messaging
+  settings/                 Stream Deck global settings (Client ID only)
+  shared/                   logger contract, SDK type helpers
+  spotify/
+    config.ts               fixed redirect URI, endpoints, timeouts
+    errors.ts               typed, user-facing errors (never contain tokens)
+    http.ts                 fetch with timeout, error-payload parsing, 401/403/429 mapping
+    auth/                   scopes, PKCE, authorization URL, callback listener, token exchange/refresh, auth service
+    api/                    authenticated Web API client, current-user profile
+    storage/                TokenStore interface, encrypted file store, Windows DPAPI key protector
+    state/                  shared Spotify account state + subscriptions
 com.marting.deckify.sdPlugin/
-  manifest.json         plugin + action definitions
-  imgs/                 Stream Deck images (plugin icon, category icon, action/key images)
-  bin/, logs/           build output and runtime logs (git-ignored)
-assets/brand/           original Deckify brand files (see assets/brand/README.md)
-scripts/                brand-asset export and hardware-free smoke test
+  manifest.json             plugin + action definitions
+  imgs/                     Stream Deck images (plugin icon, category icon, action/key images)
+  ui/spotify-account/       Spotify Account Property Inspector (no remote scripts, no browser storage)
+  bin/, logs/               build output and runtime logs (git-ignored)
+assets/brand/               original Deckify brand files (see assets/brand/README.md)
+scripts/                    brand-asset export, smoke test, dev-only token expiry helper
+test/                       Vitest suite (Spotify HTTP fully mocked)
 ```
 
-Later phases add `src/services/` (Spotify Web API, local Windows media layer), `src/state/` (shared playback state manager), `src/types/` and a `ui/` property inspector when there is something to put in them.
+Playback phases will add the local Windows media layer and a shared playback state manager next to `src/spotify/`.
 
 ## Brand
 

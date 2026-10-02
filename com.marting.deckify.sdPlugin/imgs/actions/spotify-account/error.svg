@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 144 144">
+	<!-- Spotify Account key: error (see the Property Inspector for details) -->
+	<rect width="144" height="144" fill="#121212"/>
+	<circle cx="66" cy="44" r="17" fill="#8A8A8A"/>
+	<path d="M34 96a32 30 0 0 1 64 0Z" fill="#8A8A8A"/>
+	<circle cx="100" cy="84" r="18" fill="#121212"/>
+	<circle cx="100" cy="84" r="15" fill="#FF5C5C"/>
+	<rect x="97.5" y="74" width="5" height="12" rx="2.5" fill="#121212"/><circle cx="100" cy="92" r="3" fill="#121212"/>
+</svg>
