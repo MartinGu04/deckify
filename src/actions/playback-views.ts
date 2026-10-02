@@ -45,7 +45,7 @@ export function shortPlaybackStatus(snapshot: PlaybackSnapshot): string | undefi
  * @returns The view.
  */
 export function playPauseView(snapshot: PlaybackSnapshot): KeyView {
-	if (!canControlPlayback(snapshot) || snapshot.availability === "unknown") {
+	if (!canControlPlayback(snapshot) || (snapshot.availability === "unknown" && !snapshot.localControl)) {
 		return { image: `${IMG}/play-disabled.svg`, title: shortPlaybackStatus(snapshot) ?? "" };
 	}
 	return snapshot.isPlaying ? { image: `${IMG}/pause.svg`, title: "" } : { image: `${IMG}/play.svg`, title: "" };
@@ -58,6 +58,6 @@ export function playPauseView(snapshot: PlaybackSnapshot): KeyView {
  * @returns The view.
  */
 export function skipView(direction: "next" | "previous", snapshot: PlaybackSnapshot): KeyView {
-	const enabled = canControlPlayback(snapshot) && snapshot.availability === "active";
+	const enabled = canControlPlayback(snapshot) && (snapshot.availability === "active" || snapshot.localControl);
 	return { image: `${IMG}/${direction}${enabled ? "" : "-disabled"}.svg`, title: "" };
 }
