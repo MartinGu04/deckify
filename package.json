@@ -19,10 +19,12 @@
 		"assets": "node scripts/export-brand-assets.mjs",
 		"link": "streamdeck link com.marting.deckify.sdPlugin",
 		"restart": "streamdeck restart com.marting.deckify",
-		"pack": "npm run build && streamdeck pack com.marting.deckify.sdPlugin --output dist --force",
+		"pack": "node scripts/pack.mjs",
 		"smoke": "node scripts/smoke-test.mjs",
 		"test": "vitest run",
-		"dev:expire-spotify-token": "node scripts/dev-expire-spotify-token.mjs"
+		"dev:expire-spotify-token": "node scripts/dev-expire-spotify-token.mjs",
+		"native:build": "node scripts/native.mjs build",
+		"native:test": "node scripts/native.mjs test"
 	},
 	"devDependencies": {
 		"@elgato/cli": "^1.10.1",
