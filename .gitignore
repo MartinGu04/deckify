@@ -1,0 +1,14 @@
+# Node.js
+node_modules/
+
+# Stream Deck build output and runtime logs
+*.sdPlugin/bin
+*.sdPlugin/logs
+
+# Packaged plugin
+dist/
+*.streamDeckPlugin
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
