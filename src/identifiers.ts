@@ -12,4 +12,8 @@ export const PLUGIN_UUID = "com.marting.deckify";
 export const ActionUUID = {
 	Status: `${PLUGIN_UUID}.status`,
 	SpotifyAccount: `${PLUGIN_UUID}.spotify.account`,
+	PlayPause: `${PLUGIN_UUID}.spotify.play-pause`,
+	Next: `${PLUGIN_UUID}.spotify.next`,
+	Previous: `${PLUGIN_UUID}.spotify.previous`,
+	NowPlaying: `${PLUGIN_UUID}.spotify.now-playing`,
 } as const;

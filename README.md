@@ -56,8 +56,25 @@ Phase 2 connects a Spotify account with the **Authorization Code flow with PKCE*
 - New **Spotify Account** key (`com.marting.deckify.spotify.account`). Every instance shows the same shared state: Not Configured, Disconnected, Connecting, Connected or Error.
 - Its Property Inspector holds the Spotify **Client ID** (stored in Deckify's global settings), the connection status, the connected account name, and Connect / Disconnect buttons.
 - Fixed redirect URI `http://127.0.0.1:43821/callback`. A one-shot local listener binds only to `127.0.0.1:43821` and accepts only `/callback`.
-- Only the `user-read-private` scope is requested. There is no playback yet.
 - Tokens are stored encrypted with Windows DPAPI (current user). They are refreshed automatically, and the session is restored on startup without opening a browser.
+
+## Phase 3 — Playback core
+
+Phase 3 adds Spotify playback control through the Spotify Web API, targeting your **currently active Spotify device**:
+
+| Action | UUID (permanent) | What it does |
+| --- | --- | --- |
+| Play / Pause | `com.marting.deckify.spotify.play-pause` | Shows Play while paused and Pause while playing; a press toggles. |
+| Next Track | `com.marting.deckify.spotify.next` | Skips to the next item. |
+| Previous Track | `com.marting.deckify.spotify.previous` | Goes back to the previous item. |
+| Now Playing | `com.marting.deckify.spotify.now-playing` | Shows the title, artist (or show) and progress; a press refreshes. |
+
+- **Scopes:** Deckify now requests `user-read-private`, `user-read-playback-state` and `user-modify-playback-state`.
+- **Reconnect after upgrading:** a session authorized before Phase 3 lacks the playback scopes. The Spotify Account key then shows **Reconnect**, and its Property Inspector shows **Reconnect Spotify**. Press it once to authorize again. Your Client ID is kept, and the new session replaces the old one. Deckify never uses the old session for playback, and scopes can't be added through a token refresh.
+- **Spotify Premium** is required for play, pause and skip; this is Spotify's rule. With another account, Deckify stays connected and Now Playing still works, but the control keys show **Premium**.
+- **No active device:** if Spotify isn't playing on any device, the keys show **No Device** and a press shows an alert. Open Spotify and start playing on a device first. Device selection comes in a later phase.
+- **Quota-aware polling:** Spotify Development Mode apps have request quotas as well as rate limits, so one shared poller serves every key. It runs only while Spotify is connected and a playback key is visible, about every 3 s while playing, 8 s while paused and 15 s when nothing is playing. After a press, Deckify re-reads the state shortly afterwards. Requests never overlap. On a rate limit (HTTP 429), Deckify waits for `Retry-After` and keeps showing the last state. If the quota is exhausted, it pauses updates (keys show **Limited**) and resumes on its own once the quota window has passed.
+- **OAuth stays explicit:** playback keys never open the browser. If Spotify isn't connected, they show **Connect** or **Reconnect** and alert on press.
 
 ## Spotify Developer setup
 
@@ -90,7 +107,7 @@ Deckify only needs a **Client ID**. It never needs, accepts or stores a Client S
 - Node.js **24+** (only for building; Stream Deck runs the plugin on its own bundled Node.js 24 runtime)
 - Git
 
-Plugin UUID `com.marting.deckify` and action UUIDs `com.marting.deckify.status` and `com.marting.deckify.spotify.account` are permanent. Never rename them, because existing keys in users' profiles depend on them.
+Plugin UUID `com.marting.deckify` and every action UUID (`com.marting.deckify.status`, `com.marting.deckify.spotify.account`, `.spotify.play-pause`, `.spotify.next`, `.spotify.previous`, `.spotify.now-playing`) are permanent. Never rename them, because existing keys in users' profiles depend on them.
 
 ### Install and build
 
@@ -103,7 +120,7 @@ npm run check      # typecheck + lint + tests + build + manifest validation + sm
 Individual steps: `npm run typecheck`, `npm run lint`, `npm test`, `npm run validate` and `npm run smoke`.
 
 - `npm test` runs the Vitest suite. Every Spotify HTTP request is mocked, so tests never contact Spotify and use only obviously fake credentials.
-- The smoke test runs the built plugin against a simulated Stream Deck connection, presses the Deckify Status key, and checks that a Spotify Account key renders *Not Configured*. It needs no hardware.
+- The smoke test runs the built plugin against a simulated Stream Deck connection, presses the Deckify Status key, and checks that a Spotify Account key renders *Not Configured* and a Play / Pause key renders *Connect*. It needs no hardware.
 
 CI (`.github/workflows/ci.yml`) runs `npm ci` and `npm run check` on Node.js 24 for every pull request to `main` and every push to `main`.
 
@@ -171,6 +188,9 @@ src/
   actions/
     status.ts               "Deckify Status" proof-of-life key action
     spotify-account.ts      "Spotify Account" key + Property Inspector messaging
+    play-pause.ts, skip-track.ts, now-playing.ts
+                            playback keys (shared base: playback-key-action.ts; views and Now Playing SVG renderer)
+  playback/                 transport-independent playback: model, PlaybackTransport interface, shared state, PlaybackService (polling, commands)
   settings/                 Stream Deck global settings (Client ID only)
   shared/                   logger contract, SDK type helpers
   spotify/
@@ -178,7 +198,8 @@ src/
     errors.ts               typed, user-facing errors (never contain tokens)
     http.ts                 fetch with timeout, error-payload parsing, 401/403/429 mapping
     auth/                   scopes, PKCE, authorization URL, callback listener, token exchange/refresh, auth service
-    api/                    authenticated Web API client, current-user profile
+    api/                    authenticated Web API client (GET/PUT/POST, refresh + one retry on 401), current-user profile
+    playback/               Spotify Web API playback transport and response parsing
     storage/                TokenStore interface, encrypted file store, Windows DPAPI key protector
     state/                  shared Spotify account state + subscriptions
 com.marting.deckify.sdPlugin/
@@ -191,7 +212,7 @@ scripts/                    brand-asset export, smoke test, dev-only token expir
 test/                       Vitest suite (Spotify HTTP fully mocked)
 ```
 
-Playback phases will add the local Windows media layer and a shared playback state manager next to `src/spotify/`.
+Phase 4 will add a low-latency local Windows media transport behind the same `PlaybackTransport` interface (for example, sending basic commands locally while still reading Spotify-specific state from the Web API), without changing the playback keys.
 
 ## Brand
 

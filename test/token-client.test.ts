@@ -10,7 +10,7 @@ describe("exchangeAuthorizationCode", () => {
 
 		const tokens = await exchangeAuthorizationCode({ clientId: FAKE.clientId, code: FAKE.code, codeVerifier: "test-verifier" }, { fetch });
 
-		expect(tokens).toEqual({ accessToken: FAKE.accessToken, refreshToken: FAKE.refreshToken, expiresInSeconds: 3600, scopes: ["user-read-private"] });
+		expect(tokens).toEqual({ accessToken: FAKE.accessToken, refreshToken: FAKE.refreshToken, expiresInSeconds: 3600, scopes: ["user-read-private", "user-read-playback-state", "user-modify-playback-state"] });
 		expect(requests).toHaveLength(1);
 		const [req] = requests;
 		expect(req?.url.toString()).toBe("https://accounts.spotify.com/api/token");

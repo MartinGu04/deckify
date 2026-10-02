@@ -116,6 +116,10 @@ code {
 	color: var(--error);
 }
 
+.warning {
+	color: var(--warn);
+}
+
 .badge {
 	align-self: flex-start;
 	padding: 1px 8px;
@@ -129,7 +133,8 @@ code {
 	color: #0d0d0d;
 }
 
-.badge[data-status="connecting"] {
+.badge[data-status="connecting"],
+.badge[data-status="reauthorization-required"] {
 	background: var(--warn);
 	color: #0d0d0d;
 }

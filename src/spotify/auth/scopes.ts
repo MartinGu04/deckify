@@ -1,6 +1,22 @@
 /**
  * The Spotify scopes Deckify requests. This is the single source of truth: add scopes here only when a feature needs them.
  *
- * Phase 2 (account connection) only needs to read the user's profile.
+ * - `user-read-private`: account profile (display name, subscription level).
+ * - `user-read-playback-state`: current playback state (`GET /v1/me/player`).
+ * - `user-modify-playback-state`: play, pause, next and previous.
+ *
+ * Sessions authorized before a scope was added do not have it. Scopes can only be added by authorizing again; a refresh-token exchange never
+ * grants new scopes.
  */
-export const SPOTIFY_SCOPES: readonly string[] = ["user-read-private"];
+export const SPOTIFY_SCOPES: readonly string[] = ["user-read-private", "user-read-playback-state", "user-modify-playback-state"];
+
+/**
+ * Gets the required scopes that a session was not granted.
+ * @param granted Scopes granted to the session.
+ * @param required Scopes Deckify requires; defaults to {@link SPOTIFY_SCOPES}.
+ * @returns The missing scopes, in the order they are required.
+ */
+export function getMissingScopes(granted: readonly string[], required: readonly string[] = SPOTIFY_SCOPES): string[] {
+	const grantedSet = new Set(granted);
+	return required.filter((scope) => !grantedSet.has(scope));
+}

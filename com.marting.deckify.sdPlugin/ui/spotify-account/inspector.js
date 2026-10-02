@@ -10,6 +10,7 @@
 		disconnected: "Disconnected",
 		connecting: "Connecting...",
 		connected: "Connected",
+		"reauthorization-required": "Reconnect required",
 		error: "Error",
 	};
 
@@ -18,6 +19,7 @@
 		accountRow: document.getElementById("account-row"),
 		accountName: document.getElementById("account-name"),
 		accountDetail: document.getElementById("account-detail"),
+		premiumRow: document.getElementById("premium-row"),
 		messageRow: document.getElementById("message-row"),
 		message: document.getElementById("message"),
 		clientId: document.getElementById("client-id"),
@@ -88,6 +90,7 @@
 			details.push(`authorized ${new Date(state.authorizedAt).toLocaleDateString()}`);
 		}
 		elements.accountDetail.textContent = details.join(" · ");
+		elements.premiumRow.hidden = !(connected && state.product && state.product !== "premium");
 
 		elements.messageRow.hidden = !state.message;
 		elements.message.textContent = state.message || "";
@@ -107,8 +110,10 @@
 		elements.clientIdError.textContent = clientIdError || "";
 		elements.redirectUri.textContent = state.redirectUri;
 
-		elements.connect.hidden = !(state.status === "disconnected" || state.status === "error");
-		elements.disconnect.hidden = !(connected || state.status === "connecting" || state.status === "error");
+		const reauthorize = state.status === "reauthorization-required";
+		elements.connect.hidden = !(state.status === "disconnected" || state.status === "error" || reauthorize);
+		elements.connect.textContent = reauthorize ? "Reconnect Spotify" : "Connect Spotify";
+		elements.disconnect.hidden = !(connected || state.status === "connecting" || state.status === "error" || reauthorize);
 		elements.connect.disabled = false;
 		elements.disconnect.disabled = false;
 	}

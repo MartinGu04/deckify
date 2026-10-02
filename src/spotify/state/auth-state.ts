@@ -4,7 +4,7 @@ import type { SpotifyProfile } from "../api/profile";
 /**
  * Spotify connection status shared by every Deckify action.
  */
-export type SpotifyAuthStatus = "not-configured" | "disconnected" | "connecting" | "connected" | "error";
+export type SpotifyAuthStatus = "not-configured" | "disconnected" | "connecting" | "connected" | "reauthorization-required" | "error";
 
 /**
  * Immutable snapshot of the Spotify account state. Contains no tokens.

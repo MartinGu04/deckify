@@ -1,11 +1,16 @@
 import streamDeck from "@elgato/streamdeck";
 
+import { NowPlayingAction } from "./actions/now-playing";
+import { PlayPauseAction } from "./actions/play-pause";
+import { NextTrackAction, PreviousTrackAction } from "./actions/skip-track";
 import { SpotifyAccountAction } from "./actions/spotify-account";
 import { StatusAction } from "./actions/status";
+import { PlaybackService } from "./playback/service";
 import { loadGlobalSettings, saveSpotifyClientId } from "./settings/global-settings";
 import { SpotifyAuthService } from "./spotify/auth/auth-service";
 import { normalizeClientId } from "./spotify/client-id";
 import { describeError } from "./spotify/errors";
+import { SpotifyWebApiTransport } from "./spotify/playback/web-api-transport";
 import { SpotifyAuthState } from "./spotify/state/auth-state";
 import { createTokenStore } from "./spotify/storage";
 
@@ -27,6 +32,15 @@ const spotifyAuth = new SpotifyAuthService({
 	logger: spotifyLogger,
 });
 
+// One shared playback service (and poller) for every playback key. Phase 3 uses the Spotify Web API as the transport.
+const playbackLogger = logger.createScope("Playback");
+const playback = new PlaybackService({
+	transport: new SpotifyWebApiTransport(spotifyAuth.api),
+	auth: spotifyState,
+	onAuthRejected: () => spotifyAuth.verify(),
+	logger: playbackLogger,
+});
+
 streamDeck.actions.registerAction(new StatusAction());
 streamDeck.actions.registerAction(
 	new SpotifyAccountAction({
@@ -36,6 +50,10 @@ streamDeck.actions.registerAction(
 		logger: logger.createScope("Spotify Account"),
 	}),
 );
+streamDeck.actions.registerAction(new PlayPauseAction({ playback, logger: playbackLogger }));
+streamDeck.actions.registerAction(new NextTrackAction({ playback, logger: playbackLogger }));
+streamDeck.actions.registerAction(new PreviousTrackAction({ playback, logger: playbackLogger }));
+streamDeck.actions.registerAction(new NowPlayingAction({ playback, logger: playbackLogger }));
 
 streamDeck
 	.connect()
