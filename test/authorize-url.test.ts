@@ -17,8 +17,8 @@ describe("redirect URI", () => {
 });
 
 describe("scopes", () => {
-	it("only requests user-read-private in Phase 2", () => {
-		expect(SPOTIFY_SCOPES).toEqual(["user-read-private"]);
+	it("requests exactly the profile and playback scopes", () => {
+		expect(SPOTIFY_SCOPES).toEqual(["user-read-private", "user-read-playback-state", "user-modify-playback-state"]);
 	});
 });
 
@@ -37,7 +37,7 @@ describe("buildAuthorizationUrl", () => {
 			code_challenge_method: "S256",
 			code_challenge: "test-challenge",
 			state: "test-state",
-			scope: "user-read-private",
+			scope: "user-read-private user-read-playback-state user-modify-playback-state",
 		});
 	});
 

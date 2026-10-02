@@ -8,6 +8,7 @@ import {
 	describeError,
 	SpotifyClientIdError,
 	SpotifyForbiddenError,
+	SpotifyInsufficientScopeError,
 	SpotifyNotConnectedError,
 	SpotifyOAuthError,
 	SpotifyReauthorizationRequiredError,
@@ -19,8 +20,12 @@ import type { StoredSpotifySession, TokenStore } from "../storage/token-store";
 import { buildAuthorizationUrl } from "./authorize-url";
 import { startCallbackListener, type CallbackListener, type CallbackListenerOptions } from "./callback-server";
 import { createPkceAttempt, type PkceAttempt } from "./pkce";
-import { SPOTIFY_SCOPES } from "./scopes";
+import { getMissingScopes, SPOTIFY_SCOPES } from "./scopes";
 import { exchangeAuthorizationCode, refreshAccessToken } from "./token-client";
+
+/** Shown when a stored session lacks scopes Deckify now requires (e.g. a Phase 2 session after playback scopes were added). */
+export const SCOPE_UPGRADE_MESSAGE =
+	"Deckify needs additional Spotify permissions for playback control. Press Reconnect Spotify to authorize Deckify again.";
 
 /**
  * Dependencies of {@link SpotifyAuthService}; everything with side effects is injectable for tests.
@@ -141,6 +146,10 @@ export class SpotifyAuthService implements AccessTokenProvider {
 		}
 
 		this.#replaceSession(stored);
+		if (this.#requiresReauthorization(stored)) {
+			// Keep the stored session (and Client ID) until a new authorization replaces it, but never use it.
+			return;
+		}
 		if (this.#clock() > stored.authorizedAt + REFRESH_TOKEN_LIFETIME_MS) {
 			this.#logger.info("Spotify session is about six months old; Spotify may require signing in again.");
 		}
@@ -207,10 +216,14 @@ export class SpotifyAuthService implements AccessTokenProvider {
 			this.#publish(this.#clientId === undefined ? "not-configured" : "disconnected");
 			return;
 		}
+		if (this.#requiresReauthorization(session)) {
+			// Never use a session that lacks required scopes, and never try to obtain them through a refresh: only a new authorization can add scopes.
+			return;
+		}
 
 		try {
 			const profile = await fetchCurrentUserProfile(this.api);
-			if (generation === this.#generation) {
+			if (generation === this.#generation && this.#session !== undefined && !this.#requiresReauthorization(this.#session)) {
 				this.#publishConnected(profile, session.authorizedAt);
 			}
 		} catch (err) {
@@ -270,6 +283,9 @@ export class SpotifyAuthService implements AccessTokenProvider {
 				} catch (err) {
 					this.#logger.error(`Refreshed Spotify session could not be saved: ${describeError(err)}`);
 				}
+				if (this.#state.snapshot.status === "connected") {
+					this.#requiresReauthorization(next);
+				}
 				return next.accessToken;
 			} catch (err) {
 				if (err instanceof SpotifyOAuthError && (err.isInvalidGrant || err.oauthError === "invalid_client")) {
@@ -316,6 +332,11 @@ export class SpotifyAuthService implements AccessTokenProvider {
 			const tokens = await exchangeAuthorizationCode({ clientId, code, codeVerifier: pkce.codeVerifier }, this.#http);
 			this.#assertCurrent(generation);
 
+			const missing = tokens.scopes === undefined ? [] : getMissingScopes(tokens.scopes);
+			if (missing.length > 0) {
+				throw new SpotifyInsufficientScopeError(missing);
+			}
+
 			const now = this.#clock();
 			const session: StoredSpotifySession = {
 				clientId,
@@ -347,7 +368,10 @@ export class SpotifyAuthService implements AccessTokenProvider {
 				return;
 			}
 			this.#logger.warn(`Spotify connection failed: ${describeError(err)}`);
-			if (err instanceof AuthorizationDeniedError || err instanceof AuthorizationCancelledError) {
+			if (this.#session !== undefined && getMissingScopes(this.#session.scopes).length > 0) {
+				// A failed reconnect keeps the previous session, which still needs reauthorization.
+				this.#publish("reauthorization-required", { message: `${describeError(err)} ${SCOPE_UPGRADE_MESSAGE}` });
+			} else if (err instanceof AuthorizationDeniedError || err instanceof AuthorizationCancelledError) {
 				this.#publish("disconnected", { message: err.message });
 			} else {
 				this.#publish("error", { message: describeError(err) });
@@ -381,6 +405,21 @@ export class SpotifyAuthService implements AccessTokenProvider {
 		if (err instanceof SpotifyForbiddenError) {
 			this.#logger.info("Spotify returned 403; check the app's User Management list in the Spotify Developer Dashboard.");
 		}
+	}
+
+	/**
+	 * Publishes Reauthorization Required when the session lacks required scopes.
+	 * @param session Session to check.
+	 * @returns `true` when reauthorization is required.
+	 */
+	#requiresReauthorization(session: StoredSpotifySession): boolean {
+		const missing = getMissingScopes(session.scopes);
+		if (missing.length === 0) {
+			return false;
+		}
+		this.#logger.info(`Spotify session is missing required scopes (${missing.join(", ")}); reauthorization required.`);
+		this.#publish("reauthorization-required", { message: SCOPE_UPGRADE_MESSAGE });
+		return true;
 	}
 
 	/**

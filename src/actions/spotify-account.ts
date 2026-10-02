@@ -96,7 +96,10 @@ export class SpotifyAccountAction extends SingletonAction {
 				return;
 			}
 
-			if (this.#auth.hasSession) {
+			if (status === "reauthorization-required") {
+				// New permissions can only be granted by authorizing again; the user explicitly pressed the Spotify Account key.
+				await this.#auth.connect();
+			} else if (this.#auth.hasSession) {
 				await this.#auth.verify();
 			} else {
 				await this.#auth.connect();

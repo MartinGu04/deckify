@@ -14,6 +14,7 @@ const VIEWS: Record<SpotifyAuthStatus, SpotifyAccountKeyView> = {
 	disconnected: { image: "imgs/actions/spotify-account/disconnected.svg", title: "Connect" },
 	connecting: { image: "imgs/actions/spotify-account/connecting.svg", title: "Connecting" },
 	connected: { image: "imgs/actions/spotify-account/connected.svg", title: "Connected" },
+	"reauthorization-required": { image: "imgs/actions/spotify-account/reauthorize.svg", title: "Reconnect" },
 	error: { image: "imgs/actions/spotify-account/error.svg", title: "Error" },
 };
 

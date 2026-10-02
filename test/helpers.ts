@@ -1,6 +1,13 @@
 import type { FetchFn } from "../src/spotify/http";
 import type { Logger } from "../src/shared/logger";
+import { SPOTIFY_SCOPES } from "../src/spotify/auth/scopes";
 import type { StoredSpotifySession } from "../src/spotify/storage/token-store";
+
+/** The scope set Phase 2 sessions were authorized with (before playback scopes were added). */
+export const PHASE2_SCOPES = ["user-read-private"] as const;
+
+/** The scope set Deckify currently requires. */
+export const CURRENT_SCOPES: readonly string[] = SPOTIFY_SCOPES;
 
 /**
  * Obviously fake credentials. Nothing in the test suite is a real Spotify credential, and no test ever contacts Spotify.
@@ -68,7 +75,7 @@ export function tokenResponse(accessToken: string, refreshToken?: string, expire
 		access_token: accessToken,
 		token_type: "Bearer",
 		expires_in: expiresIn,
-		scope: "user-read-private",
+		scope: SPOTIFY_SCOPES.join(" "),
 		...(refreshToken === undefined ? {} : { refresh_token: refreshToken }),
 	});
 }
@@ -119,7 +126,7 @@ export function storedSession(overrides: Partial<StoredSpotifySession> = {}): St
 		refreshToken: FAKE.refreshToken,
 		accessTokenExpiresAt: Date.UTC(2026, 0, 1) + 60 * 60 * 1000,
 		authorizedAt: Date.UTC(2025, 11, 1),
-		scopes: ["user-read-private"],
+		scopes: [...SPOTIFY_SCOPES],
 		...overrides,
 	};
 }
