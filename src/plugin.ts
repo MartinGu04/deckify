@@ -13,6 +13,7 @@ import { describeError } from "./spotify/errors";
 import { SpotifyWebApiTransport } from "./spotify/playback/web-api-transport";
 import { SpotifyAuthState } from "./spotify/state/auth-state";
 import { createTokenStore } from "./spotify/storage";
+import { createLocalCommandTransport } from "./windows";
 
 // Log files are written to "<plugin>.sdPlugin/logs". The SDK defaults to "debug" when the manifest enables Node.js debugging and "info" otherwise;
 // raise to "trace" locally to record every message exchanged with Stream Deck.
@@ -32,10 +33,15 @@ const spotifyAuth = new SpotifyAuthService({
 	logger: spotifyLogger,
 });
 
-// One shared playback service (and poller) for every playback key. Phase 3 uses the Spotify Web API as the transport.
+// One shared playback service (and poller) for every playback key. The Spotify Web API is the state transport and command fallback.
 const playbackLogger = logger.createScope("Playback");
+// Windows only: the bundled media-session helper sends commands straight to the local Spotify app; the Web API stays the state source and
+// the fallback. If the helper is missing or fails, Deckify behaves exactly as with the Web API alone.
+const localCommands = createLocalCommandTransport(logger.createScope("Media Bridge"));
+process.once("exit", () => localCommands?.dispose());
 const playback = new PlaybackService({
 	transport: new SpotifyWebApiTransport(spotifyAuth.api),
+	localCommands,
 	auth: spotifyState,
 	onAuthRejected: () => spotifyAuth.verify(),
 	logger: playbackLogger,

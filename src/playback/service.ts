@@ -15,6 +15,7 @@ import {
 import type { SpotifyAuthSnapshot, SpotifyAuthState } from "../spotify/state/auth-state";
 import { PlaybackTiming, type PlaybackTimingOptions } from "./config";
 import { PlaybackUnavailableError } from "./errors";
+import type { LocalCommandResult, LocalPlaybackCommand, LocalPlaybackCommandTransport } from "./local-commands";
 import type { PlaybackCommand, PlaybackItem, PlaybackObservation } from "./model";
 import { SIGNED_OUT_SNAPSHOT, type PlaybackNotice, type PlaybackSnapshot } from "./state";
 import type { PlaybackTransport } from "./transport";
@@ -23,7 +24,14 @@ import type { PlaybackTransport } from "./transport";
  * Dependencies of {@link PlaybackService}.
  */
 export type PlaybackServiceOptions = {
+	/** State source and fallback command path (the Spotify Web API). */
 	readonly transport: PlaybackTransport;
+
+	/**
+	 * Optional low-latency local command path (e.g. the Windows media session of the Spotify app). Tried first for every command; the
+	 * transport is only used when it reports `unavailable`.
+	 */
+	readonly localCommands?: LocalPlaybackCommandTransport;
 
 	/** Shared Spotify account state; playback only runs while it is `connected`. */
 	readonly auth: SpotifyAuthState;
@@ -47,6 +55,8 @@ const STALE_OBSERVATION_MS = 5_000;
  *
  * - Polls the transport with one shared, adaptive timer, only while Spotify is connected and at least one playback key is visible.
  * - Never overlaps state requests and never runs two commands at once.
+ * - Sends commands through the local command path first (no state read before it), then falls back to the transport only when the local
+ *   path reports that it did not perform the command.
  * - Reconciles every successful command against a fresh state read; optimistic Play/Pause state never outlives that read.
  * - Backs off on rate limits and stops polling on quota exhaustion until the window has passed.
  */
@@ -55,6 +65,7 @@ export class PlaybackService {
 	readonly state: Observable<PlaybackSnapshot>;
 
 	readonly #transport: PlaybackTransport;
+	readonly #local: LocalPlaybackCommandTransport | undefined;
 	readonly #auth: SpotifyAuthState;
 	readonly #onAuthRejected: (() => Promise<void> | void) | undefined;
 	readonly #clock: () => number;
@@ -89,6 +100,7 @@ export class PlaybackService {
 	 */
 	constructor(options: PlaybackServiceOptions) {
 		this.#transport = options.transport;
+		this.#local = options.localCommands;
 		this.#auth = options.auth;
 		this.#onAuthRejected = options.onAuthRejected;
 		this.#clock = options.clock ?? Date.now;
@@ -196,7 +208,67 @@ export class PlaybackService {
 	 * @param requested Command.
 	 */
 	async #runCommand(requested: PlaybackCommand | "toggle"): Promise<void> {
-		await this.#assertCommandAllowed();
+		this.#assertAccountAllowsCommands();
+
+		// Fast path: the local Spotify app, without any Web API request first (not even while the Web API is rate limited).
+		if (this.#local !== undefined && (await this.#tryLocalCommand(this.#local, requested))) {
+			return;
+		}
+
+		await this.#runWebApiCommand(requested);
+	}
+
+	/**
+	 * Tries a command on the local command path.
+	 * @param local Local transport.
+	 * @param requested Command.
+	 * @returns `true` when the command is finished (performed, or possibly performed); `false` when it was definitely not performed and the
+	 * Web API should be used.
+	 */
+	async #tryLocalCommand(local: LocalPlaybackCommandTransport, requested: LocalPlaybackCommand): Promise<boolean> {
+		const before = this.state.value;
+		// For the optimistic key update only; the local player itself decides what "toggle" does.
+		const expected: PlaybackCommand = requested === "toggle" ? (before.isPlaying ? "pause" : "play") : requested;
+		this.state.update({ pendingCommand: expected });
+
+		const started = this.#clock();
+		let result: LocalCommandResult;
+		try {
+			result = await local.execute(requested);
+		} catch {
+			// By contract a thrown error means nothing was sent.
+			result = { status: "unavailable", reason: "local-error" };
+		}
+
+		switch (result.status) {
+			case "handled":
+				this.#logger.info(`Playback ${requested} sent via ${local.id} in ${String(this.#clock() - started)} ms.`);
+				this.#setLocalControl(true);
+				this.#completeCommand(expected, before);
+				return true;
+			case "uncertain":
+				// It may have been performed: never repeat it through the Web API (that could skip twice). Reconcile instead.
+				this.#logger.warn(`Playback ${requested} via ${local.id} has an unknown outcome (${result.reason}); not retrying it.`);
+				this.#commandEpoch++;
+				this.state.update({ pendingCommand: undefined, optimistic: false });
+				this.#schedule(this.#timing.reconcileDelayMs, { replace: true });
+				return true;
+			case "unavailable":
+				this.#logger.info(`Playback ${requested} not available via ${local.id} (${result.reason}); using the Spotify Web API.`);
+				if (result.reason !== "command-rejected") {
+					this.#setLocalControl(false);
+				}
+				this.state.update({ pendingCommand: undefined });
+				return false;
+		}
+	}
+
+	/**
+	 * Runs a command through the transport (the Phase 3 Spotify Web API path).
+	 * @param requested Command.
+	 */
+	async #runWebApiCommand(requested: PlaybackCommand | "toggle"): Promise<void> {
+		await this.#assertWebApiCommandAllowed();
 		const before = this.state.value;
 		// Decide the toggle direction only after the freshness check, so a stale "playing" never sends a conflicting Pause.
 		const command: PlaybackCommand = requested === "toggle" ? (before.isPlaying ? "pause" : "play") : requested;
@@ -213,28 +285,46 @@ export class PlaybackService {
 			throw err;
 		}
 
+		this.#completeCommand(command, before);
+	}
+
+	/**
+	 * Applies a performed command to the shared state and schedules reconciliation.
+	 * @param command The performed command.
+	 * @param before State when the key was pressed.
+	 */
+	#completeCommand(command: PlaybackCommand, before: PlaybackSnapshot): void {
 		this.#commandEpoch++;
+		// While the Web API is backing off, keep its notice: commands may succeed locally, but state updates are still limited.
+		const notice = this.#isBlocked() ? this.state.value.notice : undefined;
 		if (command === "play" || command === "pause") {
-			// Safe optimistic update: Spotify accepted the command. The reconciliation read below confirms or corrects it.
-			this.state.update({ pendingCommand: undefined, isPlaying: command === "play", optimistic: true, notice: undefined });
+			// Safe optimistic update: the command was accepted. The reconciliation read below confirms or corrects it.
+			this.state.update({ pendingCommand: undefined, isPlaying: command === "play", optimistic: true, notice });
 		} else {
 			// Never invent metadata for Next/Previous: keep the old item until Spotify reports the new one.
 			this.#awaitingItemChange = itemKey(before.item);
-			this.state.update({ pendingCommand: undefined, notice: undefined });
+			this.state.update({ pendingCommand: undefined, notice });
 		}
+		// Reconciliation honors any rate-limit/quota back-off (the timer is never due before it ends).
 		this.#schedule(this.#timing.reconcileDelayMs, { replace: true });
 	}
 
 	/**
-	 * Throws when a command cannot succeed, without sending it.
+	 * Throws when the account cannot control playback at all (checked before any local or Web API attempt).
 	 */
-	async #assertCommandAllowed(): Promise<void> {
+	#assertAccountAllowsCommands(): void {
 		if (!this.#connected) {
 			throw new PlaybackUnavailableError(signedOutNotice(this.#auth.snapshot).message);
 		}
 		if (this.state.value.premiumRequired) {
 			throw new SpotifyPremiumRequiredError();
 		}
+	}
+
+	/**
+	 * Throws when a Web API command cannot succeed, without sending it.
+	 */
+	async #assertWebApiCommandAllowed(): Promise<void> {
 		this.#assertNotBlocked();
 
 		// Decisions based on device state need a reasonably fresh observation (e.g. the user may have just started Spotify).
@@ -258,9 +348,45 @@ export class PlaybackService {
 	 * Throws the active rate-limit/quota error while backing off.
 	 */
 	#assertNotBlocked(): void {
-		if (this.#blockedBy !== undefined && this.#clock() < this.#blockedUntil) {
+		if (this.#blockedBy !== undefined && this.#isBlocked()) {
 			throw this.#blockedBy;
 		}
+	}
+
+	/**
+	 * Whether Web API requests are paused by a rate limit or quota.
+	 * @returns `true` while backing off.
+	 */
+	#isBlocked(): boolean {
+		return this.#clock() < this.#blockedUntil;
+	}
+
+	/**
+	 * Publishes whether a local Spotify session can take commands.
+	 * @param available Availability.
+	 */
+	#setLocalControl(available: boolean): void {
+		if (this.state.value.localControl !== available) {
+			this.state.update({ localControl: available });
+		}
+	}
+
+	/**
+	 * Refreshes local availability (local IPC only; no Spotify request).
+	 */
+	#probeLocal(): void {
+		const local = this.#local;
+		if (local === undefined) {
+			return;
+		}
+		local
+			.isAvailable()
+			.then((available) => {
+				if (this.#connected) {
+					this.#setLocalControl(available);
+				}
+			})
+			.catch(() => undefined);
 	}
 
 	/**
@@ -293,6 +419,7 @@ export class PlaybackService {
 	#fetch(options: { forCommand?: boolean } = {}): Promise<void> {
 		this.#clearTimer();
 		const epoch = this.#commandEpoch;
+		this.#probeLocal();
 
 		const run = (async (): Promise<void> => {
 			try {
