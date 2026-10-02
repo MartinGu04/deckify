@@ -143,3 +143,12 @@ code {
 	background: var(--error);
 	color: #0d0d0d;
 }
+
+input[type="number"] {
+	flex: 0 0 64px;
+}
+
+.unit {
+	padding-top: 5px;
+	color: var(--muted);
+}

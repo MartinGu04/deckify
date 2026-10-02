@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="referrer" content="no-referrer" />
+		<title>Volume</title>
+		<link rel="stylesheet" href="../shared/inspector.css" />
+	</head>
+	<body>
+		<!--
+			Volume Up / Volume Down Property Inspector. Edits one per-key setting, the volume step. The plugin validates it again and falls back
+			to 10% for anything invalid. Nothing is written to browser storage.
+		-->
+		<div class="row">
+			<label class="label" for="volume-step">Volume step</label>
+			<span class="value">
+				<span class="inline">
+					<input id="volume-step" type="number" min="1" max="50" step="1" inputmode="numeric" />
+					<span class="unit">%</span>
+				</span>
+				<span id="volume-step-error" class="message error" hidden>Enter a whole number from 1 to 50.</span>
+				<span class="muted">How much one press changes Spotify's volume on the active device. Default: 10%.</span>
+			</span>
+		</div>
+
+		<script src="inspector.js"></script>
+	</body>
+</html>

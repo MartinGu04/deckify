@@ -73,6 +73,24 @@
 			]
 		},
 		{
+			"Name": "Previous Track",
+			"UUID": "com.marting.deckify.spotify.previous",
+			"Icon": "imgs/actions/playback/previous-icon",
+			"Tooltip": "Go back to the previous track on the active Spotify device.",
+			"Controllers": [
+				"Keypad"
+			],
+			"SupportedInMultiActions": false,
+			"States": [
+				{
+					"Image": "imgs/actions/playback/previous",
+					"ShowTitle": true,
+					"TitleAlignment": "bottom",
+					"TitleColor": "#FFFFFF"
+				}
+			]
+		},
+		{
 			"Name": "Play / Pause",
 			"UUID": "com.marting.deckify.spotify.play-pause",
 			"Icon": "imgs/actions/playback/play-pause-icon",
@@ -109,24 +127,6 @@
 			]
 		},
 		{
-			"Name": "Previous Track",
-			"UUID": "com.marting.deckify.spotify.previous",
-			"Icon": "imgs/actions/playback/previous-icon",
-			"Tooltip": "Go back to the previous track on the active Spotify device.",
-			"Controllers": [
-				"Keypad"
-			],
-			"SupportedInMultiActions": false,
-			"States": [
-				{
-					"Image": "imgs/actions/playback/previous",
-					"ShowTitle": true,
-					"TitleAlignment": "bottom",
-					"TitleColor": "#FFFFFF"
-				}
-			]
-		},
-		{
 			"Name": "Now Playing",
 			"UUID": "com.marting.deckify.spotify.now-playing",
 			"Icon": "imgs/actions/playback/now-playing-icon",
@@ -138,6 +138,80 @@
 			"States": [
 				{
 					"Image": "imgs/actions/playback/now-playing",
+					"ShowTitle": true,
+					"TitleAlignment": "bottom",
+					"TitleColor": "#FFFFFF"
+				}
+			]
+		},
+		{
+			"Name": "Volume Down",
+			"UUID": "com.marting.deckify.spotify.volume-down",
+			"Icon": "imgs/actions/volume/volume-down-icon",
+			"Tooltip": "Lower the Spotify volume of the active device (desktop, phone or speaker). Shows the current volume.",
+			"PropertyInspectorPath": "ui/volume/index.html",
+			"Controllers": [
+				"Keypad"
+			],
+			"SupportedInMultiActions": false,
+			"States": [
+				{
+					"Image": "imgs/actions/volume/volume-down",
+					"ShowTitle": true,
+					"TitleAlignment": "bottom",
+					"TitleColor": "#FFFFFF"
+				}
+			]
+		},
+		{
+			"Name": "Volume Up",
+			"UUID": "com.marting.deckify.spotify.volume-up",
+			"Icon": "imgs/actions/volume/volume-up-icon",
+			"Tooltip": "Raise the Spotify volume of the active device (desktop, phone or speaker). Shows the current volume.",
+			"PropertyInspectorPath": "ui/volume/index.html",
+			"Controllers": [
+				"Keypad"
+			],
+			"SupportedInMultiActions": false,
+			"States": [
+				{
+					"Image": "imgs/actions/volume/volume-up",
+					"ShowTitle": true,
+					"TitleAlignment": "bottom",
+					"TitleColor": "#FFFFFF"
+				}
+			]
+		},
+		{
+			"Name": "Mute / Unmute",
+			"UUID": "com.marting.deckify.spotify.mute",
+			"Icon": "imgs/actions/volume/mute-icon",
+			"Tooltip": "Mute the active Spotify device (volume 0), or restore the previous volume.",
+			"Controllers": [
+				"Keypad"
+			],
+			"SupportedInMultiActions": false,
+			"States": [
+				{
+					"Image": "imgs/actions/volume/speaker",
+					"ShowTitle": true,
+					"TitleAlignment": "bottom",
+					"TitleColor": "#FFFFFF"
+				}
+			]
+		},
+		{
+			"Name": "Like / Unlike",
+			"UUID": "com.marting.deckify.spotify.like",
+			"Icon": "imgs/actions/library/like-icon",
+			"Tooltip": "Add the current Spotify song to Liked Songs, or remove it. Shows whether it is liked.",
+			"Controllers": [
+				"Keypad"
+			],
+			"SupportedInMultiActions": false,
+			"States": [
+				{
+					"Image": "imgs/actions/library/heart-disabled",
 					"ShowTitle": true,
 					"TitleAlignment": "bottom",
 					"TitleColor": "#FFFFFF"

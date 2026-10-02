@@ -93,6 +93,14 @@ export abstract class PlaybackKeyAction extends SingletonAction {
 	}
 
 	/**
+	 * Re-renders every visible instance with the current playback state, e.g. when another state source the view depends on changed.
+	 * @returns Promise resolved when rendered.
+	 */
+	protected rerender(): Promise<void> {
+		return this.#renderAll(this.playback.state.value);
+	}
+
+	/**
 	 * Re-renders every visible instance of this action.
 	 * @param snapshot Playback state.
 	 */

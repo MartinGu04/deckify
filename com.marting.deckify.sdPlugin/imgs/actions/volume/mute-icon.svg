@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 144 144">
+	<!-- Mute / Unmute action icon: monochrome white on transparent background. -->
+	<path d="M28 52h16l24-19v62L44 76H28z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round"/>
+	<path d="M86 51l26 26M112 51l-26 26" fill="none" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round"/>
+</svg>

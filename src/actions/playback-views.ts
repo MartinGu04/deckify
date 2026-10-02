@@ -1,4 +1,4 @@
-import { canControlPlayback, type PlaybackSnapshot } from "../playback/state";
+import { canControlPlayback, canControlVolume, displayedVolume, type PlaybackSnapshot } from "../playback/state";
 
 /**
  * Image (plugin-relative path) and title for a key.
@@ -60,4 +60,48 @@ export function playPauseView(snapshot: PlaybackSnapshot): KeyView {
 export function skipView(direction: "next" | "previous", snapshot: PlaybackSnapshot): KeyView {
 	const enabled = canControlPlayback(snapshot) && (snapshot.availability === "active" || snapshot.localControl);
 	return { image: `${IMG}/${direction}${enabled ? "" : "-disabled"}.svg`, title: "" };
+}
+
+const VOLUME_IMG = "imgs/actions/volume";
+
+/**
+ * A short status label for the volume keys, or `undefined` when volume can be changed.
+ * @param snapshot Playback state.
+ * @returns The label.
+ */
+export function shortVolumeStatus(snapshot: PlaybackSnapshot): string | undefined {
+	const status = shortPlaybackStatus(snapshot);
+	if (status !== undefined) {
+		return status;
+	}
+	if (snapshot.availability === "active" && snapshot.device !== undefined && !snapshot.device.supportsVolume) {
+		return "Unsupported";
+	}
+	return undefined;
+}
+
+/**
+ * View of the Volume Up / Volume Down keys: the icon, with the active device's Spotify volume (or the volume being set) as the title.
+ * @param direction Which key.
+ * @param snapshot Playback state.
+ * @returns The view.
+ */
+export function volumeView(direction: "up" | "down", snapshot: PlaybackSnapshot): KeyView {
+	if (!canControlVolume(snapshot)) {
+		return { image: `${VOLUME_IMG}/volume-${direction}-disabled.svg`, title: shortVolumeStatus(snapshot) ?? "" };
+	}
+	const volume = displayedVolume(snapshot);
+	return { image: `${VOLUME_IMG}/volume-${direction}.svg`, title: volume === undefined ? "" : `${String(volume)}%` };
+}
+
+/**
+ * View of the Mute / Unmute key. Muted means the device's real Spotify volume is 0, whoever set it.
+ * @param snapshot Playback state.
+ * @returns The view.
+ */
+export function muteView(snapshot: PlaybackSnapshot): KeyView {
+	if (!canControlVolume(snapshot)) {
+		return { image: `${VOLUME_IMG}/speaker-disabled.svg`, title: shortVolumeStatus(snapshot) ?? "" };
+	}
+	return displayedVolume(snapshot) === 0 ? { image: `${VOLUME_IMG}/speaker-muted.svg`, title: "" } : { image: `${VOLUME_IMG}/speaker.svg`, title: "" };
 }

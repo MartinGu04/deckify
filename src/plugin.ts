@@ -1,15 +1,19 @@
 import streamDeck from "@elgato/streamdeck";
 
+import { LikeAction } from "./actions/like";
 import { NowPlayingAction } from "./actions/now-playing";
 import { PlayPauseAction } from "./actions/play-pause";
 import { NextTrackAction, PreviousTrackAction } from "./actions/skip-track";
 import { SpotifyAccountAction } from "./actions/spotify-account";
 import { StatusAction } from "./actions/status";
+import { MuteAction, VolumeDownAction, VolumeUpAction } from "./actions/volume";
+import { LibraryService } from "./library/service";
 import { PlaybackService } from "./playback/service";
 import { loadGlobalSettings, saveSpotifyClientId } from "./settings/global-settings";
 import { SpotifyAuthService } from "./spotify/auth/auth-service";
 import { normalizeClientId } from "./spotify/client-id";
 import { describeError } from "./spotify/errors";
+import { SpotifyWebApiLibrary } from "./spotify/library/web-api-library";
 import { SpotifyWebApiTransport } from "./spotify/playback/web-api-transport";
 import { SpotifyAuthState } from "./spotify/state/auth-state";
 import { createTokenStore } from "./spotify/storage";
@@ -47,6 +51,15 @@ const playback = new PlaybackService({
 	logger: playbackLogger,
 });
 
+// The current track's Liked Songs state, shared by every Like key; checked only when needed (never polled).
+const libraryLogger = logger.createScope("Library");
+const library = new LibraryService({
+	transport: new SpotifyWebApiLibrary(spotifyAuth.api),
+	playback: playback.state,
+	onAuthRejected: () => spotifyAuth.verify(),
+	logger: libraryLogger,
+});
+
 streamDeck.actions.registerAction(new StatusAction());
 streamDeck.actions.registerAction(
 	new SpotifyAccountAction({
@@ -60,6 +73,10 @@ streamDeck.actions.registerAction(new PlayPauseAction({ playback, logger: playba
 streamDeck.actions.registerAction(new NextTrackAction({ playback, logger: playbackLogger }));
 streamDeck.actions.registerAction(new PreviousTrackAction({ playback, logger: playbackLogger }));
 streamDeck.actions.registerAction(new NowPlayingAction({ playback, logger: playbackLogger }));
+streamDeck.actions.registerAction(new VolumeDownAction({ playback, logger: playbackLogger }));
+streamDeck.actions.registerAction(new VolumeUpAction({ playback, logger: playbackLogger }));
+streamDeck.actions.registerAction(new MuteAction({ playback, logger: playbackLogger }));
+streamDeck.actions.registerAction(new LikeAction({ playback, library, logger: libraryLogger }));
 
 streamDeck
 	.connect()

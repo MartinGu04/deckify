@@ -108,3 +108,21 @@ export function canControlPlayback(snapshot: PlaybackSnapshot): boolean {
 export function displayedVolume(snapshot: PlaybackSnapshot): number | undefined {
 	return snapshot.pendingVolume ?? (snapshot.availability === "active" ? snapshot.device?.volumePercent : undefined);
 }
+
+/**
+ * Determines whether the active device's Spotify volume can currently be changed, based on the shared state alone. Volume always goes
+ * through the Spotify Web API (for local and remote devices alike), so a local Windows media session does not help here.
+ * @param snapshot Playback state.
+ * @returns `true` when connected, Premium, not limited, and the active device is controllable and supports volume.
+ */
+export function canControlVolume(snapshot: PlaybackSnapshot): boolean {
+	return (
+		snapshot.availability === "active" &&
+		!snapshot.premiumRequired &&
+		snapshot.device !== undefined &&
+		!snapshot.device.isRestricted &&
+		snapshot.device.supportsVolume &&
+		snapshot.notice?.code !== "quota-exceeded" &&
+		snapshot.notice?.code !== "rate-limited"
+	);
+}
