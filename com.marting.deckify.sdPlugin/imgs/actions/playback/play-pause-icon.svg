@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+	<!-- Play / Pause action icon: monochrome white on transparent background. -->
+	<path d="M2 4l7 6-7 6z" fill="#FFFFFF"/>
+	<rect x="11" y="4" width="2.6" height="12" rx="0.8" fill="#FFFFFF"/>
+	<rect x="15.4" y="4" width="2.6" height="12" rx="0.8" fill="#FFFFFF"/>
+</svg>

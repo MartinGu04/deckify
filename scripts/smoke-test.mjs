@@ -5,7 +5,8 @@
  * It then:
  *   1. places a Deckify Status key and presses it three times, expecting the states 1 -> 0 -> 1;
  *   2. answers the plugin's global-settings request with no Spotify Client ID and places a Spotify Account key, expecting it to render the
- *      "Set Up" (not configured) state.
+ *      "Set Up" (not configured) state;
+ *   3. places a Play / Pause key, expecting the unavailable icon with the title "Connect" (playback never contacts Spotify while signed out).
  *
  * No Spotify request is made (no Client ID is configured). This only exercises the plugin <-> Stream Deck protocol; it does not replace
  * testing in the Stream Deck app on real hardware. Run `npm run build` first. Log output is written to `com.marting.deckify.sdPlugin/logs/`.
@@ -17,11 +18,13 @@ import { WebSocketServer } from "ws";
 const PLUGIN_DIR = path.resolve("com.marting.deckify.sdPlugin");
 const STATUS_UUID = "com.marting.deckify.status";
 const SPOTIFY_ACCOUNT_UUID = "com.marting.deckify.spotify.account";
+const PLAY_PAUSE_UUID = "com.marting.deckify.spotify.play-pause";
 const EXPECTED_STATES = [1, 0, 1];
 const TIMEOUT_MS = 10_000;
 
 const statusContext = "smoke-status-key";
 const spotifyContext = "smoke-spotify-account-key";
+const playPauseContext = "smoke-play-pause-key";
 const device = "smoke-test-mk2";
 const info = {
 	application: { font: "Segoe UI", language: "en", platform: "windows", platformVersion: "10.0", version: "7.1.0" },
@@ -59,6 +62,7 @@ server.on("connection", (socket) => {
 		if (message.event === "registerPlugin") {
 			send(STATUS_UUID, statusContext, "willAppear", 0);
 			send(SPOTIFY_ACCOUNT_UUID, spotifyContext, "willAppear", 1);
+			send(PLAY_PAUSE_UUID, playPauseContext, "willAppear", 2);
 			press();
 		} else if (message.event === "getGlobalSettings") {
 			socket.send(JSON.stringify({ event: "didReceiveGlobalSettings", id: message.id, payload: { settings: {} } }));
@@ -67,7 +71,7 @@ server.on("connection", (socket) => {
 			if (states().length < EXPECTED_STATES.length) press();
 		}
 
-		if (states().length >= EXPECTED_STATES.length && spotifyRendered()) {
+		if (states().length >= EXPECTED_STATES.length && spotifyRendered() && playPauseRendered()) {
 			finish();
 		}
 	});
@@ -95,6 +99,14 @@ function spotifyRendered() {
 	);
 }
 
+function playPauseRendered() {
+	const forKey = received.filter((m) => m.context === playPauseContext);
+	return (
+		forKey.some((m) => m.event === "setTitle" && m.payload.title === "Connect") &&
+		forKey.some((m) => m.event === "setImage" && m.payload.image === "imgs/actions/playback/play-disabled.svg")
+	);
+}
+
 function finish(error) {
 	clearTimeout(timeout);
 	plugin.removeAllListeners("exit");
@@ -104,10 +116,12 @@ function finish(error) {
 	const registered = received.some((m) => m.event === "registerPlugin");
 	const statusOk = JSON.stringify(states()) === JSON.stringify(EXPECTED_STATES);
 	const spotifyOk = spotifyRendered();
-	const passed = !error && registered && statusOk && spotifyOk;
+	const playPauseOk = playPauseRendered();
+	const passed = !error && registered && statusOk && spotifyOk && playPauseOk;
 	console.log(`registered: ${registered}`);
 	console.log(`Deckify Status setState sequence: ${JSON.stringify(states())} (expected ${JSON.stringify(EXPECTED_STATES)})`);
 	console.log(`Spotify Account rendered "Set Up" (not configured): ${spotifyOk}`);
+	console.log(`Play / Pause rendered "Connect" (signed out): ${playPauseOk}`);
 	console.log(passed ? "Smoke test passed." : `Smoke test FAILED${error ? `: ${error}` : ""}.`);
 	process.exit(passed ? 0 : 1);
 }
