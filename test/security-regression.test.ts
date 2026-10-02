@@ -16,14 +16,63 @@ async function collect(entry: string): Promise<string[]> {
 	return files.flat();
 }
 
+/**
+ * Converts an absolute path to a repository-relative path with "/" separators on every OS, so assertions and filters on paths behave the
+ * same on Windows and Linux.
+ * @param file Absolute path.
+ * @param root Repository root.
+ * @param platformPath Path implementation (injectable to test Windows behaviour on any OS).
+ * @returns The POSIX-style relative path.
+ */
+function toRepoPath(file: string, root = ROOT, platformPath: path.PlatformPath = path): string {
+	return platformPath.relative(root, file).split(platformPath.sep).join("/");
+}
+
 async function sources(): Promise<{ file: string; text: string }[]> {
 	const files = (await Promise.all(SCANNED.map(collect))).flat().filter((f) => /\.(ts|js|mjs|html|json)$/.test(f));
-	return Promise.all(files.map(async (file) => ({ file: path.relative(ROOT, file), text: await readFile(file, "utf8") })));
+	return Promise.all(files.map(async (file) => ({ file: toRepoPath(file), text: await readFile(file, "utf8") })));
+}
+
+async function inspectorSources(): Promise<{ file: string; text: string }[]> {
+	const ui = (await sources()).filter((s) => s.file.startsWith("com.marting.deckify.sdPlugin/ui/"));
+	// Guard against a filter that silently matches nothing (e.g. a path-separator mismatch), which would make the checks below vacuous.
+	expect(ui.map((s) => s.file)).toEqual(
+		expect.arrayContaining(["com.marting.deckify.sdPlugin/ui/spotify-account/index.html", "com.marting.deckify.sdPlugin/ui/spotify-account/inspector.js"]),
+	);
+	return ui;
 }
 
 function matching(files: { file: string; text: string }[], pattern: RegExp): string[] {
 	return files.flatMap(({ file, text }) => text.split("\n").flatMap((line, i) => (pattern.test(line) ? [`${file}:${i + 1}: ${line.trim()}`] : [])));
 }
+
+describe("security scan paths", () => {
+	it("normalizes Windows paths to forward slashes", () => {
+		expect(toRepoPath("C:\\work\\deckify\\src\\spotify\\config.ts", "C:\\work\\deckify", path.win32)).toBe("src/spotify/config.ts");
+		expect(toRepoPath("C:\\work\\deckify\\com.marting.deckify.sdPlugin\\ui\\spotify-account\\index.html", "C:\\work\\deckify", path.win32)).toBe(
+			"com.marting.deckify.sdPlugin/ui/spotify-account/index.html",
+		);
+	});
+
+	it("keeps POSIX paths unchanged", () => {
+		expect(toRepoPath("/work/deckify/src/spotify/config.ts", "/work/deckify", path.posix)).toBe("src/spotify/config.ts");
+	});
+
+	it("scans the expected files using forward-slash paths on every OS", async () => {
+		const files = (await sources()).map((s) => s.file);
+		expect(files).toEqual(
+			expect.arrayContaining([
+				"src/spotify/config.ts",
+				"src/spotify/auth/callback-server.ts",
+				"com.marting.deckify.sdPlugin/manifest.json",
+				"com.marting.deckify.sdPlugin/ui/spotify-account/index.html",
+				"com.marting.deckify.sdPlugin/ui/spotify-account/inspector.js",
+				"scripts/dev-expire-spotify-token.mjs",
+			]),
+		);
+		expect(files.filter((file) => file.includes("\\"))).toEqual([]);
+	});
+});
 
 describe("security regression checks", () => {
 	it("never sends or accepts a Spotify client secret", async () => {
@@ -55,13 +104,13 @@ describe("security regression checks", () => {
 	});
 
 	it("keeps the Property Inspector free of browser storage", async () => {
-		const ui = (await sources()).filter((s) => s.file.startsWith("com.marting.deckify.sdPlugin/ui"));
+		const ui = await inspectorSources();
 		expect(matching(ui, /localStorage|sessionStorage|indexedDB|document\.cookie/)).toEqual([]);
 		expect(matching(ui, /access_?token|refresh_?token|code_?verifier/i)).toEqual([]);
 	});
 
 	it("loads no remote scripts or styles in the Property Inspector", async () => {
-		const ui = (await sources()).filter((s) => s.file.endsWith(".html"));
-		expect(matching(ui, /(src|href)=["']https?:/)).toEqual([]);
+		const html = (await inspectorSources()).filter((s) => s.file.endsWith(".html"));
+		expect(matching(html, /(src|href)=["']https?:/)).toEqual([]);
 	});
 });
