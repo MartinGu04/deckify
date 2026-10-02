@@ -109,6 +109,19 @@ describe("security regression checks", () => {
 		expect(matching(ui, /access_?token|refresh_?token|code_?verifier/i)).toEqual([]);
 	});
 
+	it("never runs anything through a shell", async () => {
+		const files = (await sources()).filter((s) => s.file.startsWith("src/") || s.file.startsWith("scripts/"));
+		expect(matching(files, /shell:\s*true|\bexecSync?\(|\bexecFileSync\(.*shell/)).toEqual([]);
+	});
+
+	it("keeps Spotify credentials away from the Windows media bridge", async () => {
+		const bridge = (await sources()).filter((s) => s.file.startsWith("src/windows/"));
+		expect(bridge.map((s) => s.file)).toEqual(expect.arrayContaining(["src/windows/media-bridge.ts", "src/windows/index.ts"]));
+		// The bridge depends only on the transport-independent local command contract and the logger, never on auth, tokens or the API.
+		expect(matching(bridge, /from "\.\.\/spotify\//)).toEqual([]);
+		expect(matching(bridge, /access_?token|refresh_?token|clientId|client_id|Authorization/i)).toEqual([]);
+	});
+
 	it("loads no remote scripts or styles in the Property Inspector", async () => {
 		const html = (await inspectorSources()).filter((s) => s.file.endsWith(".html"));
 		expect(matching(html, /(src|href)=["']https?:/)).toEqual([]);
