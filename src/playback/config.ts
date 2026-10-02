@@ -23,6 +23,9 @@ export const PlaybackTiming = {
 	/** Second check after Next/Previous when the first reconciliation still shows the old item. */
 	trackChangeRecheckMs: 2_000,
 
+	/** Volume restored by Unmute when Deckify has not seen a non-zero volume since it started. */
+	defaultUnmuteVolumePercent: 50,
+
 	/** Back-off when Spotify rate limits without a Retry-After header. */
 	defaultRateLimitBackoffMs: 10_000,
 

@@ -46,6 +46,12 @@ export type PlaybackSnapshot = {
 	/** A command currently being sent. */
 	readonly pendingCommand: PlaybackCommand | undefined;
 
+	/**
+	 * The volume Deckify is setting right now (each volume key press moves it immediately), until Spotify has accepted it and the device
+	 * volume is updated. `undefined` while no volume change is in progress.
+	 */
+	readonly pendingVolume: number | undefined;
+
 	/** The connected account is not Premium, so playback commands are unavailable. */
 	readonly premiumRequired: boolean;
 
@@ -67,6 +73,7 @@ export const SIGNED_OUT_SNAPSHOT: PlaybackSnapshot = {
 	observedAt: undefined,
 	optimistic: false,
 	pendingCommand: undefined,
+	pendingVolume: undefined,
 	premiumRequired: false,
 	localControl: false,
 	notice: undefined,
@@ -91,4 +98,13 @@ export function canControlPlayback(snapshot: PlaybackSnapshot): boolean {
 		snapshot.notice?.code !== "quota-exceeded" &&
 		snapshot.notice?.code !== "rate-limited"
 	);
+}
+
+/**
+ * The volume keys should show: the volume being set, otherwise the active device's Spotify volume.
+ * @param snapshot Playback state.
+ * @returns Whole percent; otherwise `undefined` when unknown.
+ */
+export function displayedVolume(snapshot: PlaybackSnapshot): number | undefined {
+	return snapshot.pendingVolume ?? (snapshot.availability === "active" ? snapshot.device?.volumePercent : undefined);
 }

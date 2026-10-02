@@ -49,7 +49,21 @@ function parseDevice(value: unknown): PlaybackDevice | undefined {
 		name: typeof value.name === "string" ? truncate(value.name, 100) : "Unknown device",
 		type: typeof value.type === "string" ? truncate(value.type, 40) : "Unknown",
 		isRestricted: value.is_restricted === true,
+		volumePercent: parseVolumePercent(value.volume_percent),
+		supportsVolume: value.supports_volume === true,
 	};
+}
+
+/**
+ * Validates a device volume.
+ * @param value Raw `volume_percent` (Spotify sends an integer 0–100, or `null` when unknown).
+ * @returns The volume rounded to a whole percent; otherwise `undefined` when missing, not a finite number, or outside 0–100.
+ */
+export function parseVolumePercent(value: unknown): number | undefined {
+	if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 100) {
+		return undefined;
+	}
+	return Math.round(value);
 }
 
 /**

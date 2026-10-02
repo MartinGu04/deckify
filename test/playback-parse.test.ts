@@ -18,7 +18,7 @@ describe("parsePlaybackState", () => {
 		expect(parsePlaybackState(200, playerState())).toEqual({
 			active: true,
 			isPlaying: true,
-			device: { id: DEVICE.id, name: "Test Desktop", type: "Computer", isRestricted: false },
+			device: { id: DEVICE.id, name: "Test Desktop", type: "Computer", isRestricted: false, volumePercent: 60, supportsVolume: true },
 			item: {
 				type: "track",
 				id: "fakeTrack1",
@@ -83,5 +83,44 @@ describe("parsePlaybackState", () => {
 		for (const body of ["text", 42, [], null]) {
 			expect(() => parsePlaybackState(200, body)).toThrow(SpotifyInvalidResponseError);
 		}
+	});
+});
+
+describe("device volume", () => {
+	const device = (overrides: Record<string, unknown>) => parsePlaybackState(200, playerState({ device: { ...DEVICE, ...overrides } })).device;
+
+	it("reads a valid volume_percent and supports_volume", () => {
+		expect(device({ volume_percent: 63, supports_volume: true })).toMatchObject({ volumePercent: 63, supportsVolume: true });
+		expect(device({ volume_percent: 0 })).toMatchObject({ volumePercent: 0 });
+		expect(device({ volume_percent: 100 })).toMatchObject({ volumePercent: 100 });
+	});
+
+	it("maps a null or missing volume to undefined", () => {
+		expect(device({ volume_percent: null })?.volumePercent).toBeUndefined();
+		const withoutVolume: Record<string, unknown> = { ...DEVICE };
+		delete withoutVolume.volume_percent;
+		expect(parsePlaybackState(200, playerState({ device: withoutVolume })).device?.volumePercent).toBeUndefined();
+	});
+
+	it("rejects invalid volumes instead of guessing, and rounds fractional ones", () => {
+		for (const value of [-1, 101, 250, Number.NaN, Number.POSITIVE_INFINITY, "50", true, {}, []]) {
+			expect(device({ volume_percent: value })?.volumePercent).toBeUndefined();
+		}
+		expect(device({ volume_percent: 42.4 })?.volumePercent).toBe(42);
+	});
+
+	it("never guesses supports_volume: only an explicit true counts", () => {
+		expect(device({ supports_volume: false })?.supportsVolume).toBe(false);
+		expect(device({ supports_volume: "true" })?.supportsVolume).toBe(false);
+		expect(device({ supports_volume: null })?.supportsVolume).toBe(false);
+		const withoutFlag: Record<string, unknown> = { ...DEVICE };
+		delete withoutFlag.supports_volume;
+		expect(parsePlaybackState(200, playerState({ device: withoutFlag })).device?.supportsVolume).toBe(false);
+	});
+
+	it("keeps parsing Phase 3 fixtures unchanged apart from the new fields", () => {
+		const observation = parsePlaybackState(200, playerState());
+		expect(observation).toMatchObject({ active: true, isPlaying: true, item: { type: "track", uri: "spotify:track:fakeTrack1" }, progressMs: 50_000 });
+		expect(observation.device).toEqual({ id: DEVICE.id, name: "Test Desktop", type: "Computer", isRestricted: false, volumePercent: 60, supportsVolume: true });
 	});
 });

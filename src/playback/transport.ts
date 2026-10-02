@@ -24,4 +24,10 @@ export interface PlaybackTransport {
 
 	/** Skips to the previous item. */
 	previous(): Promise<void>;
+
+	/**
+	 * Sets the active device's Spotify volume.
+	 * @param volumePercent Whole percent, 0–100.
+	 */
+	setVolume(volumePercent: number): Promise<void>;
 }

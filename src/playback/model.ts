@@ -36,6 +36,15 @@ export type PlaybackDevice = {
 
 	/** Spotify reports that this device cannot be controlled through the Web API. */
 	readonly isRestricted: boolean;
+
+	/**
+	 * The device's Spotify volume (0–100), as reported by Spotify. `undefined` when Spotify did not report a usable value. This is Spotify's
+	 * own device volume (the one the Spotify apps show), never a Windows mixer level.
+	 */
+	readonly volumePercent: number | undefined;
+
+	/** Spotify reports that the device's volume can be changed through the Web API. Never assumed: `false` unless Spotify says `true`. */
+	readonly supportsVolume: boolean;
 };
 
 /**

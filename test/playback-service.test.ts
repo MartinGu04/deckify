@@ -23,7 +23,7 @@ function observation(overrides: Partial<PlaybackObservation> = {}): PlaybackObse
 	return {
 		active: true,
 		isPlaying: true,
-		device: { id: "d1", name: "Desktop", type: "Computer", isRestricted: false },
+		device: { id: "d1", name: "Desktop", type: "Computer", isRestricted: false, volumePercent: 60, supportsVolume: true },
 		item: SONG_A,
 		progressMs: 1_000,
 		...overrides,
@@ -71,6 +71,10 @@ function fakeTransport() {
 		pause: command("pause", () => (control.player = { ...control.player, isPlaying: false })),
 		next: command("next", () => (control.player = { ...control.player, item: SONG_B })),
 		previous: command("previous", () => (control.player = { ...control.player, item: SONG_A })),
+		setVolume: vi.fn(() => {
+			control.calls.push("setVolume");
+			return control.commandError ? Promise.reject(control.commandError) : Promise.resolve();
+		}),
 	};
 	return { transport, control, stateCalls: () => control.calls.filter((c) => c === "getState").length };
 }
@@ -405,7 +409,7 @@ describe("commands", () => {
 
 	it("does not send commands to a restricted device", async () => {
 		const ctx = setup();
-		ctx.control.player = observation({ device: { id: "d2", name: "Speaker", type: "Speaker", isRestricted: true } });
+		ctx.control.player = observation({ device: { id: "d2", name: "Speaker", type: "Speaker", isRestricted: true, volumePercent: 60, supportsVolume: true } });
 		ctx.service.addViewer("k1");
 		await tick(0);
 		expect(ctx.service.state.value.notice?.code).toBe("device-restricted");
