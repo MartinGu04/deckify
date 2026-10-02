@@ -69,6 +69,8 @@ npm run check      # typecheck + lint + build + manifest validation + smoke test
 
 Individual steps: `npm run typecheck`, `npm run lint`, `npm run validate` and `npm run smoke`. The smoke test runs the built plugin against a simulated Stream Deck connection and presses the Deckify Status key, so it needs no hardware.
 
+CI (`.github/workflows/ci.yml`) runs `npm ci` and `npm run check` on Node.js 24 for every pull request to `main` and every push to `main`.
+
 ### Develop against the Stream Deck app (link workflow)
 
 ```powershell
