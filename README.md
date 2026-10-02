@@ -90,6 +90,26 @@ Phase 4 makes Play / Pause, Next Track and Previous Track feel instant on Window
 - **Rate limits:** local commands keep working while the Web API is rate-limited or its quota is exhausted; reconciliation waits until the back-off ends. Without a local Spotify session, Phase 3 back-off applies unchanged.
 - **The helper** is a small bundled Rust program (`bin/native/deckify-media-bridge.exe`), started once, hidden (no console window), and spoken to over stdin/stdout with one JSON message per line. It accepts only `toggle`, `play`, `pause`, `next`, `previous` and `ping`, and never receives tokens, the Client ID or any Spotify data. If it is missing or keeps failing, Deckify logs that once and works exactly as in Phase 3. End users need nothing extra installed.
 
+## Phase 5 — Essential controls
+
+Phase 5 adds the everyday controls:
+
+| Action | UUID (permanent) | What it does |
+| --- | --- | --- |
+| Volume Down | `com.marting.deckify.spotify.volume-down` | Lowers the active device's Spotify volume by the key's step; shows the volume. |
+| Volume Up | `com.marting.deckify.spotify.volume-up` | Raises the active device's Spotify volume by the key's step; shows the volume. |
+| Mute / Unmute | `com.marting.deckify.spotify.mute` | Sets the volume to 0, or restores the previous volume. |
+| Like / Unlike | `com.marting.deckify.spotify.like` | Adds the current song to Liked Songs, or removes it; the heart shows which. |
+
+- **Scopes:** Deckify now also requests `user-library-read` and `user-library-modify` (Like / Unlike). A session from Phase 3 or 4 lacks them, so after upgrading the Spotify Account key shows **Reconnect**, exactly like the Phase 3 upgrade: press **Reconnect Spotify** once. The Client ID is kept and the old session is never used; scopes are never added through a token refresh.
+- **Volume is Spotify's own device volume**, the one the Spotify apps show, controlled through the Web API (`PUT /v1/me/player/volume`) for the desktop app and remote Spotify Connect devices (phone, speaker) alike, whenever Spotify reports the device supports it. Deckify deliberately does **not** use the Windows volume mixer (Core Audio): that is a second, independent level that would disagree with Spotify. The Phase 4 helper still only handles Play / Pause, Next and Previous.
+- **Volume step:** each Volume Up / Volume Down key has a **Volume step** setting in its Property Inspector (1–50%, default 10%). Invalid values fall back to 10%. Volume never goes below 0% or above 100%.
+- **Rapid presses all count.** Each press moves the target volume immediately (the key shows it right away); requests are sent one at a time, each carrying the newest target. Four quick presses of +10 from 40% end at 80%, even if Deckify only needs to send 50% and then 80%. Afterwards Deckify re-reads the state to confirm.
+- **No guessing:** if the current volume is unknown or stale, Deckify reads it first. With no active device the keys show **No Device**; a device without volume control shows **Unsupported**; restricted devices, rate limits (**Limited**), non-Premium accounts (**Premium**) and signed-out states behave like the playback keys.
+- **Mute / Unmute** uses Spotify's volume, because Spotify has no separate mute: Mute remembers the current volume and sets 0; Unmute restores it. Muted simply means the real device volume is 0, whoever set it: Volume Down reaching 0 shows muted, Volume Up from 0 makes it audible (0% + 10% = 10%), and a change in another Spotify app is picked up. Deckify remembers the last non-zero volume it saw or set **in memory only**; after Stream Deck restarts, Unmute from 0% restores 50% until Deckify has seen a non-zero volume again. (Storing it in Stream Deck's global settings could race with saving the Client ID there, so it is deliberately not persisted.)
+- **Like / Unlike** works on songs only. It uses Spotify's current library API (`GET /v1/me/library/contains`, `PUT` and `DELETE /v1/me/library`, with the track URI); the older `/me/tracks` endpoints are not used. Episodes, ads, local files and unknown items are never sent; the key shows **Track Only**. The heart is checked once per song while a Like key is visible (also after reconnecting and when a Like key appears), never polled, so a song liked or unliked in another Spotify app updates when the song changes or the Like key reappears. A press always applies to the song that was playing when you pressed, even if the next song starts before Spotify answers, and a second press while the first is still being sent is ignored.
+- **Spotify Premium** stays required for all Deckify controls, including volume and Like / Unlike.
+
 ## Spotify Developer setup
 
 Deckify only needs a **Client ID**. It never needs, accepts or stores a Client Secret.
@@ -135,7 +155,8 @@ npm run check      # typecheck + lint + tests + build + manifest validation + sm
 Individual steps: `npm run typecheck`, `npm run lint`, `npm test`, `npm run validate` and `npm run smoke`.
 
 - `npm test` runs the Vitest suite. Every Spotify HTTP request is mocked, so tests never contact Spotify and use only obviously fake credentials.
-- The smoke test runs the built plugin against a simulated Stream Deck connection, presses the Deckify Status key, and checks that a Spotify Account key renders *Not Configured* and a Play / Pause key renders *Connect*. It needs no hardware.
+- The smoke test runs the built plugin against a simulated Stream Deck connection, presses the Deckify Status key, and checks that a Spotify Account key renders *Not Configured* and that Play / Pause, Volume Up, Mute / Unmute and Like / Unlike keys render *Connect*. It needs no hardware.
+- `npm run assets` regenerates the image exports: the brand PNGs from `assets/brand/` and the volume / Like key images (`scripts/export-key-icons.mjs`, simple vector geometry). A test fails if the committed key images differ from the generator.
 
 CI (`.github/workflows/ci.yml`) runs on every pull request to `main` and every push to `main`:
 
@@ -195,6 +216,8 @@ On Windows, `npm run pack` builds the release helper, stages it at `com.marting.
 
 To see the fallback, quit the Spotify desktop app and play on another Spotify device (phone, web player): presses then log *not available via windows-gsmtc* and go through the Web API.
 
+Volume and Like / Unlike always use the Web API; they log only failures (for example `Volume change failed: ...`) and, for Like / Unlike, `Library item saved.` / `Library item removed.` without any track details.
+
 The plugin logs at `debug` level while `Nodejs.Debug` is enabled and at `info` otherwise. Raise it with `streamDeck.logger.setLevel("trace")` in `src/plugin.ts` to record every message exchanged with Stream Deck.
 
 ### Spotify token storage
@@ -232,7 +255,10 @@ src/
     spotify-account.ts      "Spotify Account" key + Property Inspector messaging
     play-pause.ts, skip-track.ts, now-playing.ts
                             playback keys (shared base: playback-key-action.ts; views and Now Playing SVG renderer)
-  playback/                 transport-independent playback: model, PlaybackTransport interface, shared state, PlaybackService (polling, commands, local-first routing)
+    volume.ts, like.ts      Volume Up / Volume Down / Mute and Like / Unlike keys (views: playback-views.ts, like-view.ts; volume-settings.ts)
+  playback/                 transport-independent playback: model, PlaybackTransport interface, shared state, PlaybackService (polling, commands,
+                            local-first routing, coalescing volume controller, mute memory)
+  library/                  LibraryService: the current track's Liked Songs state (checks, like / unlike, race guards), LibraryTransport interface
     local-commands.ts       LocalPlaybackCommandTransport contract (handled / unavailable / uncertain)
   windows/                  Windows media bridge client: spawns the bundled helper, JSON-lines IPC, timeouts, restarts
   settings/                 Stream Deck global settings (Client ID only)
@@ -242,18 +268,22 @@ src/
     errors.ts               typed, user-facing errors (never contain tokens)
     http.ts                 fetch with timeout, error-payload parsing, 401/403/429 mapping
     auth/                   scopes, PKCE, authorization URL, callback listener, token exchange/refresh, auth service
-    api/                    authenticated Web API client (GET/PUT/POST, refresh + one retry on 401), current-user profile
-    playback/               Spotify Web API playback transport and response parsing
+    api/                    authenticated Web API client (GET/PUT/POST/DELETE, refresh + one retry on 401), current-user profile
+    playback/               Spotify Web API playback transport (incl. volume) and response parsing
+    library/                Spotify Web API library transport (/me/library)
     storage/                TokenStore interface, encrypted file store, Windows DPAPI key protector
     state/                  shared Spotify account state + subscriptions
 com.marting.deckify.sdPlugin/
   manifest.json             plugin + action definitions
   imgs/                     Stream Deck images (plugin icon, category icon, action/key images)
   ui/spotify-account/       Spotify Account Property Inspector (no remote scripts, no browser storage)
+  ui/volume/                Volume Up / Volume Down Property Inspector (Volume step)
+  ui/shared/                Property Inspector stylesheet
   bin/, logs/               build output (bin/plugin.js, bin/native/deckify-media-bridge.exe) and runtime logs (git-ignored)
 native/media-bridge/        Rust helper: GSMTC Spotify session selection and commands (protocol.rs, selection.rs, dispatch.rs, gsmtc.rs)
 assets/brand/               original Deckify brand files (see assets/brand/README.md)
-scripts/                    brand-asset export, smoke test, dev-only token expiry helper, native build, pack + package verification
+scripts/                    brand-asset export, key-image generator (volume / Like icons), smoke test, dev-only token expiry helper,
+                            native build, pack + package verification
 test/                       Vitest suite (Spotify HTTP fully mocked)
 ```
 
