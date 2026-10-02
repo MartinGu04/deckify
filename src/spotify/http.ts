@@ -1,5 +1,17 @@
 import { HTTP_TIMEOUT_MS } from "./config";
-import { SpotifyApiError, SpotifyForbiddenError, SpotifyNetworkError, SpotifyRateLimitError, SpotifyTimeoutError, SpotifyUnauthorizedError } from "./errors";
+import {
+	SpotifyApiError,
+	SpotifyDeviceRestrictedError,
+	SpotifyForbiddenError,
+	SpotifyNetworkError,
+	SpotifyNoActiveDeviceError,
+	SpotifyPlayerCommandError,
+	SpotifyPremiumRequiredError,
+	SpotifyQuotaExceededError,
+	SpotifyRateLimitError,
+	SpotifyTimeoutError,
+	SpotifyUnauthorizedError,
+} from "./errors";
 
 /**
  * The `fetch` signature Deckify depends on; injectable so tests never reach Spotify.
@@ -104,6 +116,23 @@ export function readApiErrorMessage(body: unknown): string | undefined {
 }
 
 /**
+ * Reads Spotify's machine-readable `reason` from an error payload: `{ "error": { "status": 404, "message": "...", "reason": "NO_ACTIVE_DEVICE" } }`.
+ * A top-level `reason` is accepted too.
+ * @param body Response body.
+ * @returns The reason (upper-case identifier), when present.
+ */
+export function readApiErrorReason(body: unknown): string | undefined {
+	if (!isRecord(body)) {
+		return undefined;
+	}
+	const candidate = isRecord(body.error) && typeof body.error.reason === "string" ? body.error.reason : body.reason;
+	return typeof candidate === "string" && /^[A-Z][A-Z0-9_]{0,63}$/.test(candidate) ? candidate : undefined;
+}
+
+/** Player reasons meaning the active device cannot be controlled remotely. */
+const DEVICE_RESTRICTED_REASONS = new Set(["DEVICE_NOT_CONTROLLABLE", "REMOTE_CONTROL_DISALLOW"]);
+
+/**
  * Parses the `Retry-After` header (seconds).
  * @param headers Response headers.
  * @returns Seconds to wait, when present and valid.
@@ -123,16 +152,31 @@ export function readRetryAfterSeconds(headers: Headers): number | undefined {
  */
 export function toApiError(result: HttpResult): SpotifyApiError {
 	const message = readApiErrorMessage(result.body);
-	switch (result.status) {
-		case 401:
-			return new SpotifyUnauthorizedError(message);
-		case 403:
-			return new SpotifyForbiddenError(message);
-		case 429:
-			return new SpotifyRateLimitError(message, readRetryAfterSeconds(result.headers));
-		default:
-			return new SpotifyApiError(result.status, message);
+	const reason = readApiErrorReason(result.body);
+
+	if (result.status === 401) {
+		return new SpotifyUnauthorizedError(message);
 	}
+	if (result.status === 429) {
+		const retryAfter = readRetryAfterSeconds(result.headers);
+		return reason === "QUOTA_EXCEEDED" ? new SpotifyQuotaExceededError(message, retryAfter) : new SpotifyRateLimitError(message, retryAfter);
+	}
+
+	// Documented player error reasons take precedence over the generic status mapping.
+	if (reason === "NO_ACTIVE_DEVICE") {
+		return new SpotifyNoActiveDeviceError(result.status, message);
+	}
+	if (reason === "PREMIUM_REQUIRED") {
+		return new SpotifyPremiumRequiredError(result.status, message);
+	}
+	if (reason !== undefined && DEVICE_RESTRICTED_REASONS.has(reason)) {
+		return new SpotifyDeviceRestrictedError(result.status, message, reason);
+	}
+	if (reason !== undefined && reason !== "UNKNOWN") {
+		return new SpotifyPlayerCommandError(result.status, message, reason);
+	}
+
+	return result.status === 403 ? new SpotifyForbiddenError(message) : new SpotifyApiError(result.status, message);
 }
 
 /**

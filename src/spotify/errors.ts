@@ -110,6 +110,13 @@ export class SpotifyReauthorizationRequiredError extends SpotifyError {
 	}
 }
 
+/** Spotify granted fewer scopes than Deckify requested. */
+export class SpotifyInsufficientScopeError extends SpotifyError {
+	constructor(readonly missingScopes: readonly string[]) {
+		super("insufficient-scope", `Spotify did not grant all permissions Deckify needs (missing: ${missingScopes.join(", ")}).`);
+	}
+}
+
 /** There is no Spotify session. */
 export class SpotifyNotConnectedError extends SpotifyError {
 	constructor() {
@@ -152,6 +159,8 @@ export class SpotifyApiError extends SpotifyError {
 		readonly apiMessage: string | undefined,
 		message?: string,
 		code = "api-error",
+		/** Spotify's machine-readable `reason` (e.g. player error reasons such as `NO_ACTIVE_DEVICE`), when present. */
+		readonly reason?: string,
 	) {
 		super(code, message ?? `Spotify request failed with HTTP ${status}${apiMessage ? `: ${apiMessage}` : ""}.`);
 	}
@@ -189,6 +198,56 @@ export class SpotifyRateLimitError extends SpotifyApiError {
 			`Spotify is rate limiting requests. Try again${retryAfterSeconds === undefined ? " shortly" : ` in ${retryAfterSeconds} seconds`}.`,
 			"rate-limited",
 		);
+	}
+}
+
+/**
+ * HTTP 429 with `reason: "QUOTA_EXCEEDED"`: the app's Development Mode request quota is used up. Unlike a short rate limit, retrying soon
+ * does not help, so Deckify stops polling until the quota window has passed.
+ */
+export class SpotifyQuotaExceededError extends SpotifyRateLimitError {
+	override readonly code = "quota-exceeded";
+	override readonly message: string =
+		"Spotify's request quota for this app is used up, so Deckify has paused live playback updates. They resume automatically later.";
+}
+
+/** No Spotify device is currently active (player reason `NO_ACTIVE_DEVICE`). */
+export class SpotifyNoActiveDeviceError extends SpotifyApiError {
+	constructor(status = 404, apiMessage?: string) {
+		super(
+			status,
+			apiMessage,
+			"No active Spotify device. Open Spotify and start playing on a device, then try again.",
+			"no-active-device",
+			"NO_ACTIVE_DEVICE",
+		);
+	}
+}
+
+/** Playback control requires Spotify Premium (player reason `PREMIUM_REQUIRED`). */
+export class SpotifyPremiumRequiredError extends SpotifyApiError {
+	constructor(status = 403, apiMessage?: string) {
+		super(status, apiMessage, "Playback control requires Spotify Premium.", "premium-required", "PREMIUM_REQUIRED");
+	}
+}
+
+/** The active device cannot be controlled through the Web API (`is_restricted`, or reasons such as `DEVICE_NOT_CONTROLLABLE`). */
+export class SpotifyDeviceRestrictedError extends SpotifyApiError {
+	constructor(status = 403, apiMessage?: string, reason?: string) {
+		super(
+			status,
+			apiMessage,
+			"The active Spotify device does not allow remote control. Use another device or control playback in Spotify.",
+			"device-restricted",
+			reason,
+		);
+	}
+}
+
+/** Spotify refused a player command for another documented reason (e.g. `NO_NEXT_TRACK`, `ALREADY_PAUSED`). */
+export class SpotifyPlayerCommandError extends SpotifyApiError {
+	constructor(status: number, apiMessage: string | undefined, reason: string) {
+		super(status, apiMessage, `Spotify could not perform that playback command (${reason}).`, "player-command-failed", reason);
 	}
 }
 
