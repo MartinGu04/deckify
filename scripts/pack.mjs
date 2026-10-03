@@ -15,13 +15,18 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const PACKAGE = path.join(ROOT, "dist", "com.marting.deckify.streamDeckPlugin");
 const HELPER_ENTRY = "com.marting.deckify.sdPlugin/bin/native/deckify-media-bridge.exe";
 
+/** Spotify's official full logo, shown next to the Spotify playlist information in the playlist picker (Spotify's attribution rules). */
+export const SPOTIFY_LOGO = "ui/playlist/Spotify_Full_Logo_RGB_White.png";
+
 /** Files the manifest does not reference but the Property Inspectors load. */
 const INSPECTOR_FILES = [
 	"ui/shared/inspector.css",
 	"ui/spotify-account/inspector.js",
 	"ui/volume/inspector.js",
+	"ui/playlist/paging.js",
 	"ui/playlist/inspector.js",
 	"ui/playlist/playlist.css",
+	SPOTIFY_LOGO,
 ];
 const MANIFEST = path.join(ROOT, "com.marting.deckify.sdPlugin", "manifest.json");
 
@@ -59,30 +64,45 @@ function pack() {
 		writeFileSync(MANIFEST, manifest);
 	}
 
-	const entries = listZipEntries(readFileSync(PACKAGE));
-	if (!entries.includes("com.marting.deckify.sdPlugin/bin/plugin.js") || !entries.includes("com.marting.deckify.sdPlugin/manifest.json")) {
-		console.error("The package is missing the plugin code or manifest.");
-		process.exit(1);
-	}
-	const missing = manifestFiles(JSON.parse(readFileSync(MANIFEST, "utf8"))).filter(
-		(file) => !(file.endsWith(".html") ? [file] : [`${file}.svg`, `${file}.png`]).some((candidate) => entries.includes(`com.marting.deckify.sdPlugin/${candidate}`)),
-	);
-	// Key images set at runtime (e.g. "Added") and the Property Inspectors' scripts and styles are not in the manifest.
-	missing.push(...requiredFiles().filter((file) => !entries.includes(`com.marting.deckify.sdPlugin/${file}`)));
-	if (missing.length > 0) {
-		console.error(`The package is missing files the plugin uses: ${missing.join(", ")}`);
-		process.exit(1);
-	}
-	if (withNative && !entries.includes(HELPER_ENTRY)) {
-		console.error(`The package does not contain ${HELPER_ENTRY}.`);
+	const problems = verifyPackageEntries(listZipEntries(readFileSync(PACKAGE)), JSON.parse(readFileSync(MANIFEST, "utf8")), withNative);
+	if (problems.length > 0) {
+		for (const problem of problems) {
+			console.error(problem);
+		}
 		process.exit(1);
 	}
 	console.log(withNative ? `Verified: package includes ${HELPER_ENTRY}` : "Note: package built without the Windows media bridge (not built on Windows).");
 }
 
 /**
+ * Checks a package's file list.
+ * @param {string[]} entries ZIP entry names.
+ * @param {Record<string, unknown>} manifest Parsed manifest.
+ * @param {boolean} withNative Whether the Windows media bridge must be included.
+ * @returns {string[]} What is wrong (empty when the package is complete).
+ */
+export function verifyPackageEntries(entries, manifest, withNative) {
+	if (!entries.includes("com.marting.deckify.sdPlugin/bin/plugin.js") || !entries.includes("com.marting.deckify.sdPlugin/manifest.json")) {
+		return ["The package is missing the plugin code or manifest."];
+	}
+	const problems = [];
+	const missing = manifestFiles(manifest).filter(
+		(file) => !(file.endsWith(".html") ? [file] : [`${file}.svg`, `${file}.png`]).some((candidate) => entries.includes(`com.marting.deckify.sdPlugin/${candidate}`)),
+	);
+	// Key images set at runtime (e.g. "Added") and the Property Inspectors' scripts, styles and images are not in the manifest.
+	missing.push(...requiredFiles().filter((file) => !entries.includes(`com.marting.deckify.sdPlugin/${file}`)));
+	if (missing.length > 0) {
+		problems.push(`The package is missing files the plugin uses: ${missing.join(", ")}`);
+	}
+	if (withNative && !entries.includes(HELPER_ENTRY)) {
+		problems.push(`The package does not contain ${HELPER_ENTRY}.`);
+	}
+	return problems;
+}
+
+/**
  * Lists plugin-relative files the plugin needs that the manifest does not reference: every generated key image and the Property
- * Inspectors' scripts and styles.
+ * Inspectors' scripts, styles and images.
  * @returns {string[]} Plugin-relative paths.
  */
 export function requiredFiles() {

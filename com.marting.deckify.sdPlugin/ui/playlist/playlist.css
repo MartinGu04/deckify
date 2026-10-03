@@ -54,3 +54,24 @@ input[type="search"] {
 .attribution {
 	font-size: 8pt;
 }
+
+.pager {
+	align-items: center;
+	justify-content: space-between;
+	margin-top: 4px;
+}
+
+.pager[hidden] {
+	display: none;
+}
+
+/*
+ * Spotify's full logo at 90 px wide (Spotify's digital minimum is 70 px), white on the dark inspector background, with clear space around
+ * it. The image file is Spotify's own and is only scaled here, never recoloured or cropped.
+ */
+.spotify-logo {
+	display: block;
+	width: 90px;
+	height: auto;
+	margin: 12px 0 6px;
+}

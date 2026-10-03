@@ -2,10 +2,11 @@
 //
 // Talks only to the Deckify plugin through Stream Deck's Property Inspector WebSocket. The plugin calls Spotify and sends back sanitized
 // playlist data; this page never sees tokens or API URLs, never opens links itself and uses no browser storage. Playlist names are shown
-// exactly as Spotify returns them, always through textContent (never as HTML).
+// exactly as Spotify returns them, always through textContent (never as HTML). At most 20 playlists are shown at once (see paging.js).
 "use strict";
 
 (() => {
+	const { filterPlaylists, pageOf, pageContaining } = globalThis.DeckifyPlaylistPaging;
 	const elements = {
 		selectedName: document.getElementById("selected-name"),
 		selectedDetail: document.getElementById("selected-detail"),
@@ -16,6 +17,10 @@
 		filterNote: document.getElementById("filter-note"),
 		status: document.getElementById("status"),
 		list: document.getElementById("list"),
+		pager: document.getElementById("pager"),
+		previous: document.getElementById("previous"),
+		next: document.getElementById("next"),
+		pageInfo: document.getElementById("page-info"),
 	};
 
 	let socket;
@@ -24,6 +29,9 @@
 	let nextRequest = 0;
 	let latestRequest = null;
 	let state = null;
+	// The page of the (filtered) list being shown, and whether it has been moved to the selected playlist once.
+	let page = 0;
+	let placed = false;
 
 	/**
 	 * Entry point called by Stream Deck when the Property Inspector loads.
@@ -83,7 +91,7 @@
 		elements.status.classList.toggle("warning", kind === "warning");
 	}
 
-	function statusText(current, visibleCount) {
+	function statusText(current, matchCount) {
 		switch (current.status) {
 			case "signed-out":
 				return ["Connect Spotify in the Spotify Account key to choose a playlist.", "warning"];
@@ -106,7 +114,7 @@
 				? ["No playlists you can add to. Create a playlist in Spotify (or join a collaborative one), then Refresh.", ""]
 				: ["No playlists found. Create or follow a playlist in Spotify, then Refresh.", ""];
 		}
-		if (visibleCount === 0 && current.playlists.length > 0) {
+		if (matchCount === 0 && current.playlists.length > 0) {
 			return ["No playlists match your search.", ""];
 		}
 		return ["", ""];
@@ -158,17 +166,23 @@
 		elements.selectedWarning.textContent = warning || "";
 		elements.open.hidden = !(selected && selected.canOpen);
 
-		// List
-		const query = elements.search.value.trim().toLocaleLowerCase();
+		// List: filter the whole list, then show one page of the matches.
 		const counts = new Map();
 		for (const playlist of current.playlists) {
 			counts.set(playlist.name, (counts.get(playlist.name) || 0) + 1);
 		}
 		const duplicateNames = new Set([...counts].filter(([, count]) => count > 1).map(([name]) => name));
-		const visible = current.playlists.filter((playlist) => !query || playlist.name.toLocaleLowerCase().includes(query));
+		const matches = filterPlaylists(current.playlists, elements.search.value);
+		if (!placed && current.playlists.length > 0) {
+			// Open on the page that holds the key's playlist, so the selection is visible straight away.
+			placed = true;
+			page = pageContaining(matches, selected && selected.id) || 0;
+		}
+		const shown = pageOf(matches, page);
+		page = shown.page;
 
 		elements.list.replaceChildren(
-			...visible.map((playlist) => {
+			...shown.items.map((playlist) => {
 				const item = document.createElement("li");
 				const button = document.createElement("button");
 				button.type = "button";
@@ -189,12 +203,32 @@
 			}),
 		);
 
-		const [text, kind] = statusText(current, visible.length);
+		elements.pager.hidden = shown.pageCount <= 1;
+		elements.pageInfo.textContent = `${shown.first}–${shown.last} of ${shown.total}`;
+		elements.previous.disabled = shown.page === 0;
+		elements.next.disabled = shown.page >= shown.pageCount - 1;
+
+		const [text, kind] = statusText(current, shown.total);
 		showStatus(text, kind);
 		elements.refresh.disabled = current.status === "loading" || current.status === "signed-out" || current.status === "reauthorization-required";
 	}
 
-	elements.search.addEventListener("input", render);
+	/**
+	 * Shows another page of the list.
+	 * @param {number} delta Pages to move by.
+	 */
+	function turnPage(delta) {
+		page += delta;
+		render();
+		elements.list.scrollTop = 0;
+	}
+
+	elements.search.addEventListener("input", () => {
+		page = 0;
+		render();
+	});
+	elements.previous.addEventListener("click", () => turnPage(-1));
+	elements.next.addEventListener("click", () => turnPage(1));
 	elements.refresh.addEventListener("click", () => {
 		elements.refresh.disabled = true;
 		request("deckify:playlist:refresh");

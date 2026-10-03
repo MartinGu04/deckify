@@ -41,14 +41,24 @@
 			<span class="value">
 				<span id="status" class="message" hidden></span>
 				<ul id="list" class="playlist-list" role="listbox" aria-label="Playlists"></ul>
+				<span id="pager" class="inline pager" hidden>
+					<button id="previous" type="button" aria-label="Previous playlists">Previous</button>
+					<span id="page-info" class="muted" aria-live="polite"></span>
+					<button id="next" type="button" aria-label="Next playlists">Next</button>
+				</span>
 			</span>
 		</div>
 
 		<div class="row">
 			<span class="label"></span>
-			<span class="value"><span class="muted attribution">Playlist information provided by Spotify.</span></span>
+			<span class="value attribution">
+				<!-- Spotify's official full logo (white version for dark backgrounds), unmodified, as downloaded from Spotify's brand assets. -->
+				<img class="spotify-logo" src="Spotify_Full_Logo_RGB_White.png" alt="Spotify" width="90" height="25" draggable="false" />
+				<span class="muted">Playlist information provided by Spotify.</span>
+			</span>
 		</div>
 
+		<script src="paging.js"></script>
 		<script src="inspector.js"></script>
 	</body>
 </html>
