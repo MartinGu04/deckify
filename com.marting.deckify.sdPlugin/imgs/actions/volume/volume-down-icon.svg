@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 144 144">
+	<!-- Volume Down action icon: monochrome white on transparent background. -->
+	<path d="M28 52h16l24-19v62L44 76H28z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round"/>
+	<rect x="84" y="58" width="32" height="12" rx="4" fill="#FFFFFF"/>
+</svg>

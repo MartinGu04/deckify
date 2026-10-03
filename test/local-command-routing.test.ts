@@ -16,7 +16,7 @@ const SONG_B: PlaybackItem = { type: "track", id: "b", uri: "spotify:track:b", t
 const playing = (overrides: Partial<PlaybackObservation> = {}): PlaybackObservation => ({
 	active: true,
 	isPlaying: true,
-	device: { id: "d1", name: "Desktop", type: "Computer", isRestricted: false },
+	device: { id: "d1", name: "Desktop", type: "Computer", isRestricted: false, volumePercent: 60, supportsVolume: true },
 	item: SONG_A,
 	progressMs: 1_000,
 	...overrides,
@@ -55,6 +55,7 @@ function setup(options: { product?: string; connected?: boolean; local?: boolean
 		pause: vi.fn(() => (calls.push("api:pause"), Promise.resolve())),
 		next: vi.fn(() => (calls.push("api:next"), Promise.resolve())),
 		previous: vi.fn(() => (calls.push("api:previous"), Promise.resolve())),
+		setVolume: vi.fn(() => (calls.push("api:setVolume"), Promise.resolve())),
 	};
 
 	const local: LocalPlaybackCommandTransport & { execute: ReturnType<typeof vi.fn> } = {

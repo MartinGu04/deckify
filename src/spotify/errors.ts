@@ -244,6 +244,13 @@ export class SpotifyDeviceRestrictedError extends SpotifyApiError {
 	}
 }
 
+/** The active device's Spotify volume cannot be changed through the Web API (`supports_volume: false`, or no volume reported). */
+export class SpotifyVolumeUnsupportedError extends SpotifyError {
+	constructor(message = "The active Spotify device does not allow volume control from Deckify.") {
+		super("volume-unsupported", message);
+	}
+}
+
 /** Spotify refused a player command for another documented reason (e.g. `NO_NEXT_TRACK`, `ALREADY_PAUSED`). */
 export class SpotifyPlayerCommandError extends SpotifyApiError {
 	constructor(status: number, apiMessage: string | undefined, reason: string) {

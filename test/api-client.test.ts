@@ -106,6 +106,77 @@ describe("SpotifyApiClient", () => {
 	});
 });
 
+describe("SpotifyApiClient DELETE", () => {
+	const PATH = "/me/library?uris=spotify%3Atrack%3AfakeTrack1";
+
+	it("sends an authenticated DELETE and accepts an empty successful response", async () => {
+		const { fetch, requests } = fakeFetch(() => new Response(null, { status: 200 }));
+
+		await expect(new SpotifyApiClient(tokens(), { fetch }).request("DELETE", PATH)).resolves.toEqual({ status: 200, body: undefined });
+		expect(requests).toHaveLength(1);
+		expect(requests[0]?.method).toBe("DELETE");
+		expect(requests[0]?.url.toString()).toBe(`https://api.spotify.com/v1${PATH}`);
+		expect(requests[0]?.headers.get("authorization")).toBe(`Bearer ${FAKE.accessToken}`);
+		expect(requests[0]?.headers.has("content-type")).toBe(false);
+		expect(requests[0]?.body).toBe("");
+	});
+
+	it("accepts 204 No Content", async () => {
+		const { fetch } = fakeFetch(() => new Response(null, { status: 204 }));
+		await expect(new SpotifyApiClient(tokens(), { fetch }).request("DELETE", PATH)).resolves.toEqual({ status: 204, body: undefined });
+	});
+
+	it("refreshes once and retries the DELETE once on HTTP 401", async () => {
+		const provider = tokens();
+		const { fetch, requests } = fakeFetch((req) =>
+			req.headers.get("authorization") === `Bearer ${FAKE.accessToken}` ? json(401, { error: { status: 401, message: "The access token expired" } }) : new Response(null, { status: 200 }),
+		);
+
+		await expect(new SpotifyApiClient(provider, { fetch }).request("DELETE", PATH)).resolves.toMatchObject({ status: 200 });
+		expect(provider.refreshAccessToken).toHaveBeenCalledTimes(1);
+		expect(requests.map((r) => [r.method, r.headers.get("authorization")])).toEqual([
+			["DELETE", `Bearer ${FAKE.accessToken}`],
+			["DELETE", `Bearer ${FAKE.accessToken2}`],
+		]);
+	});
+
+	it("does not loop when the retried DELETE is rejected again", async () => {
+		const provider = tokens();
+		const { fetch, requests } = fakeFetch(() => json(401, { error: { status: 401, message: "Invalid access token" } }));
+
+		await expect(new SpotifyApiClient(provider, { fetch }).request("DELETE", PATH)).rejects.toBeInstanceOf(SpotifyUnauthorizedError);
+		expect(requests).toHaveLength(2);
+		expect(provider.refreshAccessToken).toHaveBeenCalledTimes(1);
+	});
+
+	it("maps HTTP 403 to a typed error without retrying", async () => {
+		const provider = tokens();
+		const { fetch, requests } = fakeFetch(() => json(403, { error: { status: 403, message: "Insufficient client scope" } }));
+
+		await expect(new SpotifyApiClient(provider, { fetch }).request("DELETE", PATH)).rejects.toBeInstanceOf(SpotifyForbiddenError);
+		expect(requests).toHaveLength(1);
+		expect(provider.refreshAccessToken).not.toHaveBeenCalled();
+	});
+
+	it("maps HTTP 429 to a typed error with Retry-After, without retrying", async () => {
+		const { fetch, requests } = fakeFetch(() => json(429, { error: { status: 429, message: "API rate limit exceeded" } }, { "Retry-After": "7" }));
+
+		const promise = new SpotifyApiClient(tokens(), { fetch }).request("DELETE", PATH);
+		await expect(promise).rejects.toBeInstanceOf(SpotifyRateLimitError);
+		await expect(promise).rejects.toMatchObject({ retryAfterSeconds: 7 });
+		expect(requests).toHaveLength(1);
+	});
+
+	it("still sends GET, PUT and POST unchanged", async () => {
+		const { fetch, requests } = fakeFetch(() => new Response(null, { status: 204 }));
+		const client = new SpotifyApiClient(tokens(), { fetch });
+		await client.request("GET", "/me/player");
+		await client.request("PUT", "/me/player/pause");
+		await client.request("POST", "/me/player/next");
+		expect(requests.map((r) => `${r.method} ${r.url.pathname}`)).toEqual(["GET /v1/me/player", "PUT /v1/me/player/pause", "POST /v1/me/player/next"]);
+	});
+});
+
 describe("current-user profile", () => {
 	it("fetches GET /v1/me and validates it", async () => {
 		const { fetch } = fakeFetch(() => profileResponse("Test Listener"));

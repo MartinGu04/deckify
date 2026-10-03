@@ -16,6 +16,7 @@ const PLAYER_STATE_PATH = "/me/player?additional_types=track,episode";
  * - `PUT /v1/me/player/pause` — pause
  * - `POST /v1/me/player/next` — next item
  * - `POST /v1/me/player/previous` — previous item
+ * - `PUT /v1/me/player/volume?volume_percent=N` — device volume (Spotify's own volume, for local and remote devices alike)
  *
  * Authentication (token refresh, one retry on 401) is handled by the shared {@link SpotifyApiClient}.
  */
@@ -52,5 +53,13 @@ export class SpotifyWebApiTransport implements PlaybackTransport {
 	/** @inheritdoc */
 	async previous(): Promise<void> {
 		await this.api.request("POST", "/me/player/previous");
+	}
+
+	/** @inheritdoc */
+	async setVolume(volumePercent: number): Promise<void> {
+		if (!Number.isInteger(volumePercent) || volumePercent < 0 || volumePercent > 100) {
+			throw new RangeError("Volume must be a whole percent from 0 to 100.");
+		}
+		await this.api.request("PUT", `/me/player/volume?volume_percent=${String(volumePercent)}`);
 	}
 }

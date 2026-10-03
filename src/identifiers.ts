@@ -16,4 +16,8 @@ export const ActionUUID = {
 	Next: `${PLUGIN_UUID}.spotify.next`,
 	Previous: `${PLUGIN_UUID}.spotify.previous`,
 	NowPlaying: `${PLUGIN_UUID}.spotify.now-playing`,
+	VolumeUp: `${PLUGIN_UUID}.spotify.volume-up`,
+	VolumeDown: `${PLUGIN_UUID}.spotify.volume-down`,
+	Mute: `${PLUGIN_UUID}.spotify.mute`,
+	Like: `${PLUGIN_UUID}.spotify.like`,
 } as const;

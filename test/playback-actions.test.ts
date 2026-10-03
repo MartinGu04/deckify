@@ -39,7 +39,7 @@ function setup(options: { connected?: boolean } = {}) {
 	let player: PlaybackObservation = {
 		active: true,
 		isPlaying: true,
-		device: { id: "d", name: "Desktop", type: "Computer", isRestricted: false },
+		device: { id: "d", name: "Desktop", type: "Computer", isRestricted: false, volumePercent: 60, supportsVolume: true },
 		item: SONG,
 		progressMs: 100_000,
 	};
@@ -56,6 +56,7 @@ function setup(options: { connected?: boolean } = {}) {
 		}),
 		next: vi.fn(() => Promise.resolve()),
 		previous: vi.fn(() => Promise.resolve()),
+		setVolume: vi.fn(() => Promise.resolve()),
 	};
 	const auth = new SpotifyAuthState();
 	if (options.connected !== false) {
@@ -192,7 +193,7 @@ describe("playback actions", () => {
 	it("do not re-send unchanged images to Stream Deck", async () => {
 		const ctx = setup();
 		ctx.transport.getState = vi.fn(() =>
-			Promise.resolve({ active: true, isPlaying: true, device: { id: "d", name: "D", type: "Computer", isRestricted: false }, item: SONG, progressMs: 0 }),
+			Promise.resolve({ active: true, isPlaying: true, device: { id: "d", name: "D", type: "Computer", isRestricted: false, volumePercent: 60, supportsVolume: true }, item: SONG, progressMs: 0 }),
 		);
 		const key = fakeKey("pp");
 		await place(ctx.actions.playPause, key);

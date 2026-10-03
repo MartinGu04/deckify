@@ -42,6 +42,15 @@ async function inspectorSources(): Promise<{ file: string; text: string }[]> {
 	return ui;
 }
 
+/**
+ * Drops matches on comment lines (documentation may name what the code must never do).
+ * @param lines Matches from {@link matching}.
+ * @returns Matches on code lines.
+ */
+function codeOnly(lines: string[]): string[] {
+	return lines.filter((line) => !/^[^:]+:\d+: (\*|\/\/|\/\*)/.test(line));
+}
+
 function matching(files: { file: string; text: string }[], pattern: RegExp): string[] {
 	return files.flatMap(({ file, text }) => text.split("\n").flatMap((line, i) => (pattern.test(line) ? [`${file}:${i + 1}: ${line.trim()}`] : [])));
 }
@@ -120,6 +129,48 @@ describe("security regression checks", () => {
 		// The bridge depends only on the transport-independent local command contract and the logger, never on auth, tokens or the API.
 		expect(matching(bridge, /from "\.\.\/spotify\//)).toEqual([]);
 		expect(matching(bridge, /access_?token|refresh_?token|clientId|client_id|Authorization/i)).toEqual([]);
+	});
+
+	it("uses only Spotify's generic library endpoints, never the deprecated /me/tracks ones", async () => {
+		const src = (await sources()).filter((s) => s.file.startsWith("src/"));
+		expect(codeOnly(matching(src, /\/me\/tracks/))).toEqual([]);
+		expect(codeOnly(matching(src, /\/me\/library/)).length).toBeGreaterThanOrEqual(3);
+	});
+
+	it("sends Spotify URIs to the library only as an encoded query parameter", async () => {
+		const src = (await sources()).filter((s) => s.file.startsWith("src/"));
+		const uriParams = codeOnly(matching(src, /uris=/));
+		expect(uriParams.length).toBeGreaterThanOrEqual(3);
+		expect(uriParams.filter((line) => !line.includes("uris=${encodeTrackUri("))).toEqual([]);
+	});
+
+	it("never logs track URIs, titles or artists", async () => {
+		const logCalls = matching(await sources(), /logger\.(debug|info|warn|error|trace)\(/);
+		expect(logCalls.filter((line) => /\b(uri|trackUri)\b|\.(uri|title|subtitle|item)\b/.test(line))).toEqual([]);
+	});
+
+	it("controls volume only through Spotify (no Windows Core Audio) and leaves the native helper protocol unchanged", async () => {
+		const src = (await sources()).filter((s) => s.file.startsWith("src/"));
+		expect(matching(src, /ISimpleAudioVolume|IAudioEndpointVolume|MMDevice|WASAPI|Core Audio API/i)).toEqual([]);
+		const bridge = src.filter((s) => s.file.startsWith("src/windows/"));
+		expect(matching(bridge, /volume|library/i)).toEqual([]);
+		const native = await Promise.all(
+			["native/media-bridge/src/protocol.rs", "native/media-bridge/src/dispatch.rs", "native/media-bridge/src/gsmtc.rs", "native/media-bridge/Cargo.toml"].map(
+				async (file) => ({ file, text: await readFile(path.join(ROOT, file), "utf8") }),
+			),
+		);
+		expect(matching(native, /volume|library|Media_Audio|ISimpleAudioVolume/i)).toEqual([]);
+	});
+
+	it("keeps the volume Property Inspector to its one bounded setting", async () => {
+		const volume = (await inspectorSources()).filter((s) => s.file.startsWith("com.marting.deckify.sdPlugin/ui/volume/"));
+		expect(volume.map((s) => s.file)).toEqual(
+			expect.arrayContaining(["com.marting.deckify.sdPlugin/ui/volume/index.html", "com.marting.deckify.sdPlugin/ui/volume/inspector.js"]),
+		);
+		const sends = matching(volume, /JSON\.stringify\(\{ event: "setSettings"/);
+		expect(sends).toHaveLength(1);
+		expect(sends[0]).toContain("payload: { volumeStep: step }");
+		expect(matching(volume, /fetch\(|XMLHttpRequest|https?:\/\/(?!127\.0\.0\.1)/)).toEqual([]);
 	});
 
 	it("loads no remote scripts or styles in the Property Inspector", async () => {

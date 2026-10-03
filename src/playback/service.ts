@@ -11,6 +11,7 @@ import {
 	SpotifyRateLimitError,
 	SpotifyReauthorizationRequiredError,
 	SpotifyUnauthorizedError,
+	SpotifyVolumeUnsupportedError,
 } from "../spotify/errors";
 import type { SpotifyAuthSnapshot, SpotifyAuthState } from "../spotify/state/auth-state";
 import { PlaybackTiming, type PlaybackTimingOptions } from "./config";
@@ -93,6 +94,17 @@ export class PlaybackService {
 	/** Rate-limit or quota back-off: no requests before this time. */
 	#blockedUntil = 0;
 	#blockedBy: SpotifyRateLimitError | undefined;
+	#lastFetchError: unknown;
+
+	/** The volume the user wants while a volume change is in progress; every press moves it immediately. */
+	#volumeTarget: number | undefined;
+	/** The last volume Spotify accepted in the current volume change. */
+	#volumeSent: number | undefined;
+	/** Whether set-volume requests are being sent (strictly one at a time). */
+	#volumeDraining = false;
+	#volumeDrain: Promise<void> | undefined;
+	/** The last non-zero device volume Deckify saw or set; Unmute restores it. In memory only (see the README). */
+	#lastNonZeroVolume: number | undefined;
 
 	/**
 	 * Initializes a new instance of the {@link PlaybackService} class.
@@ -192,6 +204,50 @@ export class PlaybackService {
 		} finally {
 			this.#commandInFlight = undefined;
 		}
+	}
+
+	/**
+	 * The volume Unmute restores, when known.
+	 * @returns Whole percent above zero; otherwise `undefined`.
+	 */
+	get lastNonZeroVolume(): number | undefined {
+		return this.#lastNonZeroVolume;
+	}
+
+	/**
+	 * Changes the active device's Spotify volume by a number of percentage points (clamped to 0–100).
+	 *
+	 * Presses are never dropped: each one moves the desired volume immediately (based on the volume still being set, if any), and set-volume
+	 * requests are sent strictly one at a time, each carrying the newest desired volume. Intermediate values may be skipped, but the final
+	 * volume always reflects every press. The state is reconciled with Spotify afterwards.
+	 * @param deltaPercent Whole percentage points; positive raises the volume.
+	 * @returns `"done"` once Spotify accepted the newest volume.
+	 * @throws {SpotifyError} When volume control is not possible (signed out, not Premium, no device, restricted, unsupported, limited) or
+	 * Spotify rejected the change.
+	 */
+	async adjustVolume(deltaPercent: number): Promise<CommandOutcome> {
+		if (!Number.isInteger(deltaPercent)) {
+			throw new RangeError("Volume steps must be whole percentage points.");
+		}
+		await this.#changeVolume((base) => base + deltaPercent);
+		return "done";
+	}
+
+	/**
+	 * Mutes by setting the device volume to 0 (remembering the current volume), or unmutes by restoring the remembered volume (50% when none
+	 * is known). Spotify's real device volume decides which: a volume of 0 counts as muted, whoever set it.
+	 * @returns `"done"` once Spotify accepted the change.
+	 * @throws {SpotifyError} As {@link adjustVolume}.
+	 */
+	async toggleMute(): Promise<CommandOutcome> {
+		await this.#changeVolume((base) => {
+			if (base > 0) {
+				this.#lastNonZeroVolume = base;
+				return 0;
+			}
+			return this.#lastNonZeroVolume ?? this.#timing.defaultUnmuteVolumePercent;
+		});
+		return "done";
 	}
 
 	/**
@@ -307,6 +363,127 @@ export class PlaybackService {
 		}
 		// Reconciliation honors any rate-limit/quota back-off (the timer is never due before it ends).
 		this.#schedule(this.#timing.reconcileDelayMs, { replace: true });
+	}
+
+	/**
+	 * Moves the desired volume and makes sure it is sent (see {@link adjustVolume}).
+	 * @param compute Computes the new volume from the current one (the volume still being set, if any).
+	 */
+	async #changeVolume(compute: (base: number) => number): Promise<void> {
+		this.#assertAccountAllowsCommands();
+		this.#assertNotBlocked();
+		if (this.#volumeTarget === undefined) {
+			await this.#ensureVolumeControllable();
+		}
+
+		// Read the base only now: another press may have moved the target (or finished a change) while this one waited for fresh state.
+		const base = this.#volumeTarget ?? this.state.value.device?.volumePercent;
+		if (base === undefined) {
+			throw new SpotifyVolumeUnsupportedError("The active Spotify device did not report its volume.");
+		}
+		const target = clampVolume(compute(base));
+		if (this.#volumeTarget === undefined && target === base) {
+			// Already there (e.g. Volume Up at 100%): nothing to send.
+			return;
+		}
+		this.#volumeTarget = target;
+		if (this.state.value.pendingVolume !== target) {
+			this.state.update({ pendingVolume: target });
+		}
+		await this.#drainVolume();
+	}
+
+	/**
+	 * Makes sure the active device's volume is known and can be changed, reading the state first when it is stale or has no volume.
+	 * Never assumes a volume.
+	 */
+	async #ensureVolumeControllable(): Promise<void> {
+		const needsFreshState = (): boolean => this.#isObservationStale() || this.state.value.device?.volumePercent === undefined;
+		if (needsFreshState() && this.#fetchInFlight !== undefined) {
+			// A read is already on its way; use it rather than sending a second one.
+			await this.#fetchInFlight;
+		}
+		if (needsFreshState()) {
+			await this.#fetch({ forCommand: true });
+			if (this.#lastFetchFailed) {
+				throw this.#lastFetchError;
+			}
+			this.#assertNotBlocked();
+		}
+
+		const snapshot = this.state.value;
+		const device = snapshot.device;
+		if (snapshot.availability === "inactive" || device === undefined) {
+			this.state.update({ notice: { code: "no-active-device", message: new SpotifyNoActiveDeviceError().message } });
+			throw new SpotifyNoActiveDeviceError();
+		}
+		if (device.isRestricted) {
+			this.state.update({ notice: { code: "device-restricted", message: new SpotifyDeviceRestrictedError().message } });
+			throw new SpotifyDeviceRestrictedError();
+		}
+		if (!device.supportsVolume) {
+			throw new SpotifyVolumeUnsupportedError();
+		}
+		if (device.volumePercent === undefined) {
+			throw new SpotifyVolumeUnsupportedError("The active Spotify device did not report its volume.");
+		}
+	}
+
+	/**
+	 * Sends the desired volume until Spotify has accepted the newest one. Only one sequence runs at a time; presses during it just move the
+	 * target, which the running sequence picks up.
+	 * @returns Promise resolved when the newest volume was accepted (rejected when a request failed).
+	 */
+	#drainVolume(): Promise<void> {
+		if (this.#volumeDraining && this.#volumeDrain !== undefined) {
+			return this.#volumeDrain;
+		}
+		this.#volumeDraining = true;
+		this.#volumeDrain = this.#runVolumeDrain();
+		return this.#volumeDrain;
+	}
+
+	/**
+	 * The set-volume loop (see {@link drainVolume}).
+	 */
+	async #runVolumeDrain(): Promise<void> {
+		try {
+			while (this.#volumeTarget !== undefined && this.#volumeTarget !== this.#volumeSent) {
+				const target = this.#volumeTarget;
+				await this.#transport.setVolume(target);
+				this.#volumeSent = target;
+				// State reads that started before Spotify applied this volume are stale.
+				this.#commandEpoch++;
+				this.#rememberVolume(target);
+				const device = this.state.value.device;
+				if (device !== undefined && device.volumePercent !== target) {
+					this.state.update({ device: { ...device, volumePercent: target } });
+				}
+			}
+		} catch (err) {
+			this.#handleError(err);
+			this.#logger.warn(`Volume change failed: ${describeError(err)}`);
+			throw err;
+		} finally {
+			// Runs in the same turn as the loop's last check, so a press can never join a sequence that has already ended.
+			this.#volumeDraining = false;
+			this.#volumeTarget = undefined;
+			this.#volumeSent = undefined;
+			this.#commandEpoch++;
+			// On failure the keys fall back to the last volume Spotify accepted; the reconciliation read below shows the real one.
+			this.state.update({ pendingVolume: undefined });
+			this.#schedule(this.#timing.reconcileDelayMs, { replace: true });
+		}
+	}
+
+	/**
+	 * Remembers a non-zero volume for Unmute.
+	 * @param volumePercent Volume.
+	 */
+	#rememberVolume(volumePercent: number | undefined): void {
+		if (volumePercent !== undefined && volumePercent > 0) {
+			this.#lastNonZeroVolume = volumePercent;
+		}
 	}
 
 	/**
@@ -428,13 +605,14 @@ export class PlaybackService {
 				if (!this.#connected) {
 					return;
 				}
-				if (epoch !== this.#commandEpoch || (this.#commandInFlight !== undefined && options.forCommand !== true)) {
+				if (epoch !== this.#commandEpoch || ((this.#commandInFlight !== undefined || this.#volumeDraining) && options.forCommand !== true)) {
 					// Started before a command changed the player; its result may be stale. The command schedules its own reconciliation.
 					return;
 				}
 				this.#applyObservation(observation);
 			} catch (err) {
 				this.#lastFetchFailed = true;
+				this.#lastFetchError = err;
 				this.#handleError(err);
 				this.#logger.warn(`Playback state request failed: ${describeError(err)}`);
 			}
@@ -486,6 +664,7 @@ export class PlaybackService {
 			}
 		}
 
+		this.#rememberVolume(observation.device?.volumePercent);
 		this.state.set({
 			...previous,
 			availability: "active",
@@ -548,6 +727,11 @@ export class PlaybackService {
 			return;
 		}
 		if (err instanceof SpotifyPlayerCommandError) {
+			if (err.reason === "VOLUME_CONTROL_DISALLOW") {
+				// The device refused a volume change: show it as not supporting volume until Spotify reports otherwise.
+				const device = this.state.value.device;
+				this.state.update({ device: device === undefined ? undefined : { ...device, supportsVolume: false } });
+			}
 			// E.g. NO_NEXT_TRACK: a one-off refusal; the key shows an alert, the shared state is unaffected.
 			return;
 		}
@@ -651,6 +835,15 @@ export class PlaybackService {
 }
 
 /**
+ * Clamps a volume to Spotify's range.
+ * @param value Volume.
+ * @returns A whole percent from 0 to 100.
+ */
+function clampVolume(value: number): number {
+	return Math.min(100, Math.max(0, Math.round(value)));
+}
+
+/**
  * Identity of an item for change detection.
  * @param item Item.
  * @returns A key; empty when there is no item.
@@ -675,7 +868,7 @@ function premiumNoticeFor(): PlaybackNotice {
 function signedOutNotice(snapshot: SpotifyAuthSnapshot): PlaybackNotice {
 	switch (snapshot.status) {
 		case "reauthorization-required":
-			return { code: "reauthorization-required", message: "Reconnect Spotify in the Spotify Account key to enable playback control." };
+			return { code: "reauthorization-required", message: "Reconnect Spotify in the Spotify Account key to enable Deckify's Spotify controls." };
 		case "connecting":
 			return { code: "not-connected", message: "Connecting to Spotify..." };
 		case "not-configured":

@@ -13,7 +13,7 @@ export interface AccessTokenProvider {
 }
 
 /** HTTP methods used with the Web API. */
-export type ApiMethod = "GET" | "PUT" | "POST";
+export type ApiMethod = "GET" | "PUT" | "POST" | "DELETE";
 
 /**
  * A successful Web API response.

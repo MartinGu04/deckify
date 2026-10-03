@@ -28,6 +28,39 @@ const noContent = (): Response => new Response(null, { status: 204 });
 const playerError = (status: number, reason: string, message = "Player command failed"): Response => json(status, { error: { status, message, reason } });
 
 describe("SpotifyWebApiTransport endpoints", () => {
+	it("sets the volume with PUT /v1/me/player/volume?volume_percent=N on the active device", async () => {
+		const { transport, requests } = setup(noContent);
+		await transport.setVolume(73);
+
+		expect(requests).toHaveLength(1);
+		expect(requests[0]?.method).toBe("PUT");
+		expect(requests[0]?.url.toString()).toBe("https://api.spotify.com/v1/me/player/volume?volume_percent=73");
+		expect(requests[0]?.url.searchParams.has("device_id")).toBe(false);
+		expect(requests[0]?.body).toBe("");
+	});
+
+	it("refuses volumes outside 0-100 without sending anything", async () => {
+		const { transport, requests } = setup(noContent);
+		for (const value of [-1, 101, 50.5, Number.NaN]) {
+			await expect(transport.setVolume(value)).rejects.toBeInstanceOf(RangeError);
+		}
+		expect(requests).toHaveLength(0);
+	});
+
+	it("refreshes once and retries the volume request once on HTTP 401", async () => {
+		const { transport, requests, tokens } = setup((req) =>
+			req.headers.get("authorization") === `Bearer ${FAKE.accessToken}` ? json(401, { error: { status: 401, message: "expired" } }) : noContent(),
+		);
+		await transport.setVolume(40);
+		expect(tokens.refreshAccessToken).toHaveBeenCalledTimes(1);
+		expect(requests.map((r) => r.url.search)).toEqual(["?volume_percent=40", "?volume_percent=40"]);
+	});
+
+	it("maps VOLUME_CONTROL_DISALLOW to a typed player error", async () => {
+		const { transport } = setup(() => playerError(403, "VOLUME_CONTROL_DISALLOW"));
+		await expect(transport.setVolume(40)).rejects.toMatchObject({ constructor: SpotifyPlayerCommandError, reason: "VOLUME_CONTROL_DISALLOW" });
+	});
+
 	it("reads playback state with GET /v1/me/player including episodes", async () => {
 		const { transport, requests } = setup(() => json(200, playerState()));
 		const state = await transport.getState();

@@ -7,7 +7,7 @@ import { getMissingScopes, SPOTIFY_SCOPES } from "../src/spotify/auth/scopes";
 import { AuthorizationDeniedError } from "../src/spotify/errors";
 import { SpotifyAuthState, type SpotifyAuthSnapshot } from "../src/spotify/state/auth-state";
 import { MemoryTokenStore, type StoredSpotifySession } from "../src/spotify/storage/token-store";
-import { FAKE, fakeClock, fakeFetch, json, PHASE2_SCOPES, profileResponse, storedSession, type RecordedRequest } from "./helpers";
+import { FAKE, fakeClock, fakeFetch, json, PHASE2_SCOPES, PHASE4_SCOPES, profileResponse, storedSession, type RecordedRequest } from "./helpers";
 
 const NEW_ACCESS = "fake-access-token-reauthorized";
 const NEW_REFRESH = "fake-refresh-token-reauthorized";
@@ -59,7 +59,12 @@ function setup(options: { stored?: StoredSpotifySession; grantedScopes?: readonl
 
 describe("getMissingScopes", () => {
 	it("reports the playback scopes missing from a Phase 2 session", () => {
-		expect(getMissingScopes(PHASE2_SCOPES)).toEqual(["user-read-playback-state", "user-modify-playback-state"]);
+		expect(getMissingScopes(PHASE2_SCOPES)).toEqual([
+			"user-read-playback-state",
+			"user-modify-playback-state",
+			"user-library-read",
+			"user-library-modify",
+		]);
 	});
 
 	it("reports nothing for a current session, regardless of order or extra scopes", () => {
@@ -97,7 +102,9 @@ describe("scope migration from Phase 2", () => {
 		await ctx.auth.initialize(FAKE.clientId);
 		await ctx.auth.connect();
 
-		expect(ctx.opened[0]?.searchParams.get("scope")).toBe("user-read-private user-read-playback-state user-modify-playback-state");
+		expect(ctx.opened[0]?.searchParams.get("scope")).toBe(
+			"user-read-private user-read-playback-state user-modify-playback-state user-library-read user-library-modify",
+		);
 		expect(ctx.state.snapshot.status).toBe("connected");
 		await expect(ctx.store.load()).resolves.toMatchObject({ accessToken: NEW_ACCESS, refreshToken: NEW_REFRESH, scopes: [...SPOTIFY_SCOPES] });
 	});
@@ -119,7 +126,7 @@ describe("scope migration from Phase 2", () => {
 		await ctx.auth.connect();
 
 		expect(ctx.state.snapshot.status).toBe("error");
-		expect(ctx.state.snapshot.message).toMatch(/missing: user-read-playback-state, user-modify-playback-state/);
+		expect(ctx.state.snapshot.message).toMatch(/missing: user-read-playback-state, user-modify-playback-state, user-library-read, user-library-modify/);
 		await expect(ctx.store.load()).resolves.toBeUndefined();
 	});
 
@@ -133,7 +140,7 @@ describe("scope migration from Phase 2", () => {
 		}
 	});
 
-	it("connects normally when the stored session already has the Phase 3 scopes", async () => {
+	it("connects normally when the stored session already has every current scope", async () => {
 		const ctx = setup({ stored: storedSession({ scopes: [...SPOTIFY_SCOPES] }) });
 		await ctx.auth.initialize(FAKE.clientId);
 
@@ -157,6 +164,53 @@ describe("scope migration from Phase 2", () => {
 		await ctx.auth.disconnect();
 
 		expect(ctx.state.snapshot).toMatchObject({ status: "disconnected", clientId: FAKE.clientId });
+		await expect(ctx.store.load()).resolves.toBeUndefined();
+	});
+});
+
+describe("scope migration from Phase 4 (library scopes added)", () => {
+	it("requires exactly the two library scopes from a Phase 4 session", () => {
+		expect(getMissingScopes(PHASE4_SCOPES)).toEqual(["user-library-read", "user-library-modify"]);
+		expect(SPOTIFY_SCOPES).toEqual([...PHASE4_SCOPES, "user-library-read", "user-library-modify"]);
+	});
+
+	it("shows Reconnect for a stored Phase 4 session, keeps the Client ID and the session, and never uses it", async () => {
+		const stored = storedSession({ scopes: [...PHASE4_SCOPES] });
+		const ctx = setup({ stored });
+		await ctx.auth.initialize(FAKE.clientId);
+
+		expect(ctx.state.snapshot).toMatchObject({ status: "reauthorization-required", clientId: FAKE.clientId, message: SCOPE_UPGRADE_MESSAGE });
+		expect(ctx.requests).toHaveLength(0);
+		expect(ctx.openUrl).not.toHaveBeenCalled();
+		await expect(ctx.store.load()).resolves.toEqual(stored);
+	});
+
+	it("does not refresh an expired Phase 4 session to try to gain the library scopes", async () => {
+		const ctx = setup({ stored: storedSession({ scopes: [...PHASE4_SCOPES], accessTokenExpiresAt: 0 }) });
+		await ctx.auth.initialize(FAKE.clientId);
+		await ctx.auth.verify();
+
+		expect(ctx.state.snapshot.status).toBe("reauthorization-required");
+		expect(ctx.requests).toHaveLength(0);
+	});
+
+	it("requests every required scope on Reconnect and replaces the Phase 4 session", async () => {
+		const ctx = setup({ stored: storedSession({ scopes: [...PHASE4_SCOPES] }) });
+		await ctx.auth.initialize(FAKE.clientId);
+		await ctx.auth.connect();
+
+		expect(ctx.opened[0]?.searchParams.get("scope")?.split(" ")).toEqual([...SPOTIFY_SCOPES]);
+		expect(ctx.state.snapshot.status).toBe("connected");
+		await expect(ctx.store.load()).resolves.toMatchObject({ accessToken: NEW_ACCESS, refreshToken: NEW_REFRESH, scopes: [...SPOTIFY_SCOPES] });
+	});
+
+	it("refuses a Reconnect that grants only the Phase 4 scopes and keeps nothing half-upgraded", async () => {
+		const ctx = setup({ grantedScopes: PHASE4_SCOPES });
+		await ctx.auth.initialize(FAKE.clientId);
+		await ctx.auth.connect();
+
+		expect(ctx.state.snapshot.status).toBe("error");
+		expect(ctx.state.snapshot.message).toMatch(/missing: user-library-read, user-library-modify/);
 		await expect(ctx.store.load()).resolves.toBeUndefined();
 	});
 });

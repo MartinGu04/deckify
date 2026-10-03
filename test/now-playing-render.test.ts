@@ -8,7 +8,7 @@ const active = (overrides: Partial<PlaybackSnapshot> = {}): PlaybackSnapshot => 
 	...SIGNED_OUT_SNAPSHOT,
 	availability: "active",
 	isPlaying: true,
-	device: { id: "d", name: "Desktop", type: "Computer", isRestricted: false },
+	device: { id: "d", name: "Desktop", type: "Computer", isRestricted: false, volumePercent: 60, supportsVolume: true },
 	item: { type: "track", id: "a", uri: "spotify:track:a", title: "Test Song", subtitle: "Test Artist", durationMs: 200_000 },
 	progressMs: 50_000,
 	observedAt: 1,
@@ -96,7 +96,7 @@ describe("key views", () => {
 		expect(playPauseView({ ...active(), availability: "inactive" })).toEqual({ image: "imgs/actions/playback/play-disabled.svg", title: "No Device" });
 		expect(playPauseView(active({ premiumRequired: true, notice: { code: "premium-required", message: "x" } })).title).toBe("Premium");
 		expect(playPauseView(active({ notice: { code: "quota-exceeded", message: "x" } })).title).toBe("Limited");
-		expect(playPauseView(active({ device: { id: "d", name: "S", type: "Speaker", isRestricted: true }, notice: { code: "device-restricted", message: "x" } })).title).toBe(
+		expect(playPauseView(active({ device: { id: "d", name: "S", type: "Speaker", isRestricted: true, volumePercent: 60, supportsVolume: true }, notice: { code: "device-restricted", message: "x" } })).title).toBe(
 			"Restricted",
 		);
 		expect(playPauseView(SIGNED_OUT_SNAPSHOT).title).toBe("Connect");

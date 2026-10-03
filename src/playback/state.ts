@@ -46,6 +46,12 @@ export type PlaybackSnapshot = {
 	/** A command currently being sent. */
 	readonly pendingCommand: PlaybackCommand | undefined;
 
+	/**
+	 * The volume Deckify is setting right now (each volume key press moves it immediately), until Spotify has accepted it and the device
+	 * volume is updated. `undefined` while no volume change is in progress.
+	 */
+	readonly pendingVolume: number | undefined;
+
 	/** The connected account is not Premium, so playback commands are unavailable. */
 	readonly premiumRequired: boolean;
 
@@ -67,6 +73,7 @@ export const SIGNED_OUT_SNAPSHOT: PlaybackSnapshot = {
 	observedAt: undefined,
 	optimistic: false,
 	pendingCommand: undefined,
+	pendingVolume: undefined,
 	premiumRequired: false,
 	localControl: false,
 	notice: undefined,
@@ -88,6 +95,33 @@ export function canControlPlayback(snapshot: PlaybackSnapshot): boolean {
 	return (
 		snapshot.availability !== "inactive" &&
 		snapshot.device?.isRestricted !== true &&
+		snapshot.notice?.code !== "quota-exceeded" &&
+		snapshot.notice?.code !== "rate-limited"
+	);
+}
+
+/**
+ * The volume keys should show: the volume being set, otherwise the active device's Spotify volume.
+ * @param snapshot Playback state.
+ * @returns Whole percent; otherwise `undefined` when unknown.
+ */
+export function displayedVolume(snapshot: PlaybackSnapshot): number | undefined {
+	return snapshot.pendingVolume ?? (snapshot.availability === "active" ? snapshot.device?.volumePercent : undefined);
+}
+
+/**
+ * Determines whether the active device's Spotify volume can currently be changed, based on the shared state alone. Volume always goes
+ * through the Spotify Web API (for local and remote devices alike), so a local Windows media session does not help here.
+ * @param snapshot Playback state.
+ * @returns `true` when connected, Premium, not limited, and the active device is controllable and supports volume.
+ */
+export function canControlVolume(snapshot: PlaybackSnapshot): boolean {
+	return (
+		snapshot.availability === "active" &&
+		!snapshot.premiumRequired &&
+		snapshot.device !== undefined &&
+		!snapshot.device.isRestricted &&
+		snapshot.device.supportsVolume &&
 		snapshot.notice?.code !== "quota-exceeded" &&
 		snapshot.notice?.code !== "rate-limited"
 	);
