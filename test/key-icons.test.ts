@@ -11,7 +11,9 @@ const files = Object.entries((keyIconFiles as () => Record<string, string>)());
 describe("generated key images", () => {
 	it("are committed exactly as `npm run assets` generates them", async () => {
 		for (const [file, content] of files) {
-			await expect(readFile(path.join(IMGS, file), "utf8"), file).resolves.toBe(content);
+			// Git may check text files out with CRLF (e.g. core.autocrlf on Windows); the committed content is what matters.
+			const committed = (await readFile(path.join(IMGS, file), "utf8")).replaceAll("\r\n", "\n");
+			expect(committed, file).toBe(content);
 		}
 	});
 
