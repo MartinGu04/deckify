@@ -69,11 +69,19 @@ The guided setup opens in your default browser, served by Deckify from your own 
   network can reach it.
 - **What it receives:** the same public account state as the Spotify Account settings, plus a short problem code. Never tokens, the
   encryption key or a Client Secret.
-- **What it can do:** only save your Client ID, connect, retry or cancel a sign-in, disconnect, and open the Spotify Developer Dashboard.
+- **What it can do:** only save your Client ID, connect, retry or cancel a sign-in, disconnect, open the Spotify Developer Dashboard, and
+  ask Deckify to show one of its three bundled layouts on the Stream Deck you opened setup from. It never learns that device's ID.
 - **Access:** a one-time link from Stream Deck and a session token kept only in the open page. The token is never put in a URL, a cookie
   or browser storage, and it is never logged.
 - **What it stores:** nothing. It uses no cookies, no browser storage, no remote fonts or scripts, no analytics and no telemetry. The setup
-  step and tour page are forgotten when the tab closes.
+  step, tour page and chosen layout are forgotten when the tab closes.
+
+## Bundled layouts
+
+Deckify's three starter layouts are Stream Deck profiles shipped inside the plugin. They contain only Deckify's own actions with default
+settings. They hold no Spotify data and no playlist choice: playlist keys start empty, and checks run before packaging reject any
+playlist, Spotify link, ID or image. Once installed, the profile belongs to the Stream Deck app and to you. Deckify doesn't read, copy or
+sync your changes to it.
 
 ## Logs
 

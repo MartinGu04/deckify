@@ -55,6 +55,9 @@ Deckify has had no formal security audit. Its design limits what can go wrong; [
 - **Local setup server.** Deckify Setup is served only on `127.0.0.1` (dynamic port, never the OAuth callback port) while setup is open. It
   requires a one-time launch code and a per-session token, checks the Host and Origin headers, and runs only a fixed list of account
   actions. See [docs/architecture.md](docs/architecture.md#deckify-setup).
+- **Bundled profiles only.** Deckify Setup can only pick one of three fixed experience IDs. The plugin maps the ID to a profile bundled
+  with Deckify and switches only the Stream Deck that opened setup (taken from the SDK, never from the page). It can't reach user-made
+  profiles. See [docs/profiles.md](docs/profiles.md).
 - **Restricted helper.** The media helper accepts six fixed commands. It is started without a shell and only controls Spotify's media
   session.
 - **Validated links.** Only links that pass validation are opened: `open.spotify.com` playlist, track and episode links built from

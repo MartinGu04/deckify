@@ -92,6 +92,9 @@ You do **not** need Node.js, Rust, Git, PowerShell, other developer tools or a S
 
 ## Getting started
 
+**Install → Connect → Choose → Play.** Install the plugin, connect your Spotify account in Deckify Setup, choose a ready-made layout for
+your Stream Deck, and start pressing keys.
+
 ### 1. Check the requirements
 
 See [Requirements](#requirements). Make sure you're signed in to Spotify with a Premium account.
@@ -130,16 +133,35 @@ Until then, Deckify can be built from source; see [docs/development.md](docs/dev
 3. Press **Start setup** and follow the four steps: open the Spotify Dashboard, create the app, add your Client ID, and connect.
 4. When you press **Connect Spotify**, a new tab opens Spotify's authorization page. Approve it; Deckify Setup shows **You're connected**,
    and the key shows **Connected**.
-5. Optionally, press **Show me around** for a short tour of what Deckify's keys do, then **Done**.
 
 If something goes wrong (you cancel in the browser, Spotify doesn't answer, or Spotify refuses the account), Deckify Setup says what
 happened and what to try next. Afterwards, the Spotify Account settings show your connection, with **Open Deckify Setup** for anything
 else.
 
-### 5. Add your keys
+### 5. Choose your experience
 
-Drag any Deckify actions onto your keys. For **Add to Playlist** and **Play Playlist**, choose a playlist in the key's settings. Start
-playing something in Spotify and press away.
+Deckify includes three editable starter layouts for the 15-key Stream Deck and Stream Deck MK.2. They use the same Deckify actions; they
+only differ in which keys they place where.
+
+| Experience | What you get |
+| --- | --- |
+| **SIMPLE** | The essentials, clean and focused: playback, Now Playing, Like, volume and your account in a centred 3 × 3 block. |
+| **DECKIFY** (recommended) | The complete Deckify experience: every Deckify action once, with Now Playing in the centre. |
+| **POWER** | Everything within reach on one page: the SIMPLE controls plus a bank of four Play Playlist and two Add to Playlist keys. |
+
+1. Right after connecting, press **Choose my Deckify experience** (or **Show me around first** for a short tour that ends at the same
+   place).
+2. Pick a layout and press **Use this experience**. Deckify asks the Stream Deck app to show it on the Stream Deck you opened setup from.
+3. The first time, the Stream Deck app may ask you to install the Deckify profile. Approve it, then press **Continue**.
+
+The layout is a normal Stream Deck profile and is yours to change: move keys, remove them or add more Deckify actions. Deckify never
+overwrites your changes. Playlist keys start empty, so select each one to choose your own playlist. You can pick another experience
+later from **Open Deckify Setup** in the Spotify Account settings, or skip this step and arrange keys yourself.
+
+### 6. Play
+
+Start playing something in Spotify and press away. To add more keys, drag any Deckify actions from the actions list. For **Add to
+Playlist** and **Play Playlist**, choose a playlist in the key's settings.
 
 ## Your Spotify Client ID, explained
 
@@ -192,7 +214,8 @@ Deckify was designed to keep your Spotify account safe. It hasn't had a formal s
 - **Tokens stay in the plugin.** The Windows helper, the Property Inspector pages and Deckify Setup never receive them, and they never go
   into Stream Deck settings or browser storage.
 - **Local-only setup page.** Deckify Setup is served on `127.0.0.1` only while it is open, on a random port, behind a one-time link and a
-  per-session token. It can only ask for a fixed set of account actions.
+  per-session token. It can only ask for a fixed set of account actions, or for one of Deckify's three bundled layouts by name; it can't
+  reach any other Stream Deck profile.
 - **No shell, fixed commands.** Media commands run without a shell: the helper accepts six fixed commands and only targets Spotify's
   media session.
 - **Clean logs.** Production logs leave out tokens and Spotify IDs, URIs and names.
@@ -316,13 +339,13 @@ No. Deckify is an independent project. It isn't made, endorsed or supported by S
 - **Volume:** Volume Up / Down and Mute / Unmute.
 - **Library and playlists:** Like / Unlike, Add to Playlist with duplicate protection, Play Playlist with a real playlist picker.
 - **Remote devices:** Spotify Connect control.
+- **Starter layouts:** SIMPLE, DECKIFY and POWER for the 15-key Stream Deck / MK.2, chosen in Deckify Setup.
 
 **Under consideration** (no dates, no promises):
 
 - choosing the playback device;
 - queue controls;
 - layouts tuned for Stream Deck +, XL and Neo;
-- a ready-made Deckify profile;
 - a public release and Elgato Marketplace listing, once the remaining [launch audit](docs/public-launch-audit.md) items are done
   (licence, official Spotify Like icons, release packaging and real product media).
 
@@ -331,10 +354,11 @@ No. Deckify is an independent project. It isn't made, endorsed or supported by S
 | Document | Contents |
 | --- | --- |
 | [Architecture](docs/architecture.md) | Services, local and Web API paths, the Windows helper, attribution. |
+| [Experiences](docs/profiles.md) | The three bundled starter layouts, how they are made and checked. |
 | [Privacy](docs/privacy.md) | What Deckify stores, sends and logs. |
 | [Security policy](SECURITY.md) | Supported versions and how to report vulnerabilities. |
 | [Development](docs/development.md) | Building, testing, packaging, CI and logs. |
-| [Development history](docs/development-history.md) | Phases 1–8 and the decisions behind them. |
+| [Development history](docs/development-history.md) | Phases 1–9 and the decisions behind them. |
 | [Public-launch audit](docs/public-launch-audit.md) | Spotify and Elgato compliance status and launch blockers. |
 | [Marketplace readiness](docs/marketplace-readiness.md) | The Elgato Marketplace checklist. |
 | [Brand](assets/brand/README.md) · [brand review](docs/brand-review/README.md) | The Deckify brand masters, and how the B1 mark was chosen. |

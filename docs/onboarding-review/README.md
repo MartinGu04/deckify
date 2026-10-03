@@ -5,6 +5,9 @@ Renders of Phase 8 for review before the hardware check:
 - **Deckify Setup:** the guided setup in the browser, rendered at 1280 px wide (some screens also at 600 px).
 - **Spotify Account Property Inspector:** the compact entry point, rendered at 360 px wide.
 
+Phase 9 changed the **You're connected**, end-of-tour and **Deckify is ready** screens (the experience chooser now comes first); see
+[experiences-review](../experiences-review/README.md) for the current versions.
+
 They come from the real `ui/setup/` and `ui/spotify-account/` pages in headless Chromium. The plugin's messages are simulated with a fake
 Client ID and display name; no Spotify account is involved. These files are review material, not product media, and are not shipped with
 the plugin.
