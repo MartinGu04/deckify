@@ -1,17 +1,18 @@
-// Spotify Account onboarding model: which screen the Property Inspector shows for the plugin's public account state, and the guidance for
-// every issue code the plugin reports. Pure functions only; nothing here touches the page, the plugin, the network or browser storage.
+// Deckify onboarding model, shared by the Deckify Setup App (the guided setup in the browser) and the compact Spotify Account Property
+// Inspector: which screen to show for the plugin's public account state, and the guidance for every issue code the plugin reports. Pure
+// functions only; nothing here touches a page, the plugin, the network or browser storage.
 //
 // The plugin is authoritative: it decides the status and the issue code. This file only turns them into words and next steps, and keeps
-// the purely visual, per-session navigation state (setup step, tour page) that is forgotten when the Property Inspector closes.
+// the purely visual, per-session navigation state (setup step, tour page) that is forgotten when the page closes.
 "use strict";
 
 (() => {
 	/** Setup steps, in order. */
 	const STEPS = Object.freeze([
-		Object.freeze({ id: "dashboard", title: "Open Spotify Dashboard" }),
-		Object.freeze({ id: "app", title: "Create your Spotify app" }),
-		Object.freeze({ id: "client-id", title: "Add your Client ID" }),
-		Object.freeze({ id: "connect", title: "Connect Spotify" }),
+		Object.freeze({ id: "dashboard", title: "Open Spotify Dashboard", label: "Dashboard" }),
+		Object.freeze({ id: "app", title: "Create your Spotify app", label: "Spotify app" }),
+		Object.freeze({ id: "client-id", title: "Add your Client ID", label: "Client ID" }),
+		Object.freeze({ id: "connect", title: "Connect Spotify", label: "Connect" }),
 	]);
 
 	/** After this long without Spotify's answer, the waiting screen offers troubleshooting (the plugin itself gives up after two minutes). */
@@ -169,31 +170,35 @@
 		},
 	});
 
-	/** The four pages of the "Show me around" tour. Images are Deckify's own action icons. */
+	/** The four pages of the "Show me around" tour. Images are Deckify's own action icons, served by the Setup App. */
 	const TOUR = Object.freeze([
 		Object.freeze({
 			id: "now-playing",
 			title: "Now Playing",
 			body: "See the current track, artist and progress directly on a key. Press it to open the song on Spotify.",
-			icon: "../../imgs/actions/playback/now-playing-icon.svg",
+			icon: "/setup/icons/now-playing.svg",
+			actions: Object.freeze(["Now Playing"]),
 		}),
 		Object.freeze({
 			id: "like",
 			title: "Like",
 			body: "Save or remove the current song from your Spotify library.",
-			icon: "../../imgs/actions/library/like-icon.svg",
+			icon: "/setup/icons/like.svg",
+			actions: Object.freeze(["Like / Unlike"]),
 		}),
 		Object.freeze({
 			id: "playlists",
 			title: "Playlists",
 			body: "Add the current song without duplicates, or launch a playlist from a key.",
-			icon: "../../imgs/actions/playlist/add-icon.svg",
+			icon: "/setup/icons/playlists.svg",
+			actions: Object.freeze(["Add to Playlist", "Play Playlist"]),
 		}),
 		Object.freeze({
 			id: "volume",
 			title: "Volume",
 			body: "Control Spotify's own device volume, not the Windows mixer.",
-			icon: "../../imgs/actions/volume/volume-up-icon.svg",
+			icon: "/setup/icons/volume.svg",
+			actions: Object.freeze(["Volume Up", "Volume Down", "Mute / Unmute"]),
 		}),
 	]);
 
@@ -220,6 +225,15 @@
 	}
 
 	/**
+	 * Whether an issue only needs the user to sign in again (their Client ID is still saved and set up).
+	 * @param {string | null | undefined} issue Issue code.
+	 * @returns {boolean} `true` for expired, unreadable or Client-ID-changed sessions.
+	 */
+	function needsSignInAgain(issue) {
+		return SIGN_IN_AGAIN.includes(issue);
+	}
+
+	/**
 	 * Splits an action name such as `"connect:Try again"` into the action and its button label.
 	 * @param {string} action Action from {@link ISSUES}.
 	 * @returns {{action: string, label: string | undefined}} The parts.
@@ -230,11 +244,12 @@
 	}
 
 	/**
-	 * The Property Inspector's own navigation state when it opens.
-	 * @returns {{route: "auto" | "setup" | "tour", step: number, tourPage: number, celebrate: boolean}} Fresh state.
+	 * The navigation state when a page opens.
+	 * @param {"start" | "account"} [entry] Where to start: the welcome screen, or straight at the account (Client ID / connection) part.
+	 * @returns {{route: "auto" | "account" | "setup" | "tour" | "ready", step: number, tourPage: number, celebrate: boolean}} Fresh state.
 	 */
-	function initialUi() {
-		return { route: "auto", step: 1, tourPage: 0, celebrate: false };
+	function initialUi(entry) {
+		return { route: entry === "account" ? "account" : "auto", step: 1, tourPage: 0, celebrate: false };
 	}
 
 	/**
@@ -255,7 +270,7 @@
 			}
 		} else {
 			result.celebrate = false;
-			if (result.route === "tour") {
+			if (result.route === "tour" || result.route === "ready") {
 				result.route = "auto";
 			}
 		}
@@ -276,10 +291,16 @@
 			case "connecting":
 				return { view: state.activity === "restoring" ? "restoring" : "waiting" };
 			case "not-configured":
+				if (ui.route === "account") {
+					return { view: "setup", step: 3 };
+				}
 				return ui.route === "setup" ? { view: "setup", step: clampStep(ui.step) } : { view: "welcome" };
 			case "connected":
 				if (ui.route === "tour") {
 					return { view: "tour" };
+				}
+				if (ui.route === "ready") {
+					return { view: "ready" };
 				}
 				if (ui.route === "setup") {
 					return { view: "setup", step: clampStep(ui.step) };
@@ -315,6 +336,7 @@
 		TOUR,
 		STATUS_LABELS,
 		guidanceFor,
+		needsSignInAgain,
 		parseAction,
 		initialUi,
 		onStateChange,

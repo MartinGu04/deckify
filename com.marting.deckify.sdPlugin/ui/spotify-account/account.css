@@ -1,0 +1,314 @@
+/*
+ * Spotify Account Property Inspector: compact Deckify entry point, in the B1 violet on Stream Deck's charcoal. Builds on
+ * ../shared/inspector.css. Status is always written out in words; colour only repeats it.
+ */
+:root {
+	--surface: #262626;
+	--border: #444444;
+	--accent-strong: #9a82ff;
+	--accent-soft: rgba(124, 92, 255, 0.16);
+	--on-accent: #ffffff;
+	--radius: 6px;
+}
+
+body {
+	padding: 10px 12px 18px;
+	line-height: 1.4;
+}
+
+h1,
+h2 {
+	margin: 0;
+	color: #f2f2f2;
+	font-weight: 600;
+}
+
+h2 {
+	font-size: 11pt;
+	line-height: 1.3;
+}
+
+h2:focus {
+	outline: none;
+}
+
+p {
+	margin: 0;
+}
+
+strong {
+	color: #f2f2f2;
+}
+
+[hidden] {
+	display: none !important;
+}
+
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+:focus-visible {
+	outline: 2px solid var(--accent-strong);
+	outline-offset: 2px;
+}
+
+input:focus-visible {
+	outline: none;
+}
+
+.app-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.brand-mark {
+	flex: 0 0 auto;
+	color: var(--accent);
+}
+
+.app-title {
+	flex: 1;
+	font-size: 10pt;
+}
+
+.status-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 2px 9px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--surface);
+	font-size: 8pt;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.status-icon::before {
+	content: "○";
+}
+
+.status-pill[data-status="connected"] {
+	border-color: var(--accent);
+	background: var(--accent-soft);
+}
+
+.status-pill[data-status="connected"] .status-icon::before {
+	color: var(--accent-strong);
+	content: "✓";
+}
+
+.status-pill[data-status="connecting"] .status-icon::before {
+	content: "…";
+}
+
+.status-pill[data-status="reauthorization-required"],
+.status-pill[data-status="error"] {
+	border-color: var(--warn);
+}
+
+.status-pill[data-status="reauthorization-required"] .status-icon::before,
+.status-pill[data-status="error"] .status-icon::before {
+	color: var(--warn);
+	content: "!";
+}
+
+.view {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+button {
+	min-height: 26px;
+	border-radius: 4px;
+}
+
+button.primary {
+	background: var(--accent);
+	color: var(--on-accent);
+	font-weight: 600;
+}
+
+button.link {
+	align-self: flex-start;
+	padding: 4px 2px;
+	background: none;
+	color: var(--accent-strong);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+button.danger {
+	border: 1px solid var(--border);
+	background: none;
+	color: var(--text);
+}
+
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.actions.end {
+	justify-content: flex-end;
+}
+
+.problem {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 8px 10px;
+	border-left: 3px solid var(--warn);
+	border-radius: var(--radius);
+	background: var(--surface);
+}
+
+.problem-title {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	font-weight: 600;
+}
+
+.issue-icon {
+	display: inline-flex;
+	flex: 0 0 16px;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: rgba(245, 184, 61, 0.18);
+	color: var(--warn);
+	font-size: 8pt;
+	font-weight: 700;
+}
+
+.note {
+	padding: 8px 10px;
+	border-radius: var(--radius);
+	background: var(--surface);
+	font-size: 8pt;
+}
+
+.warning-note {
+	border-left: 3px solid var(--warn);
+}
+
+.account {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin: 0;
+	padding: 10px;
+	border-radius: var(--radius);
+	background: var(--surface);
+}
+
+.account div {
+	display: flex;
+	gap: 8px;
+}
+
+.account dt {
+	flex: 0 0 64px;
+	color: var(--muted);
+}
+
+.account dd {
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+
+details.help {
+	padding: 6px 8px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+}
+
+details.help summary {
+	color: var(--accent-strong);
+	cursor: pointer;
+}
+
+details.help[open] {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+#saved-client-id {
+	user-select: all;
+}
+
+.copy-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.copy-value {
+	flex: 1 1 100%;
+	min-width: 0;
+	padding: 5px 6px;
+	border: 1px solid var(--accent);
+	background: var(--surface);
+	color: #f2f2f2;
+	font: 8.5pt Consolas, monospace;
+}
+
+.copy-button[data-feedback="copied"] {
+	background: var(--accent);
+	color: var(--on-accent);
+}
+
+.copy-button[data-feedback="copied"]::before {
+	content: "✓ ";
+}
+
+.waiting {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.spinner {
+	flex: 0 0 18px;
+	width: 18px;
+	height: 18px;
+	border: 2px solid var(--accent-soft);
+	border-top-color: var(--accent);
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation: none !important;
+		transition: none !important;
+	}
+
+	.spinner {
+		border-color: var(--accent);
+		border-right-color: transparent;
+	}
+}

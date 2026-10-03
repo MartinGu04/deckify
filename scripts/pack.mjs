@@ -21,12 +21,16 @@ export const SPOTIFY_LOGO = "ui/playlist/Spotify_Full_Logo_RGB_White.png";
 /** Spotify's official icon, which the Now Playing key draws next to Spotify metadata (read at runtime, not referenced by the manifest). */
 export const SPOTIFY_ICON = "imgs/attribution/Spotify_Primary_Logo_RGB_Green.png";
 
-/** Files the manifest does not reference but the Property Inspectors load. */
+/** Files the manifest does not reference but the Property Inspectors and the Deckify Setup App load. */
 const INSPECTOR_FILES = [
 	"ui/shared/inspector.css",
-	"ui/spotify-account/onboarding.js",
+	"ui/shared/onboarding.js",
 	"ui/spotify-account/inspector.js",
-	"ui/spotify-account/onboarding.css",
+	"ui/spotify-account/account.css",
+	"ui/setup/index.html",
+	"ui/setup/setup.css",
+	"ui/setup/setup.js",
+	"ui/setup/icon.svg",
 	"ui/volume/inspector.js",
 	"ui/playlist/paging.js",
 	"ui/playlist/inspector.js",

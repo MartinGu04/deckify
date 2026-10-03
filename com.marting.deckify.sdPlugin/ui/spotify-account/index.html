@@ -5,14 +5,14 @@
 		<meta name="referrer" content="no-referrer" />
 		<title>Spotify Account</title>
 		<link rel="stylesheet" href="../shared/inspector.css" />
-		<link rel="stylesheet" href="onboarding.css" />
+		<link rel="stylesheet" href="account.css" />
 	</head>
 	<body>
 		<!--
-			Spotify Account Property Inspector: Deckify's guided Spotify setup. It shows and edits only non-sensitive state (the Client ID, the
-			connection status, the display name and a structured issue code) that the plugin sends. OAuth tokens never reach this page, it
-			never asks for a Client Secret, it never opens links itself (Open Spotify Dashboard asks the plugin, which only opens the fixed
-			dashboard address), and nothing is written to browser storage.
+			Spotify Account Property Inspector: a compact entry point. It shows the connection status and account summary, and opens Deckify
+			Setup (the guided setup, in the default browser) for everything else. It handles only non-sensitive state that the plugin sends
+			(Client ID, status, display name, plan, Redirect URI and a structured issue code). OAuth tokens never reach this page, it never
+			opens links itself, and nothing is written to browser storage.
 		-->
 		<header class="app-header">
 			<svg class="brand-mark" viewBox="11 10 80 80" width="22" height="22" aria-hidden="true" focusable="false">
@@ -29,219 +29,92 @@
 		<p id="announcer" class="sr-only" aria-live="polite"></p>
 
 		<main id="app">
-			<!-- Waiting for the plugin's first state. -->
-			<section id="view-loading" class="view" data-view="loading" aria-labelledby="loading-title">
+			<section class="view" data-view="loading" aria-labelledby="loading-title">
 				<h2 id="loading-title" class="sr-only" tabindex="-1">Loading</h2>
 				<p class="muted">Loading your Spotify connection…</p>
 			</section>
 
-			<!-- 1. First run: nothing configured yet. -->
-			<section id="view-welcome" class="view" data-view="welcome" aria-labelledby="welcome-title" hidden>
-				<div class="hero">
-					<svg class="hero-mark" viewBox="11 10 80 80" width="44" height="44" aria-hidden="true" focusable="false">
-						<path fill="currentColor" fill-rule="evenodd" d="M18 10H50C74 10 90 28 90 50C90 72 74 90 50 90H18A6 6 0 0 1 12 84V16A6 6 0 0 1 18 10Z M27 25H50C65 25 75 36 75 50C75 64 65 75 50 75H27Z" />
-						<rect x="30.5" y="32.55" width="15.75" height="15.75" rx="3.4" fill="currentColor" />
-						<rect x="49.65" y="32.55" width="15.75" height="15.75" rx="3.4" fill="currentColor" />
-						<rect x="30.5" y="51.7" width="15.75" height="15.75" rx="3.4" fill="currentColor" />
-						<rect x="49.65" y="51.7" width="15.75" height="15.75" rx="3.4" fill="currentColor" />
-					</svg>
-					<h2 id="welcome-title" tabindex="-1">Connect Deckify to Spotify</h2>
-					<p>Setup takes a couple of minutes. Deckify will guide you through creating the Spotify app it needs.</p>
+			<!-- Not connected (nothing set up yet, signed out, or a problem). -->
+			<section class="view" data-view="disconnected" aria-labelledby="disconnected-title" hidden>
+				<h2 id="disconnected-title" tabindex="-1">Not connected</h2>
+				<p>Connect Deckify to Spotify to get started.</p>
+				<div id="problem" class="problem" hidden>
+					<p class="problem-title"><span class="issue-icon" aria-hidden="true">!</span><span id="problem-title"></span></p>
+					<p class="muted">Deckify Setup explains what to try next.</p>
 				</div>
-				<h3 class="list-title">You'll need</h3>
-				<ul class="requirements">
-					<li><span class="req-icon" aria-hidden="true">★</span><span><strong>Spotify Premium</strong></span></li>
-					<li><span class="req-icon" aria-hidden="true">@</span><span><strong>A Spotify Developer account</strong> <span class="muted">(free; sign in with Spotify)</span></span></li>
-					<li><span class="req-icon" aria-hidden="true">✓</span><span><strong>No Client Secret required</strong></span></li>
-				</ul>
 				<div class="actions">
-					<button type="button" class="primary" data-action="start-setup">Start setup</button>
-					<button type="button" class="link" data-action="have-client-id">I already have a Client ID</button>
+					<button type="button" class="primary" data-action="open-setup" id="setup-button">Set up Deckify</button>
 				</div>
+				<button type="button" class="link" data-action="open-account-setup" id="account-setup-button">Already set up? Open account setup</button>
 			</section>
 
-			<!-- 2. Guided setup. -->
-			<section id="view-setup" class="view" data-view="setup" aria-labelledby="setup-title" hidden>
-				<ol id="stepper" class="stepper" aria-label="Setup progress">
-					<li data-step="1"><span class="dot" aria-hidden="true">1</span><span class="sr-only">Step 1: Open Spotify Dashboard</span></li>
-					<li data-step="2"><span class="dot" aria-hidden="true">2</span><span class="sr-only">Step 2: Create your Spotify app</span></li>
-					<li data-step="3"><span class="dot" aria-hidden="true">3</span><span class="sr-only">Step 3: Add your Client ID</span></li>
-					<li data-step="4"><span class="dot" aria-hidden="true">4</span><span class="sr-only">Step 4: Connect Spotify</span></li>
-				</ol>
-				<p id="step-counter" class="eyebrow">Step 1 of 4</p>
-				<h2 id="setup-title" tabindex="-1">Open Spotify Dashboard</h2>
-
-				<div class="step" data-step="1">
-					<p>Deckify uses your own Spotify app so no secret credential has to be shipped inside the plugin.</p>
-					<div class="flow" aria-hidden="true">
-						<span class="flow-node">Deckify</span><span class="flow-arrow">→</span><span class="flow-node">Your Spotify app</span><span class="flow-arrow">→</span><span class="flow-node">Spotify</span>
-					</div>
-					<button type="button" class="primary" data-action="open-dashboard">Open Spotify Dashboard</button>
-					<p class="muted">Sign in with your Spotify account and accept the developer terms if Spotify asks.</p>
-				</div>
-
-				<div class="step" data-step="2" hidden>
-					<ol class="instructions">
-						<li><strong>Create an app.</strong></li>
-						<li>Choose any app name and description, for example <strong>Deckify</strong>.</li>
-						<li>Under the APIs your app uses, select <strong>Web API</strong>.</li>
-						<li>Add Deckify's <strong>Redirect URI</strong> exactly:</li>
-					</ol>
-					<div class="copy-row">
-						<input type="text" class="copy-value" data-redirect-uri readonly aria-label="Redirect URI" />
-						<button type="button" class="copy-button" data-action="copy-redirect-uri">Copy Redirect URI</button>
-					</div>
-					<p class="callout warning-callout"><span class="callout-icon" aria-hidden="true">!</span><span><strong>Do not use localhost.</strong> Use the address exactly as shown, with 127.0.0.1.</span></p>
-					<p class="muted">Spotify currently requires Premium for the owner of a Development Mode app.</p>
-					<details class="help">
-						<summary>About Spotify Development Mode</summary>
-						<ul>
-							<li>New Spotify apps start in Development Mode, which is meant for personal use.</li>
-							<li>Spotify currently requires the app owner to have Spotify Premium.</li>
-							<li>Spotify currently allows each new developer one Development Mode Client ID.</li>
-							<li>A Development Mode app can authorize up to five Spotify accounts. To use one that isn't the owner's, add it under Users Management in the app's settings.</li>
-						</ul>
-						<p class="muted">These are Spotify's rules for Development Mode apps, not Deckify limits.</p>
-					</details>
-				</div>
-
-				<div class="step" data-step="3" hidden>
-					<label for="client-id" class="field-label">Paste your Spotify Client ID</label>
-					<p class="muted">Find it in your Spotify app's settings, under Basic Information.</p>
-					<div class="inline">
-						<input id="client-id" type="text" maxlength="64" autocomplete="off" spellcheck="false" placeholder="Client ID" aria-describedby="client-id-note client-id-feedback" />
-						<button id="save-client-id" type="button" class="primary" data-action="save-client-id">Save Client ID</button>
-					</div>
-					<p id="client-id-feedback" class="field-feedback" aria-live="polite"></p>
-					<div id="client-id-issue" class="issue" hidden></div>
-					<p id="client-id-change-note" class="muted" hidden>Saving a different Client ID signs Deckify out of the current Spotify session.</p>
-					<p id="client-id-note" class="note"><span class="note-icon" aria-hidden="true">✓</span><span>Client ID is safe to use in installed apps. Deckify never asks for your Client Secret.</span></p>
-				</div>
-
-				<div class="step" data-step="4" hidden>
-					<div id="connect-ready">
-						<p>Your browser will open Spotify's authorization page. Approve Deckify's request, then come back here.</p>
-						<button type="button" class="primary" data-action="connect">Connect Spotify</button>
-					</div>
-					<div id="connect-done" hidden>
-						<p>Spotify is connected.</p>
-						<button type="button" class="primary" data-action="exit-setup">Done</button>
-					</div>
-					<div id="connect-issue" class="issue" hidden></div>
-				</div>
-
-				<div class="step-nav">
-					<button type="button" data-action="step-back">Back</button>
-					<button type="button" data-action="step-next" id="step-next">Next</button>
-				</div>
-			</section>
-
-			<!-- 3. Waiting for the browser. -->
-			<section id="view-waiting" class="view" data-view="waiting" aria-labelledby="waiting-title" hidden>
+			<!-- Waiting for the browser sign-in. -->
+			<section class="view" data-view="waiting" aria-labelledby="waiting-title" hidden>
 				<div class="waiting">
 					<span class="spinner" aria-hidden="true"></span>
 					<h2 id="waiting-title" tabindex="-1">Waiting for Spotify…</h2>
 				</div>
-				<p>Complete the authorization in your browser.</p>
-				<div id="slow-help" class="issue tone-warning" hidden>
-					<h3>Taking longer than expected?</h3>
-					<p>Check that your Spotify app contains exactly:</p>
-					<div class="copy-row">
-						<input type="text" class="copy-value" data-redirect-uri readonly aria-label="Redirect URI" />
-						<button type="button" class="copy-button" data-action="copy-redirect-uri">Copy Redirect URI</button>
-					</div>
-					<p class="muted">It must use 127.0.0.1, not localhost. If Spotify showed an error page instead of asking for permission, the Client ID or Redirect URI in your Spotify app may not match.</p>
-					<div class="actions">
-						<button type="button" data-action="open-dashboard">Open Spotify Dashboard</button>
-						<button type="button" class="primary" data-action="retry-connect">Retry Connect</button>
-					</div>
-				</div>
+				<p>Complete the authorization in your browser. Deckify Setup can help if it takes long.</p>
 				<div class="actions">
+					<button type="button" data-action="open-setup">Open Deckify Setup</button>
 					<button type="button" class="link" data-action="cancel-connect">Cancel sign-in</button>
 				</div>
 			</section>
 
-			<!-- Checking a saved session (e.g. after Stream Deck starts). -->
-			<section id="view-restoring" class="view" data-view="restoring" aria-labelledby="restoring-title" hidden>
+			<section class="view" data-view="restoring" aria-labelledby="restoring-title" hidden>
 				<div class="waiting">
 					<span class="spinner" aria-hidden="true"></span>
 					<h2 id="restoring-title" tabindex="-1">Checking your Spotify connection…</h2>
 				</div>
 			</section>
 
-			<!-- 4. Connected: celebrated right after signing in, compact afterwards. -->
-			<section id="view-connected" class="view" data-view="connected" aria-labelledby="connected-title" hidden>
-				<h2 id="connected-title" tabindex="-1">Connected to Spotify</h2>
-				<p id="success-text" hidden>Deckify is ready. Add Deckify actions to your keys and press away.</p>
+			<!-- Connected. -->
+			<section class="view" data-view="connected" aria-labelledby="connected-title" hidden>
+				<h2 id="connected-title" tabindex="-1">✓ Connected</h2>
 				<dl class="account">
 					<div><dt>Account</dt><dd id="account-name"></dd></div>
 					<div><dt>Premium</dt><dd id="account-premium"></dd></div>
 					<div><dt>Status</dt><dd id="account-status">Connected</dd></div>
 				</dl>
-				<div id="premium-note" class="issue tone-warning" hidden>
-					<h3>Playback controls need Spotify Premium</h3>
-					<p>Spotify only allows playback control for Premium accounts. Now Playing still shows what's playing; the other Deckify keys show <strong>Premium</strong>.</p>
-				</div>
-				<div id="connected-issue" class="issue" hidden></div>
+				<p id="premium-note" class="note warning-note" hidden>Playback controls need Spotify Premium. Now Playing still works; the other keys show <strong>Premium</strong>.</p>
+				<p id="connected-problem" class="note warning-note" hidden></p>
 				<div class="actions">
-					<button type="button" id="tour-start" class="primary" data-action="tour-start">Show me around</button>
-					<button type="button" id="success-dismiss" class="link" data-action="dismiss-success" hidden>Not now</button>
+					<button type="button" data-action="open-setup">Open Deckify Setup</button>
 				</div>
 				<details class="help">
-					<summary>Account setup help</summary>
+					<summary>Account and setup help</summary>
 					<p class="muted">Client ID: <code id="saved-client-id"></code></p>
-					<div class="actions">
-						<button type="button" data-action="edit-client-id">Change Client ID</button>
-						<button type="button" data-action="open-dashboard">Open Spotify Dashboard</button>
-					</div>
-					<p class="muted">Redirect URI registered in your Spotify app:</p>
+					<p class="muted">Redirect URI in your Spotify app:</p>
 					<div class="copy-row">
 						<input type="text" class="copy-value" data-redirect-uri readonly aria-label="Redirect URI" />
-						<button type="button" class="copy-button" data-action="copy-redirect-uri">Copy Redirect URI</button>
+						<button type="button" class="copy-button" data-action="copy-redirect-uri">Copy</button>
 					</div>
-					<p class="muted">To remove Deckify's access entirely, also revoke it on your Spotify account page under Manage apps.</p>
+					<div class="actions">
+						<button type="button" data-action="open-account-setup">Change Client ID</button>
+						<button type="button" data-action="open-dashboard">Open Spotify Dashboard</button>
+					</div>
 				</details>
 				<div class="actions end">
 					<button type="button" class="danger" data-action="disconnect">Disconnect</button>
 				</div>
 			</section>
 
-			<!-- 5. Lightweight tour (educational only; nothing is installed). -->
-			<section id="view-tour" class="view" data-view="tour" aria-labelledby="tour-title" hidden>
-				<p id="tour-counter" class="eyebrow">1 of 4</p>
-				<div class="tour-card">
-					<img id="tour-icon" class="tour-icon" src="../../imgs/actions/playback/now-playing-icon.svg" alt="" width="40" height="40" />
-					<h2 id="tour-title" tabindex="-1">Now Playing</h2>
-					<p id="tour-body"></p>
-				</div>
-				<p class="muted">Drag Deckify actions from the Stream Deck actions list onto your keys.</p>
-				<div class="step-nav">
-					<button type="button" data-action="tour-prev" id="tour-prev">Previous</button>
-					<button type="button" class="primary" data-action="tour-next" id="tour-next">Next</button>
-					<button type="button" class="primary" data-action="tour-done" id="tour-done" hidden>Done</button>
-				</div>
-			</section>
-
-			<!-- Reconnect: new permissions, or the session must be signed in again. The Client ID stays. -->
-			<section id="view-reconnect" class="view" data-view="reconnect" aria-labelledby="reconnect-title" hidden>
+			<!-- Reconnect: new permissions, or the session must be signed in again. No wizard; the Client ID stays. -->
+			<section class="view" data-view="reconnect" aria-labelledby="reconnect-title" hidden>
 				<h2 id="reconnect-title" tabindex="-1">Deckify needs updated Spotify permissions</h2>
 				<p id="reconnect-body">Deckify added features that need additional Spotify permissions.</p>
-				<div id="reconnect-issue" class="issue" hidden></div>
+				<p id="reconnect-problem" class="note warning-note" hidden></p>
 				<div class="actions">
 					<button type="button" class="primary" data-action="connect" id="reconnect-button">Reconnect Spotify</button>
+					<button type="button" data-action="open-setup">Open Deckify Setup</button>
 				</div>
-				<details class="help" id="reconnect-why">
-					<summary>Why?</summary>
-					<p>Spotify only grants new permissions when you approve them yourself, so Deckify asks you to sign in once more. Your Client ID stays saved, and Deckify won't use the old session for anything until you reconnect.</p>
-				</details>
 				<div class="actions end">
-					<button type="button" class="link" data-action="edit-client-id">Client ID and setup help</button>
 					<button type="button" class="danger" data-action="disconnect">Disconnect</button>
 				</div>
 			</section>
 		</main>
 
-		<script src="onboarding.js"></script>
+		<script src="../shared/onboarding.js"></script>
 		<script src="inspector.js"></script>
 	</body>
 </html>
