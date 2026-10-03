@@ -89,7 +89,21 @@ describe("security regression checks", () => {
 	});
 
 	it("never uses localhost (only the 127.0.0.1 loopback literal)", async () => {
-		expect(matching(await sources(), /localhost/i)).toEqual([]);
+		// The only mentions allowed are the setup guide's warnings against it, in the Spotify Account Property Inspector's copy.
+		const warning = /\b(not localhost|Do not use localhost)\b/;
+		const mentions = matching(await sources(), /localhost/i);
+		const warnings = mentions.filter((line) => line.startsWith("com.marting.deckify.sdPlugin/ui/spotify-account/") && warning.test(line));
+		expect(mentions.filter((line) => !warnings.includes(line))).toEqual([]);
+		expect(warnings.length).toBeLessThanOrEqual(3);
+		for (const line of warnings) {
+			// A warning is prose, never an address, a host or a URL.
+			expect(line).not.toMatch(/\/\/localhost|localhost:|["'`]localhost|localhost["'`]|=\s*["'`]?localhost/i);
+			expect(line.match(/localhost/gi)).toHaveLength(1);
+		}
+	});
+
+	it("never uses localhost as an address anywhere", async () => {
+		expect(matching(await sources(), /\/\/localhost|localhost:\d|host:\s*["'`]localhost/i)).toEqual([]);
 	});
 
 	it("only ever uses loopback port 43821 for HTTP", async () => {
@@ -207,14 +221,20 @@ describe("security regression checks", () => {
 		const src = (await sources()).filter((s) => s.file.startsWith("src/"));
 		const calls = codeOnly(matching(src, /openUrl\(/)).filter((line) => !/^\S+: (export type|readonly|openUrl\(url: string\))/.test(line.replace(/^(\S+:\d+): /, "$1: ")));
 		// The auth flow opens Spotify's authorize URL; the playlist picker opens only a link that passed toSpotifyPlaylistUrl; Now Playing opens
-		// only a link built by spotifyItemUrl.
+		// only a link built by spotifyItemUrl; the Spotify Account action opens only the fixed Spotify Developer Dashboard address.
 		expect(calls.map((line) => line.split(":")[0]).sort()).toEqual([
 			"src/actions/now-playing.ts",
 			"src/actions/playlist-key-action.ts",
+			"src/actions/spotify-account.ts",
+			"src/plugin.ts",
 			"src/plugin.ts",
 			"src/plugin.ts",
 			"src/plugin.ts",
 			"src/spotify/auth/auth-service.ts",
+		]);
+		expect(calls.find((line) => line.startsWith("src/actions/spotify-account.ts"))).toContain("this.#openUrl(SPOTIFY_DEVELOPER_DASHBOARD_URL)");
+		expect(matching(src, /SPOTIFY_DEVELOPER_DASHBOARD_URL = /).map((line) => line.replace(/:\d+: /, ": "))).toEqual([
+			'src/spotify/links.ts: export const SPOTIFY_DEVELOPER_DASHBOARD_URL = "https://developer.spotify.com/dashboard";',
 		]);
 		const pickerOpen = calls.find((line) => line.startsWith("src/actions/playlist-key-action.ts"));
 		expect(pickerOpen).toContain("this.#inspector.openUrl(url)");
@@ -226,6 +246,23 @@ describe("security regression checks", () => {
 	it("never logs playlist or track identifiers or names", async () => {
 		const logCalls = matching(await sources(), /logger\.(debug|info|warn|error|trace)\(/);
 		expect(logCalls.filter((line) => /playlistId|playlistUri|trackUri|ownerDisplayName|ownerId|playlist\.name|metadata\.name|selection\b/.test(line))).toEqual([]);
+	});
+
+	it("keeps the Spotify Account setup page away from Spotify, links, HTML injection and credentials", async () => {
+		const account = (await inspectorSources()).filter((s) => s.file.startsWith("com.marting.deckify.sdPlugin/ui/spotify-account/"));
+		expect(account.map((s) => s.file).sort()).toEqual([
+			"com.marting.deckify.sdPlugin/ui/spotify-account/index.html",
+			"com.marting.deckify.sdPlugin/ui/spotify-account/inspector.js",
+			"com.marting.deckify.sdPlugin/ui/spotify-account/onboarding.js",
+		]);
+		// No Spotify endpoints, no network calls, no way to open or navigate to a URL, no HTML built from strings.
+		expect(
+			matching(account, /api\.spotify\.com|accounts\.spotify\.com|fetch\(|XMLHttpRequest|sendBeacon|window\.open|location\s*=|location\.(href|assign|replace)|innerHTML|outerHTML|insertAdjacentHTML|document\.write|"openUrl"|eval\(/),
+		).toEqual([]);
+		// The only absolute URL is Stream Deck's own WebSocket; the dashboard address lives in the plugin.
+		expect(codeOnly(matching(account, /[a-z]+:\/\//i)).map((line) => line.replace(/^\S+:\d+: /, ""))).toEqual(["socket = new WebSocket(`ws://127.0.0.1:${port}`);"]);
+		// Nothing token-shaped, and no input for anything but the Client ID.
+		expect(matching(account, /access_?token|refresh_?token|code_?verifier|Authorization:|Bearer |type="password"/i)).toEqual([]);
 	});
 
 	it("loads no remote scripts or styles in the Property Inspector", async () => {

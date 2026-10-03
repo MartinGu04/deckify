@@ -24,7 +24,9 @@ export const SPOTIFY_ICON = "imgs/attribution/Spotify_Primary_Logo_RGB_Green.png
 /** Files the manifest does not reference but the Property Inspectors load. */
 const INSPECTOR_FILES = [
 	"ui/shared/inspector.css",
+	"ui/spotify-account/onboarding.js",
 	"ui/spotify-account/inspector.js",
+	"ui/spotify-account/onboarding.css",
 	"ui/volume/inspector.js",
 	"ui/playlist/paging.js",
 	"ui/playlist/inspector.js",
