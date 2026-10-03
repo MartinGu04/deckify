@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 144 144">
+	<!-- Like / Unlike key: checking whether the current track is in Liked Songs (Deckify's own glyph) -->
+	<rect width="144" height="144" fill="#121212"/>
+	<circle cx="48" cy="50" r="8" fill="#8A8A8A"/>
+	<circle cx="72" cy="50" r="8" fill="#8A8A8A"/>
+	<circle cx="96" cy="50" r="8" fill="#8A8A8A"/>
+</svg>

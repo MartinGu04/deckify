@@ -33,7 +33,7 @@ Status key: ✅ ready · 🟡 decision or small change needed · ⛔ missing.
 | --- | --- | --- |
 | Plugin icon 256×256 and 512×512 PNG | `imgs/plugin/marketplace.png` / `@2x`: the B1 symbol on the charcoal tile | ✅ |
 | Category icon 28×28 (56×56 when raster), monochrome white, transparent | The B1 28×28 pixel-grid glyph, SVG, `#FFFFFF`, transparent | ✅ |
-| Action icons 20×20 (40×40 when raster), monochrome white, transparent | 12 SVGs, 20×20, `#FFFFFF`, transparent | ✅ (Like's heart glyph to be revisited with the official Spotify Like icons) |
+| Action icons 20×20 (40×40 when raster), monochrome white, transparent | 11 Deckify SVGs, 20×20, `#FFFFFF`, transparent. Like / Unlike uses Spotify's official + icon SVG, unmodified (white on transparent, 135×135 viewBox, scaled by Stream Deck) | ✅ (check the Like icon in the actions list during the MK.2 review) |
 | Key images 72×72 with 144×144 high-DPI | SVG drawn at 144×144, shown at 72×72, in Deckify violet; Status PNGs (B1 symbol) at 72×72 and 144×144 | ✅ |
 
 ## Marketplace listing assets
@@ -63,14 +63,14 @@ Each image: 1920×960 PNG, English text, no Spotify logo used as decoration, and
 
 ## Before submitting
 
-**Resolved in the v1.0 cleanup:** version `1.0.0.0`, author `MARTIN.G`, no Node.js debugging in the package, and no Spotify playlist
-metadata on keys (the picker links every playlist back to Spotify).
+**Resolved in the v1.0 cleanup:** version `1.0.0.0`, author `MARTIN.G`, no Node.js debugging in the package, no Spotify playlist
+metadata on keys (the picker links every playlist back to Spotify), and Spotify's official Like icons
+([public-launch audit](public-launch-audit.md#spotify-like--unlike)).
 
 **Still open:**
 
-1. The official Spotify Like icons ([public-launch audit](public-launch-audit.md#spotify-like--unlike)).
-2. The Development Mode / Client ID model for public users: re-check Spotify's developer terms.
-3. Build with `npm run pack` on Windows (CI does this), install the package on a clean machine, and run the physical MK.2 review.
+1. The Development Mode / Client ID model for public users: re-check Spotify's developer terms.
+2. Build with `npm run pack` on Windows (CI does this), install the package on a clean machine, and run the physical MK.2 review.
 
 **Marketplace media pending:** capture the real product media, then compose the 1920×960 thumbnail and gallery from it with the B1
 logo. The brand, plugin icon, category icon, key accent and 288×288 app icon are done.

@@ -169,7 +169,9 @@ Code: `src/experiences/experiences.ts` (plugin side), `com.marting.deckify.sdPlu
 - **Playlist picker:** shows Spotify's official full logo. The selected playlist and every playlist row have **Open in Spotify**; the
   plugin opens only `https://open.spotify.com/playlist/<same id>` links, and only for the selected playlist or a playlist the picker offers.
 - **Playlist keys:** show Deckify's own labels (**Add to Playlist**, **Play Playlist**), never playlist names or other Spotify metadata.
-- **Deckify's own artwork:** key images and action icons never include Spotify branding.
+- **Like / Unlike:** the inactive and active key images show Spotify's official + icon and its active state, embedded unmodified; the
+  action-list icon is Spotify's + icon SVG. Checking and unavailable use Deckify's own glyphs.
+- **Deckify's own artwork:** all other key images and action icons never include Spotify branding.
 
 ## Tests
 

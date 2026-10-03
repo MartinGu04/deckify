@@ -347,7 +347,7 @@ No. Deckify is an independent project. It isn't made, endorsed or supported by S
 - queue controls;
 - layouts tuned for Stream Deck +, XL and Neo;
 - a public release and Elgato Marketplace listing, once the remaining [launch audit](docs/public-launch-audit.md) items are done
-  (licence, official Spotify Like icons and real product media).
+  (licence and real product media).
 
 ## Documentation
 

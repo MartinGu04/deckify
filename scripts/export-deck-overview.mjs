@@ -17,7 +17,7 @@ export const OVERVIEW_LAYOUT = [
 		["playback/pause.svg", "Play / Pause"],
 		["playback/next.svg", "Next"],
 		["playback/now-playing.svg", "Now Playing"],
-		["library/heart-filled.svg", "Like / Unlike"],
+		["library/like-unavailable.svg", "Like / Unlike"],
 	],
 	[
 		["volume/volume-down.svg", "Volume Down"],

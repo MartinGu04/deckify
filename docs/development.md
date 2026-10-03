@@ -37,7 +37,8 @@ Individual steps: `npm run typecheck`, `npm run lint`, `npm test`, `npm run vali
 - **`npm run assets`** regenerates image exports:
   - the brand masters in `assets/brand/` and every brand export (plugin icon, category and Status icons, Status key images, Marketplace
     app icon), all generated from `scripts/brand.mjs` (`scripts/export-brand-assets.mjs`);
-  - the volume / Like / playlist key images (`scripts/export-key-icons.mjs`);
+  - the volume / Like / playlist key images (`scripts/export-key-icons.mjs`; the Like inactive and active images embed Spotify's icons from
+    `assets/spotify-like-icon/`);
   - the README overview illustration (`scripts/export-deck-overview.mjs`).
 
   Tests fail if a committed generated file differs from its generator.
@@ -219,6 +220,7 @@ com.marting.deckify.sdPlugin/
   bin/, logs/               build output (plugin.js, native/deckify-media-bridge.exe) and runtime logs (git-ignored)
 native/media-bridge/        Rust helper: GSMTC Spotify session selection and commands
 assets/brand/               Deckify brand masters (B1) and the Marketplace app icon; archive/ keeps the retired development-era mark
+assets/spotify-like-icon/   Spotify's official Like icons, unmodified (embedded in the Like key images; hashes pinned by tests)
 docs/                       architecture, privacy, history, launch audits, brand review, media capture guide
 scripts/                    asset generators, smoke test, dev-only token expiry helper, native build, pack + package verification,
                             bundled profile checks and import (profiles.mjs)

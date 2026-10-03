@@ -40,13 +40,14 @@ describe("Like / Unlike key states", () => {
 		expect(likeView(playback, library)).toEqual({ image: LIKE_KEY_IMAGES[expected.state], title: expected.title });
 	});
 
-	it("uses one distinct image per state (the Phase 5 artwork until official Spotify Like icons are supplied)", () => {
+	it("uses one distinct image per state: Spotify's official Like icons for inactive and active, Deckify's own glyphs otherwise", () => {
 		expect(LIKE_KEY_IMAGES).toEqual({
-			add: "imgs/actions/library/heart-outline.svg",
-			added: "imgs/actions/library/heart-filled.svg",
-			checking: "imgs/actions/library/heart-unknown.svg",
-			unavailable: "imgs/actions/library/heart-disabled.svg",
+			add: "imgs/actions/library/like-add.svg",
+			added: "imgs/actions/library/like-added.svg",
+			checking: "imgs/actions/library/like-checking.svg",
+			unavailable: "imgs/actions/library/like-unavailable.svg",
 		});
+		expect(Object.values(LIKE_KEY_IMAGES).join(" ")).not.toMatch(/heart/i);
 	});
 
 	it("keeps the image of the current state while Added / Removed is shown after a press", () => {

@@ -25,7 +25,7 @@ const PLAY_PAUSE_UUID = "com.marting.deckify.spotify.play-pause";
 const SIGNED_OUT_KEYS = [
 	{ uuid: "com.marting.deckify.spotify.volume-up", context: "smoke-volume-up-key", image: "imgs/actions/volume/volume-up-disabled.svg" },
 	{ uuid: "com.marting.deckify.spotify.mute", context: "smoke-mute-key", image: "imgs/actions/volume/speaker-disabled.svg" },
-	{ uuid: "com.marting.deckify.spotify.like", context: "smoke-like-key", image: "imgs/actions/library/heart-disabled.svg" },
+	{ uuid: "com.marting.deckify.spotify.like", context: "smoke-like-key", image: "imgs/actions/library/like-unavailable.svg" },
 	{ uuid: "com.marting.deckify.spotify.add-to-playlist", context: "smoke-add-to-playlist-key", image: "imgs/actions/playlist/add-disabled.svg" },
 	{ uuid: "com.marting.deckify.spotify.play-playlist", context: "smoke-play-playlist-key", image: "imgs/actions/playlist/play-disabled.svg" },
 ];

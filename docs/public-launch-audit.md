@@ -64,7 +64,7 @@ back to the content on Spotify.
    - **Size:** Spotify's minimum icon size (21 px digital) is met in key pixels on the MK.2. The full logo (70 px minimum) doesn't fit a
      72-pixel key, and Spotify allows the icon alone when there isn't room for the full logo.
    - **Clear space:** the clear space is kept, which leaves the title and artist the lower half of the key.
-   - **Physical review:** confirmed on the MK.2 in Phase 7.
+   - **Before launch:** confirm on the physical MK.2 that it is legible, and that Stream Deck draws the embedded PNG in the key's SVG.
 
 ## Spotify: Like / Unlike
 
@@ -72,21 +72,12 @@ back to the content on Spotify.
 | --- | --- | --- |
 | Behaviour | ✅ | Likes or unlikes on Spotify (nothing is stored by Deckify), songs only, with race handling and no polling. Unchanged. Permanent UUID `com.marting.deckify.spotify.like` unchanged. |
 | States | ✅ | Explicit: `add` (not in Liked Songs, inactive), `added` (active state), `checking`, `unavailable`, with a test listing every case (`test/like-states.test.ts`). The artwork is one table, `LIKE_KEY_IMAGES` in `src/actions/like-view.ts`. |
+| Icon | ✅ (v1.0) | Spotify's official Like icon files, downloaded by the owner from Spotify's Design & Branding Guidelines (`like-icon-svg.zip` and `like-icon-png.zip`, files dated 2024-09-20), are kept unmodified in `assets/spotify-like-icon/` with their SHA-256 pinned (`test/spotify-like-icon.test.ts`). **Inactive** (`add`): the white **+ icon**. **Active** (`added`): Spotify's green active state. Both are embedded byte-for-byte (the 135×135 PNGs, as data URIs) in Deckify's dark 72×72 key at 72/144 size, centred in the upper part, at their original proportions, with nothing drawn over them and no filter, recolouring or cropping (the way Now Playing embeds Spotify's icon). **Checking** and **unavailable** use Deckify's own grey glyphs (three dots; a dash), so Spotify's icon is never altered to show them; the title says why (Connect, No Device, Track Only, …). The **action-list icon** is Spotify's official `like-icon-like.svg` itself, unmodified (`imgs/attribution/`). The heart artwork is deleted, and a test keeps it out. |
 | Messages | ✅ (v1.0) | Following Spotify's "Added to Liked Songs" / "Removed from Liked Songs", a successful press shows **Added** or **Removed** as the key title for 1.5 s, on the pressed key only, while the image already shows the new state. A failed or ignored press shows no message (an alert instead, as before). The message is a timer only: no extra request, no polling. |
-| Icon | ⛔ blocker for public launch | Spotify's guidelines represent Like with the **+ icon** and its active state, and provide the icon files to download. The download is on `developer.spotify.com`, which the environment that prepared v1.0 can't reach, and Deckify must not redraw or approximate Spotify's icon. **The Phase 5 heart artwork is therefore still on the key** until the official files are added (steps below). |
+| README illustration | ✅ | The README stays free of Spotify artwork: its overview illustration shows the Like key in Deckify's neutral (unavailable) state. |
 
-**To finish the Like icon** (the code and tests are ready for it):
-
-1. Download the official Like icon set from Spotify's Design & Branding page.
-2. Add the inactive (+) and active state files, unmodified, under `imgs/actions/library/` (keep Spotify's file names).
-3. Point `LIKE_KEY_IMAGES.add` / `.added` in `src/actions/like-view.ts` at them. Keep `checking` / `unavailable` distinguishable without
-   altering Spotify's files: Deckify's own dimmed key images (for example a dimmed Deckify tile with the official file drawn unmodified
-   on top, like Now Playing embeds Spotify's icon), never a recoloured copy of the icon.
-4. Pin the files' SHA-256 in a test like `test/spotify-attribution.test.ts`, add them to `requiredFiles()` in `scripts/pack.mjs`, and
-   make the test fail if a heart image is still mapped. The Like tests in `test/phase5-actions.test.ts` already read the images from
-   `LIKE_KEY_IMAGES`, and the smoke test checks the `unavailable` image.
-5. Decide on the action-list icon (Deckify's own 20×20 monochrome glyph; a heart today).
-6. Review on the MK.2 (see the physical review gate in the v1.0 pull request).
+**Before launch:** on the physical MK.2, confirm that Stream Deck draws the embedded PNGs in the Like key images (the same technique as
+Now Playing's icon), that both states are legible, and how the 135×135 official SVG looks as the action-list icon in the Stream Deck app.
 
 ## Elgato: plugin and action list
 
@@ -133,7 +124,9 @@ On the production B1 build (`a13b8e9`), the owner checked Deckify on a physical 
   Plugin UUID, category, product name and all twelve action UUIDs are unchanged (a test lists them literally).
 - **Release Node.js configuration:** packages ship without `Nodejs.Debug`, verified on the actual package.
 - **Playlist metadata:** no playlist names on keys; Open in Spotify on the selected playlist and every picker row.
-- **Like / Unlike messages:** brief **Added** / **Removed** after a successful press.
+- **Like / Unlike:** Spotify's official + icon and active state, unmodified and hash-pinned, for the inactive and active states; Spotify's
+  + icon as the action-list icon; Deckify's own glyphs for checking and unavailable; no heart anywhere; brief **Added** / **Removed** after a
+  successful press.
 - **Elgato metadata:** Windows 10+ only, Stream Deck 7.1+, Node.js 24, keypad actions only (unchanged).
 - **Phase 7:** brand, attribution assets, hidden legacy action, security policy and privacy documentation (see above).
 
@@ -141,9 +134,9 @@ On the production B1 build (`a13b8e9`), the owner checked Deckify on a physical 
 
 **Before publishing a release:**
 
-1. **Official Spotify Like icons** ([steps](#spotify-like--unlike)): the only Spotify-guideline blocker left.
-2. The **physical MK.2 review** of the v1.0 release package (listed in the v1.0 pull request).
-3. **Licence:** choose one, or deliberately decide to publish without one (a decision for the owner; no licence file is added).
+1. The **physical MK.2 review** of the v1.0 release package (listed in the v1.0 pull request), including the Like key with Spotify's
+   icons.
+2. **Licence:** choose one, or deliberately decide to publish without one (a decision for the owner; no licence file is added).
 
 **Before making the repository public:** the licence decision, and enabling GitHub private vulnerability reporting.
 
@@ -157,7 +150,7 @@ Real product media is handled separately from the code; nothing fake is added in
 - The Marketplace thumbnail and gallery (1920×960) from real captures; see [marketplace-readiness.md](marketplace-readiness.md). The
   288×288 app icon is done.
 - A real hardware capture for the README ([capture plan](media/README.md)).
-- The playlist picker screenshot (now with Open in Spotify on each row) and, once the official icons are in, the Like key.
+- The playlist picker screenshot (now with Open in Spotify on each row) and the Like key with Spotify's icons.
 
 ## Post-v1.0 roadmap
 

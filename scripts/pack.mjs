@@ -17,7 +17,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { inflateRawSync } from "node:zlib";
 
-import { keyIconFiles } from "./export-key-icons.mjs";
+import { keyIconFiles, likeKeyFiles } from "./export-key-icons.mjs";
 import { buildNative } from "./native.mjs";
 import { checkBundledProfiles, PROFILE_EXTENSION } from "./profiles.mjs";
 
@@ -33,6 +33,9 @@ export const SPOTIFY_LOGO = "ui/playlist/Spotify_Full_Logo_RGB_White.png";
 
 /** Spotify's official icon, which the Now Playing key draws next to Spotify metadata (read at runtime, not referenced by the manifest). */
 export const SPOTIFY_ICON = "imgs/attribution/Spotify_Primary_Logo_RGB_Green.png";
+
+/** Spotify's official Like icon (the + icon, SVG, unmodified): the Like / Unlike action-list icon. */
+export const SPOTIFY_LIKE_ICON = "imgs/attribution/like-icon-like.svg";
 
 /** Files the manifest does not reference but the Property Inspectors and the Deckify Setup App load. */
 const INSPECTOR_FILES = [
@@ -206,12 +209,13 @@ export function verifyProfileEntries(entries, manifest) {
 }
 
 /**
- * Lists plugin-relative files the plugin needs that the manifest does not reference: every generated key image, the Spotify icon
- * Now Playing draws, and the Property Inspectors' scripts, styles and images.
+ * Lists plugin-relative files the plugin needs that the manifest does not reference (or references without an extension): every generated
+ * key image (including the Like / Unlike keys with Spotify's Like icons), the Spotify icon Now Playing draws, Spotify's Like icon, and the
+ * Property Inspectors' scripts, styles and images.
  * @returns {string[]} Plugin-relative paths.
  */
 export function requiredFiles() {
-	return [...Object.keys(keyIconFiles()).map((file) => `imgs/actions/${file}`), SPOTIFY_ICON, ...INSPECTOR_FILES];
+	return [...Object.keys({ ...keyIconFiles(), ...likeKeyFiles() }).map((file) => `imgs/actions/${file}`), SPOTIFY_ICON, SPOTIFY_LIKE_ICON, ...INSPECTOR_FILES];
 }
 
 /**

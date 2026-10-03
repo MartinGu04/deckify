@@ -228,5 +228,6 @@ state source and the fallback.
   keeps the debugger.
 - **Playlist metadata:** playlist keys show Deckify's own labels instead of playlist names. The picker adds Open in Spotify on every
   row, validated by the plugin. Playlist selection, storage, duplicate protection and playback are unchanged.
-- **Like / Unlike:** a successful press briefly shows **Added** or **Removed**. The official Spotify + icon is still to be added (the
-  download wasn't reachable from the build environment); see the [public-launch audit](public-launch-audit.md#spotify-like--unlike).
+- **Like / Unlike:** Spotify's official + icon and its active state replace the heart, embedded unmodified and hash-pinned; checking and
+  unavailable use Deckify's own grey glyphs; the action-list icon is Spotify's + icon. A successful press briefly shows **Added** or
+  **Removed**. See the [public-launch audit](public-launch-audit.md#spotify-like--unlike).
