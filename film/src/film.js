@@ -114,7 +114,9 @@ const LAYOUT = MOBILE
 				setup: { size: 98, top: 250 },
 			},
 			panel: { x: 72, y: 1170, width: 936, columns: 2 },
-			setup: { width: 600, height: 1120, anchor: [300, 430], screen: [540, 1250], scale: 1.36, push: 1.44, pushShift: 0, pushLift: 0 },
+			// While the guidance shows, push in on its card (page x 33–567, y 310–642 in the narrow layout) so the problem and the fix read
+			// on a phone, and fade out the page above it so it never runs under the headline.
+			setup: { width: 600, height: 1120, anchor: [300, 430], screen: [540, 1250], scale: 1.36, push: 1.76, pushAnchor: [300, 476], pushScreen: [540, 1010], pushMaskTop: 600, release: [-0.14, 0.3] },
 			steps: { vertical: true, x: 72, top: 250, size: 116 },
 			bg: { hook: [50, 62], control: [50, 58], actions: [50, 58], personal: [50, 42], setup: [50, 55], complete: [50, 58], end: [50, 45] },
 			end: { x: 540, y: 860, symbolScale: 3.6, lockupWidth: 820, taglineY: 1010, taglineSize: 50, supportY: 1088, supportSize: 25 },
@@ -133,7 +135,7 @@ const LAYOUT = MOBILE
 				setup: { size: 76, center: 540 },
 			},
 			panel: { x: 128, y: 334, width: 470, columns: 1 },
-			setup: { width: 1280, height: 940, anchor: [640, 420], screen: [1320, 540], scale: 1.18, push: 1.24, pushShift: 0, pushLift: 70 },
+			setup: { width: 1280, height: 940, anchor: [640, 420], screen: [1320, 540], scale: 1.18, push: 1.24, pushAnchor: [640, 490], pushScreen: [1320, 540], release: [0.05, 0.4] },
 			steps: { vertical: false, center: 960, y: 936, size: 62 },
 			bg: { hook: [68, 52], control: [64, 52], actions: [64, 52], personal: [64, 56], setup: [68, 50], complete: [50, 44], end: [50, 45] },
 			end: { x: 960, y: 470, symbolScale: 3.4, lockupWidth: 860, taglineY: 640, taglineSize: 44, supportY: 714, supportSize: 22 },
@@ -690,7 +692,7 @@ const setupDriver = {
 	/** Types the demo Client ID into the real field, as far as film time `t` (only before it is saved). */
 	type(t) {
 		const typed = Math.round(prog(t, S.typeStart, S.typeEnd - S.typeStart) * T.DEMO_CLIENT_ID.length);
-		if (typed !== this.typed && t < S.save) {
+		if (typed !== this.typed && t <= S.save) {
 			const field = q("#client-id");
 			field.value = T.DEMO_CLIENT_ID.slice(0, typed);
 			field.dispatchEvent(new Event("input", { bubbles: true }));
@@ -903,13 +905,24 @@ function drawSetup(t) {
 	setupWrap.style.visibility = show > 0.001 ? "visible" : "hidden";
 	const enter = 1 - prog(t, S.enter - 0.05, 0.5, E.outQuint);
 	const exit = prog(t, 16.92, 0.3, E.in);
-	const push = prog(t, S.failure - 0.05, 0.45, E.inOut) * (1 - prog(t, S.retry + 0.05, 0.4, E.inOut));
+	// Pull back as the retry starts, so the waiting screen is framed again (on 9:16 it would sit in the faded area).
+	const push = prog(t, S.failure - 0.05, 0.45, E.inOut) * (1 - prog(t, S.retry + L.release[0], L.release[1], E.inOut));
 	const scale = L.scale * lerp(1, L.push / L.scale, push) * (1 - 0.05 * enter) * (1 - 0.06 * exit);
-	// While pushed in, aim a little lower: the guidance card sits below the step header.
-	const anchorY = L.anchor[1] + push * L.pushLift;
-	const x = L.screen[0] + L.pushShift * push - L.anchor[0] * scale;
-	const y = L.screen[1] - anchorY * scale + 70 * enter - 40 * exit;
+	// While pushed in, the camera aims at the guidance card instead of the whole page.
+	const anchor = [lerp(L.anchor[0], L.pushAnchor[0], push), lerp(L.anchor[1], L.pushAnchor[1], push)];
+	const screen = [lerp(L.screen[0], L.pushScreen[0], push), lerp(L.screen[1], L.pushScreen[1], push)];
+	const x = screen[0] - anchor[0] * scale;
+	const y = screen[1] - anchor[1] * scale + 70 * enter - 40 * exit;
 	setupWrap.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) scale(${scale.toFixed(4)})`;
+	let mask = "none";
+	if (L.pushMaskTop && push > 0.001) {
+		const top = (L.pushMaskTop - y) / scale;
+		// Fully hidden for most of the push, so nothing above the card ever shows under the type while the camera moves.
+		const alpha = clamp(1 - push * 2.5);
+		mask = `linear-gradient(to bottom, rgba(0, 0, 0, ${alpha.toFixed(3)}) ${top.toFixed(1)}px, #000 ${(top + 90 / scale).toFixed(1)}px)`;
+	}
+	setupWrap.style.maskImage = mask;
+	setupWrap.style.webkitMaskImage = mask;
 	setupWrap.style.filter = enter > 0.02 || exit > 0.02 ? `blur(${(8 * Math.max(enter, exit)).toFixed(2)}px)` : "none";
 
 	// Cursor.
@@ -962,7 +975,7 @@ function drawHeadlines(t) {
 		}
 		h.lines.forEach((line, i) => {
 			const inK = prog(t, line.in, 0.42, E.outExpo);
-			const outK = prog(t, block.out + i * 0.03, 0.26, E.in);
+			const outK = prog(t, block.out + i * 0.03, block.exit ?? 0.26, E.in);
 			const y = (1 - inK) * 108 - outK * 108;
 			line.inner.style.transform = `translateY(${y.toFixed(2)}%)`;
 		});

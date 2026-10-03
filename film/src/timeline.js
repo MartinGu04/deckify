@@ -109,14 +109,15 @@ export const SETUP_EVENTS = {
 };
 
 /**
- * On-screen copy. Each block: lines revealed one after another, held, then cleared together. `accent` colours the closing period
- * violet (the only colour in the type).
+ * On-screen copy. Each block: lines revealed one after another, held, then cleared together (over `exit` seconds; 0.26 by default).
+ * The closing period is violet (the only colour in the type). The one-word cards hand over cleanly: each clears completely before the
+ * next one rises into the same place, so two phrases are never on screen together.
  */
 export const COPY = [
 	{ id: "hook", lines: [{ text: "YOUR SPOTIFY.", in: 0.35 }, { text: "AT YOUR FINGERTIPS.", in: 1.2 }], out: 1.94 },
 	{ id: "control", lines: [{ text: "CONTROL", in: 3.12 }, { text: "EVERYTHING.", in: 3.3 }], out: 5.82 },
-	{ id: "like", lines: [{ text: "LIKE IT.", in: 6.05 }], out: 6.9 },
-	{ id: "save", lines: [{ text: "SAVE IT.", in: 6.92 }], out: 7.78 },
+	{ id: "like", lines: [{ text: "LIKE IT.", in: 6.05 }], out: 6.74, exit: 0.16 },
+	{ id: "save", lines: [{ text: "SAVE IT.", in: 6.92 }], out: 7.62, exit: 0.16 },
 	{ id: "play", lines: [{ text: "PLAY IT.", in: 7.8 }], out: 8.85 },
 	{ id: "personal", lines: [{ text: "YOUR DECK.", in: 9.3 }, { text: "YOUR WAY.", in: 10.9 }], out: 12.85 },
 	{ id: "setup", lines: [{ text: "NO CRYPTIC", in: 14.55 }, { text: "ERRORS.", in: 14.7 }, { text: "JUST ANSWERS.", in: 15.35 }], out: 16.9 },
@@ -128,13 +129,14 @@ export const STEPS = { words: ["INSTALL", "CONNECT", "CHOOSE", "PLAY"], at: [17.
 /** End card. */
 export const END = {
 	fadeOut: 21.0,
-	symbolIn: 21.45,
-	keysIn: [21.7, 21.78, 21.86, 21.94],
-	lockup: 22.2,
-	tagline: 22.7,
-	support: 22.95,
+	symbolIn: 21.38,
+	keysIn: [21.63, 21.71, 21.79, 21.87],
+	lockup: 22.0,
+	tagline: 22.45,
+	support: 22.7,
 	cue: 23.3,
-	cut: 23.75,
+	// The build is tightened by 0.25 s and the cut moved 0.15 s later, so the finished card holds ~0.4 s longer in the same 24 s.
+	cut: 23.9,
 	tagText: "Spotify control. Done right.",
 	supportText: "For Stream Deck on Windows · Spotify Premium required",
 };
