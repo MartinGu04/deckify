@@ -23,6 +23,29 @@
 		"Version": "24",
 		"Debug": "enabled"
 	},
+	"Profiles": [
+		{
+			"Name": "profiles/Deckify Simple",
+			"DeviceType": 0,
+			"Readonly": false,
+			"AutoInstall": false,
+			"DontAutoSwitchWhenInstalled": false
+		},
+		{
+			"Name": "profiles/Deckify",
+			"DeviceType": 0,
+			"Readonly": false,
+			"AutoInstall": false,
+			"DontAutoSwitchWhenInstalled": false
+		},
+		{
+			"Name": "profiles/Deckify Power",
+			"DeviceType": 0,
+			"Readonly": false,
+			"AutoInstall": false,
+			"DontAutoSwitchWhenInstalled": false
+		}
+	],
 	"Actions": [
 		{
 			"Name": "Deckify Status",

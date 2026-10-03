@@ -402,7 +402,9 @@ describe("package verification", () => {
 	async function completeEntries() {
 		const manifest = JSON.parse(await readFile(path.join(PLUGIN, "manifest.json"), "utf8")) as Record<string, unknown>;
 		const files = manifestFiles(manifest).flatMap((file) => (file.endsWith(".html") ? [file] : [`${file}.svg`, `${file}.png`]));
-		const entries = ["bin/plugin.js", "manifest.json", ...files, ...requiredFiles()].map((file) => `com.marting.deckify.sdPlugin/${file}`);
+		// Deckify's bundled experience profiles, as the manifest declares them.
+		const profiles = (manifest.Profiles as { Name: string }[]).map((profile) => `${profile.Name}.streamDeckProfile`);
+		const entries = ["bin/plugin.js", "manifest.json", ...files, ...requiredFiles(), ...profiles].map((file) => `com.marting.deckify.sdPlugin/${file}`);
 		return { manifest, entries };
 	}
 

@@ -58,7 +58,7 @@ function setup() {
 	const auth = fakeAuth(state);
 	const saveClientId = vi.fn((_clientId: string | undefined) => Promise.resolve());
 	const openUrl = vi.fn((_url: string) => Promise.resolve());
-	const openSetup = vi.fn((_entry: string) => Promise.resolve());
+	const openSetup = vi.fn((_entry: string, _originDeviceId?: string) => Promise.resolve());
 	const action = new SpotifyAccountAction({ auth: auth as unknown as SpotifyAuthService, state, saveClientId, openUrl, openSetup });
 	return { state, auth, saveClientId, openUrl, openSetup, action };
 }
@@ -185,9 +185,25 @@ describe("SpotifyAccountAction", () => {
 		await action.onSendToPlugin({ payload: { type: "deckify:spotify:open-setup" } } as unknown as Event);
 		await action.onSendToPlugin({ payload: { type: "deckify:spotify:open-setup", entry: "account" } } as unknown as Event);
 		await action.onSendToPlugin({ payload: { type: "deckify:spotify:open-setup", entry: "../../evil", url: "https://evil.example/" } } as unknown as Event);
-		expect(openSetup.mock.calls).toEqual([["start"], ["account"], ["start"]]);
+		expect(openSetup.mock.calls).toEqual([
+			["start", undefined],
+			["account", undefined],
+			["start", undefined],
+		]);
 		expect(openUrl).not.toHaveBeenCalled();
 		expect(auth.connect).not.toHaveBeenCalled();
+	});
+
+	it("remembers which Stream Deck opened Deckify Setup from the SDK event, never from the inspector's message", async () => {
+		const { openSetup, action } = setup();
+		const fromDevice = (id: string, payload: Record<string, unknown>) => ({ action: { device: { id, type: 0 } }, payload }) as unknown as Event;
+		await action.onSendToPlugin(fromDevice("mk2-device", { type: "deckify:spotify:open-setup" }));
+		// A device, profile or path in the message itself is ignored.
+		await action.onSendToPlugin(fromDevice("mk2-device", { type: "deckify:spotify:open-setup", entry: "account", device: "other", deviceId: "other", profile: "x" }));
+		expect(openSetup.mock.calls).toEqual([
+			["start", "mk2-device"],
+			["account", "mk2-device"],
+		]);
 	});
 
 	it("reports a failure to open Deckify Setup without crashing", async () => {

@@ -860,6 +860,154 @@ details.help ul {
 	background: var(--accent-ring);
 }
 
+/* Experiences: three layout choices (not plans), each with a schematic 5 × 3 preview of its keys. */
+.experience-list {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 14px;
+}
+
+.experience-card {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 10px;
+	min-height: 0;
+	padding: 16px 16px 18px;
+	border: 1px solid var(--border);
+	border-radius: 16px;
+	background: var(--surface-sunken);
+	color: var(--text);
+	font-weight: 400;
+	text-align: left;
+}
+
+.experience-card[data-recommended="true"] {
+	border-color: var(--border-strong);
+	background: linear-gradient(160deg, var(--accent-soft), transparent 62%), var(--surface-sunken);
+}
+
+.experience-card[data-selected="true"] {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px var(--accent-ring), 0 14px 32px rgba(0, 0, 0, 0.35);
+}
+
+.experience-card:active:not(:disabled) {
+	transform: none;
+}
+
+.experience-header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 8px;
+	min-height: 24px;
+	padding-right: 28px;
+}
+
+.experience-name {
+	color: var(--text-strong);
+	font-size: 15px;
+	font-weight: 750;
+	letter-spacing: 0.1em;
+}
+
+.experience-badge {
+	padding: 1px 9px;
+	border-radius: 999px;
+	background: var(--accent);
+	color: var(--on-accent);
+	font-size: 11.5px;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+}
+
+.experience-check {
+	position: absolute;
+	top: 18px;
+	right: 16px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	border: 1.5px solid var(--border-strong);
+	border-radius: 50%;
+	font-size: 11px;
+	font-weight: 800;
+}
+
+.experience-card[data-selected="true"] .experience-check {
+	border-color: var(--accent);
+	background: var(--accent);
+	color: var(--on-accent);
+}
+
+.experience-card[data-selected="true"] .experience-check::before {
+	content: "✓";
+}
+
+.experience-description {
+	min-height: 2.9em;
+	color: var(--muted);
+	font-size: 13.5px;
+	line-height: 1.45;
+}
+
+.experience-list.is-unavailable .experience-card {
+	opacity: 0.55;
+}
+
+/* The preview frame stands in for the device; keys use Deckify's own monochrome action icons. */
+.deck-preview {
+	display: grid;
+	margin-top: auto;
+	grid-template-columns: repeat(5, minmax(0, 1fr));
+	gap: 6px;
+	padding: 10px;
+	border-radius: 12px;
+	background: #08080a;
+	box-shadow: 0 0 0 1px var(--border);
+}
+
+.deck-key {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	aspect-ratio: 1;
+	border-radius: 22%;
+	background: #1a1a1f;
+	box-shadow: inset 0 0 0 1px #2c2c33;
+}
+
+.deck-key img {
+	width: 52%;
+	height: auto;
+}
+
+.deck-key.empty {
+	background: #0f0f12;
+	box-shadow: inset 0 0 0 1px #1f1f24;
+}
+
+.deck-key[data-key="now-playing"] {
+	box-shadow: inset 0 0 0 1px var(--accent-ring);
+}
+
+.experience-tag {
+	color: var(--accent-strong);
+	font-size: 14px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+}
+
+#ready-chosen {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
 /* Subtle motion only, and none when the user asks for less. */
 .view:not([hidden]) {
 	animation: appear 180ms ease-out;
@@ -912,6 +1060,18 @@ details.help ul {
 	.tour-card {
 		flex-direction: column;
 		padding: 22px;
+	}
+
+	.experience-list {
+		grid-template-columns: 1fr;
+	}
+
+	.experience-description {
+		min-height: 0;
+	}
+
+	.deck-preview {
+		max-width: 300px;
 	}
 
 	.flow-arrow {

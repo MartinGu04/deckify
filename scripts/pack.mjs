@@ -3,6 +3,9 @@
  *
  * On Windows the Windows media bridge helper is built (Rust) and bundled into bin/native/, and the package is verified to contain it.
  * Elsewhere the package is built without it (Deckify then uses the Spotify Web API for commands).
+ *
+ * Deckify's bundled Stream Deck profiles (the experiences) are checked before packing (they must be real exports matching their layouts,
+ * with no personal data; see scripts/profiles.mjs), and the package must contain exactly the profiles the manifest declares.
  */
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -10,6 +13,7 @@ import path from "node:path";
 
 import { keyIconFiles } from "./export-key-icons.mjs";
 import { buildNative } from "./native.mjs";
+import { checkBundledProfiles, PROFILE_EXTENSION } from "./profiles.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const PACKAGE = path.join(ROOT, "dist", "com.marting.deckify.streamDeckPlugin");
@@ -25,6 +29,7 @@ export const SPOTIFY_ICON = "imgs/attribution/Spotify_Primary_Logo_RGB_Green.png
 const INSPECTOR_FILES = [
 	"ui/shared/inspector.css",
 	"ui/shared/onboarding.js",
+	"ui/setup/experiences.js",
 	"ui/spotify-account/inspector.js",
 	"ui/spotify-account/account.css",
 	"ui/setup/index.html",
@@ -63,6 +68,13 @@ class CommandFailedError extends Error {
  * Builds, packs and verifies the package.
  */
 function pack() {
+	const profileProblems = checkBundledProfiles(JSON.parse(readFileSync(MANIFEST, "utf8")));
+	if (profileProblems.length > 0) {
+		for (const problem of profileProblems) {
+			console.error(problem);
+		}
+		process.exit(1);
+	}
 	const withNative = buildNative();
 	run(path.join(ROOT, "node_modules", "rollup", "dist", "bin", "rollup"), ["-c"]);
 	// `streamdeck pack` rewrites manifest.json (dropping its final newline); put the committed bytes back afterwards.
@@ -103,8 +115,29 @@ export function verifyPackageEntries(entries, manifest, withNative) {
 	if (missing.length > 0) {
 		problems.push(`The package is missing files the plugin uses: ${missing.join(", ")}`);
 	}
+	problems.push(...verifyProfileEntries(entries, manifest));
 	if (withNative && !entries.includes(HELPER_ENTRY)) {
 		problems.push(`The package does not contain ${HELPER_ENTRY}.`);
+	}
+	return problems;
+}
+
+/**
+ * Checks that a package contains exactly the Stream Deck profiles the manifest declares (no development or test profiles).
+ * @param {string[]} entries ZIP entry names.
+ * @param {Record<string, unknown>} manifest Parsed manifest.
+ * @returns {string[]} What is wrong.
+ */
+export function verifyProfileEntries(entries, manifest) {
+	const declared = (Array.isArray(manifest.Profiles) ? manifest.Profiles : []).map((profile) => `com.marting.deckify.sdPlugin/${String(profile.Name)}${PROFILE_EXTENSION}`);
+	const problems = [];
+	const missing = declared.filter((entry) => !entries.includes(entry));
+	if (missing.length > 0) {
+		problems.push(`The package is missing bundled profiles the manifest declares: ${missing.join(", ")}`);
+	}
+	const extra = entries.filter((entry) => entry.endsWith(PROFILE_EXTENSION) && !declared.includes(entry));
+	if (extra.length > 0) {
+		problems.push(`The package contains profiles the manifest does not declare: ${extra.join(", ")}`);
 	}
 	return problems;
 }
