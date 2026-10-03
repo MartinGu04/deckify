@@ -87,6 +87,8 @@ streamDeck.actions.registerAction(
 		auth: spotifyAuth,
 		state: spotifyState,
 		saveClientId: saveSpotifyClientId,
+		// Only ever asked to open the Spotify Developer Dashboard (a fixed URL; the Property Inspector cannot pass one).
+		openUrl: (url) => streamDeck.system.openUrl(url),
 		logger: logger.createScope("Spotify Account"),
 	}),
 );

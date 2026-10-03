@@ -121,6 +121,8 @@ describe("scope migration from Phase 2", () => {
 
 		expect(ctx.state.snapshot.status).toBe("reauthorization-required");
 		expect(ctx.state.snapshot.message).toContain("Reconnect Spotify");
+		// The Property Inspector keeps its compact Reconnect screen and explains the denial.
+		expect(ctx.state.snapshot.issue).toBe("authorization-denied");
 		await expect(ctx.store.load()).resolves.toEqual(stored);
 	});
 

@@ -45,6 +45,8 @@ function fakeAuth(state: SpotifyAuthState) {
 			state.update({ status: "connected", profile: { id: "u", displayName: "Test Listener", product: undefined }, authorizedAt: 1 });
 			return Promise.resolve();
 		}),
+		retryConnect: vi.fn(() => Promise.resolve()),
+		cancelConnect: vi.fn(),
 		disconnect: vi.fn(() => Promise.resolve()),
 		verify: vi.fn(() => Promise.resolve()),
 		setClientId: vi.fn((_clientId: string | undefined) => Promise.resolve()),
@@ -55,8 +57,9 @@ function setup() {
 	const state = new SpotifyAuthState();
 	const auth = fakeAuth(state);
 	const saveClientId = vi.fn((_clientId: string | undefined) => Promise.resolve());
-	const action = new SpotifyAccountAction({ auth: auth as unknown as SpotifyAuthService, state, saveClientId });
-	return { state, auth, saveClientId, action };
+	const openUrl = vi.fn((_url: string) => Promise.resolve());
+	const action = new SpotifyAccountAction({ auth: auth as unknown as SpotifyAuthService, state, saveClientId, openUrl });
+	return { state, auth, saveClientId, openUrl, action };
 }
 
 /** Lets fire-and-forget renders settle. */
@@ -136,7 +139,7 @@ describe("SpotifyAccountAction", () => {
 		expect(saveClientId).not.toHaveBeenCalled();
 		expect(auth.setClientId).not.toHaveBeenCalled();
 		expect(sdk.ui.sendToPropertyInspector).toHaveBeenLastCalledWith(
-			expect.objectContaining({ clientIdError: expect.stringMatching(/does not look like a Spotify Client ID/) as unknown }),
+			expect.objectContaining({ clientIdError: expect.stringMatching(/does not look like a Spotify Client ID/) as unknown, clientIdIssue: "invalid-client-id" }),
 		);
 	});
 
@@ -154,6 +157,46 @@ describe("SpotifyAccountAction", () => {
 		await action.onSendToPlugin({ payload: { type: "deckify:spotify:disconnect" } } as unknown as Event);
 		expect(auth.connect).toHaveBeenCalledTimes(1);
 		expect(auth.disconnect).toHaveBeenCalledTimes(1);
+	});
+
+	it("routes Retry and Cancel for a sign-in in progress", async () => {
+		const { auth, action } = setup();
+		await action.onSendToPlugin({ payload: { type: "deckify:spotify:retry-connect" } } as unknown as Event);
+		await action.onSendToPlugin({ payload: { type: "deckify:spotify:cancel-connect" } } as unknown as Event);
+		expect(auth.retryConnect).toHaveBeenCalledTimes(1);
+		expect(auth.cancelConnect).toHaveBeenCalledTimes(1);
+		expect(auth.connect).not.toHaveBeenCalled();
+	});
+
+	it("opens only the Spotify Developer Dashboard, whatever the message carries", async () => {
+		const { openUrl, action } = setup();
+		await action.onSendToPlugin({ payload: { type: "deckify:spotify:open-dashboard" } } as unknown as Event);
+		for (const url of ["https://evil.example/", "javascript:alert(1)", "file:///C:/Windows/System32/cmd.exe", "https://developer.spotify.com.evil.example/dashboard"]) {
+			await action.onSendToPlugin({ payload: { type: "deckify:spotify:open-dashboard", url } } as unknown as Event);
+		}
+		await action.onSendToPlugin({ payload: { type: "deckify:spotify:open-url", url: "https://evil.example/" } } as unknown as Event);
+
+		expect(openUrl.mock.calls).toEqual(Array.from({ length: 5 }, () => ["https://developer.spotify.com/dashboard"]));
+	});
+
+	it("reports a failure to open the dashboard without crashing", async () => {
+		const { openUrl, action } = setup();
+		openUrl.mockRejectedValueOnce(new Error("no browser"));
+		await action.onSendToPlugin({ payload: { type: "deckify:spotify:open-dashboard" } } as unknown as Event);
+		expect(sdk.ui.sendToPropertyInspector).toHaveBeenLastCalledWith(expect.objectContaining({ clientIdIssue: "unknown" }));
+	});
+
+	it("sends the structured issue and activity with the state, never as English to parse", async () => {
+		const { state } = setup();
+		state.update({ status: "connecting", clientId: FAKE.clientId, message: "Waiting...", activity: "authorizing" });
+		await flush();
+		state.update({ status: "error", clientId: FAKE.clientId, message: "Spotify refused access (HTTP 403).", issue: "spotify-access-refused" });
+		await flush();
+		const states = sdk.ui.sendToPropertyInspector.mock.calls.map(([payload]) => (payload as { state: Record<string, unknown> }).state);
+		expect(states.map((s) => [s.status, s.issue, s.activity])).toEqual([
+			["connecting", null, "authorizing"],
+			["error", "spotify-access-refused", null],
+		]);
 	});
 
 	it("ignores malformed Property Inspector messages", async () => {
@@ -184,7 +227,7 @@ describe("shared state propagation (real auth service)", () => {
 			openUrl: () => Promise.reject(new Error("must not open a browser")),
 			http: { fetch },
 		});
-		new SpotifyAccountAction({ auth, state, saveClientId: () => Promise.resolve() });
+		new SpotifyAccountAction({ auth, state, saveClientId: () => Promise.resolve(), openUrl: () => Promise.reject(new Error("must not open a browser")) });
 		const keys = [fakeKey("a"), fakeKey("b")];
 		sdk.keys = keys;
 
@@ -196,7 +239,8 @@ describe("shared state propagation (real auth service)", () => {
 		}
 		const payload = sdk.ui.sendToPropertyInspector.mock.calls.at(-1)?.[0] as { state: Record<string, unknown> };
 		expect(payload.state).toMatchObject({ status: "connected", displayName: "Test Listener", clientId: FAKE.clientId });
-		expect(Object.keys(payload.state).sort()).toEqual(["authorizedAt", "clientId", "displayName", "message", "product", "redirectUri", "status"]);
+		expect(Object.keys(payload.state).sort()).toEqual(["activity", "authorizedAt", "clientId", "displayName", "issue", "message", "product", "redirectUri", "status"]);
+		expect(Object.keys(payload).sort()).toEqual(["clientIdError", "clientIdIssue", "state", "type"]);
 		expect(findSecrets(JSON.stringify(sdk.ui.sendToPropertyInspector.mock.calls))).toEqual([]);
 
 		await auth.disconnect();

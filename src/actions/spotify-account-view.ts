@@ -1,4 +1,5 @@
-import type { SpotifyAuthSnapshot, SpotifyAuthStatus } from "../spotify/state/auth-state";
+import type { SpotifyAccountIssue } from "../spotify/account-issues";
+import type { SpotifyAuthActivity, SpotifyAuthSnapshot, SpotifyAuthStatus } from "../spotify/state/auth-state";
 
 /**
  * How a Spotify Account key looks for a given status.
@@ -38,6 +39,12 @@ export type SpotifyAccountInspectorState = {
 	readonly product: string | undefined;
 	readonly authorizedAt: number | undefined;
 	readonly message: string | undefined;
+
+	/** Why the account is in this state; the Property Inspector picks its guidance from this, never from {@link message}. */
+	readonly issue: SpotifyAccountIssue | undefined;
+
+	/** What a Connecting state is waiting for. */
+	readonly activity: SpotifyAuthActivity | undefined;
 };
 
 /**
@@ -55,5 +62,7 @@ export function toInspectorState(snapshot: SpotifyAuthSnapshot, redirectUri: str
 		product: snapshot.profile?.product,
 		authorizedAt: snapshot.authorizedAt,
 		message: snapshot.message,
+		issue: snapshot.issue,
+		activity: snapshot.activity,
 	};
 }

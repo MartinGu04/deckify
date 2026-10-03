@@ -11,3 +11,10 @@ export function spotifyItemUrl(uri: string | undefined): string | undefined {
 	const match = typeof uri === "string" ? ITEM_URI.exec(uri) : null;
 	return match ? `https://open.spotify.com/${match[1] ?? ""}/${match[2] ?? ""}` : undefined;
 }
+
+/**
+ * The Spotify Developer Dashboard, where users create the Spotify app whose Client ID Deckify uses. The Spotify Account Property Inspector
+ * can ask the plugin to open this page, and only this page: the request carries no URL.
+ */
+export const SPOTIFY_DEVELOPER_DASHBOARD_URL = "https://developer.spotify.com/dashboard";
+

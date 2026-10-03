@@ -592,3 +592,153 @@ describe("Client ID changes", () => {
 		expect(ctx.state.snapshot.status).toBe("connected");
 	});
 });
+
+describe("structured issues for the Property Inspector", () => {
+	it("marks a browser sign-in as authorizing and a restore as restoring", async () => {
+		const ctx = setup();
+		await ctx.auth.initialize(FAKE.clientId);
+		await ctx.auth.connect();
+		expect(ctx.history.filter((s) => s.status === "connecting").map((s) => s.activity)).toEqual(["authorizing"]);
+		expect(ctx.state.snapshot).toMatchObject({ status: "connected", issue: undefined, activity: undefined });
+
+		const restore = setup({ store: new MemoryTokenStore(storedSession({ accessTokenExpiresAt: Date.UTC(2026, 0, 1) + HOUR })) });
+		await restore.auth.initialize(FAKE.clientId);
+		expect(restore.history.map((s) => [s.status, s.activity])).toEqual([
+			["connecting", "restoring"],
+			["connected", undefined],
+		]);
+	});
+
+	it.each([
+		["denied", new AuthorizationDeniedError(), "disconnected", "authorization-denied"],
+		["cancelled", new AuthorizationCancelledError(), "disconnected", "authorization-cancelled"],
+		["timed out", new AuthorizationTimeoutError(), "error", "authorization-timeout"],
+		["state mismatch", new AuthorizationStateMismatchError(), "error", "authorization-failed"],
+	])("classifies a sign-in that was %s", async (_name, error, status, issue) => {
+		const ctx = setup({ onBrowserOpen: (_url, l) => l.respond(error) });
+		await ctx.auth.initialize(FAKE.clientId);
+		await ctx.auth.connect();
+		expect(ctx.state.snapshot).toMatchObject({ status, issue });
+	});
+
+	it("classifies an occupied callback port", async () => {
+		const ctx = setup();
+		ctx.listener.failToStart(new CallbackPortInUseError());
+		await ctx.auth.initialize(FAKE.clientId);
+		await ctx.auth.connect();
+		expect(ctx.state.snapshot.issue).toBe("callback-port-in-use");
+	});
+
+	it("classifies a 403 after sign-in as refused access, not as anything more specific", async () => {
+		const ctx = setup({
+			spotify: (req) =>
+				req.url.pathname === "/v1/me" ? json(403, { error: { status: 403, message: "User not registered in the Developer Dashboard" } }) : defaultSpotify(req),
+		});
+		await ctx.auth.initialize(FAKE.clientId);
+		await ctx.auth.connect();
+		expect(ctx.state.snapshot).toMatchObject({ status: "error", issue: "spotify-access-refused" });
+	});
+
+	it("classifies other Spotify failures without guessing", async () => {
+		const ctx = setup({ spotify: (req) => (req.url.pathname === "/v1/me" ? json(500, { error: { status: 500, message: "Server error" } }) : defaultSpotify(req)) });
+		await ctx.auth.initialize(FAKE.clientId);
+		await ctx.auth.connect();
+		expect(ctx.state.snapshot).toMatchObject({ status: "error", issue: "spotify-unavailable" });
+	});
+
+	it("classifies a missing Client ID, a session that could not be saved, and session problems at startup", async () => {
+		const none = setup();
+		await none.auth.initialize(undefined);
+		await none.auth.connect();
+		expect(none.state.snapshot).toMatchObject({ status: "not-configured", issue: "client-id-missing" });
+
+		const store = new MemoryTokenStore();
+		vi.spyOn(store, "save").mockRejectedValue(new TokenStoreError("DPAPI unavailable"));
+		const unsaved = setup({ store });
+		await unsaved.auth.initialize(FAKE.clientId);
+		await unsaved.auth.connect();
+		expect(unsaved.state.snapshot).toMatchObject({ status: "connected", issue: "session-not-saved" });
+
+		const other = setup({ store: new MemoryTokenStore(storedSession({ clientId: FAKE.otherClientId })) });
+		await other.auth.initialize(FAKE.clientId);
+		expect(other.state.snapshot).toMatchObject({ status: "disconnected", issue: "client-id-changed" });
+
+		const broken = new MemoryTokenStore(storedSession());
+		vi.spyOn(broken, "load").mockRejectedValue(new TokenStoreError("The stored Spotify session could not be decrypted."));
+		const unreadable = setup({ store: broken });
+		await unreadable.auth.initialize(FAKE.clientId);
+		expect(unreadable.state.snapshot).toMatchObject({ status: "disconnected", issue: "session-unreadable" });
+
+		const revoked = setup({
+			store: new MemoryTokenStore(storedSession({ accessTokenExpiresAt: 0 })),
+			spotify: (req) => (req.url.pathname === "/api/token" ? json(400, { error: "invalid_grant", error_description: "Refresh token revoked" }) : defaultSpotify(req)),
+		});
+		await revoked.auth.initialize(FAKE.clientId);
+		expect(revoked.state.snapshot).toMatchObject({ status: "disconnected", issue: "session-expired" });
+	});
+
+	it("clears the issue once the account recovers", async () => {
+		const ctx = setup({ onBrowserOpen: (_url, l) => l.respond(new AuthorizationDeniedError()) });
+		await ctx.auth.initialize(FAKE.clientId);
+		await ctx.auth.connect();
+		expect(ctx.state.snapshot.issue).toBe("authorization-denied");
+		await ctx.auth.disconnect();
+		expect(ctx.state.snapshot).toMatchObject({ status: "disconnected", issue: undefined, message: undefined });
+	});
+});
+
+describe("cancelling and retrying a sign-in", () => {
+	it("cancels a sign-in that is waiting for the browser, storing nothing", async () => {
+		const ctx = setup({ onBrowserOpen: () => undefined });
+		await ctx.auth.initialize(FAKE.clientId);
+		const connecting = ctx.auth.connect();
+		await vi.waitFor(() => expect(ctx.openUrl).toHaveBeenCalled());
+
+		ctx.auth.cancelConnect();
+		await connecting;
+		expect(ctx.listener.close).toHaveBeenCalled();
+		expect(ctx.state.snapshot).toMatchObject({ status: "disconnected", issue: "authorization-cancelled", clientId: FAKE.clientId });
+		expect(ctx.tokenRequests()).toHaveLength(0);
+		await expect(ctx.store.load()).resolves.toBeUndefined();
+	});
+
+	it("does nothing when no sign-in is waiting", async () => {
+		const ctx = setup({ store: new MemoryTokenStore(storedSession()) });
+		await ctx.auth.initialize(FAKE.clientId);
+		ctx.auth.cancelConnect();
+		expect(ctx.state.snapshot.status).toBe("connected");
+		expect(ctx.auth.hasSession).toBe(true);
+	});
+
+	it("retries by opening Spotify's page again, without a cancelled state in between", async () => {
+		let attempts = 0;
+		const ctx = setup({
+			onBrowserOpen: (_url, l) => {
+				attempts++;
+				if (attempts === 2) {
+					l.respond({ code: FAKE.code });
+				}
+			},
+		});
+		await ctx.auth.initialize(FAKE.clientId);
+		const first = ctx.auth.connect();
+		await vi.waitFor(() => expect(ctx.openUrl).toHaveBeenCalledTimes(1));
+
+		await ctx.auth.retryConnect();
+		await first;
+		expect(ctx.openUrl).toHaveBeenCalledTimes(2);
+		expect(ctx.listener.start).toHaveBeenCalledTimes(2);
+		expect(ctx.state.snapshot.status).toBe("connected");
+		expect(ctx.history.map((s) => s.status)).toEqual(["disconnected", "connecting", "connecting", "connected"]);
+		expect(ctx.tokenRequests()).toHaveLength(1);
+		expectNoLeaks(ctx);
+	});
+
+	it("retry simply connects when nothing is in progress", async () => {
+		const ctx = setup();
+		await ctx.auth.initialize(FAKE.clientId);
+		await ctx.auth.retryConnect();
+		expect(ctx.openUrl).toHaveBeenCalledTimes(1);
+		expect(ctx.state.snapshot.status).toBe("connected");
+	});
+});
