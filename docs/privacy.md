@@ -11,7 +11,7 @@ and logs. It describes the current code; if something here is wrong, please repo
 | Your Spotify **Client ID** | Stream Deck's global settings for Deckify | None needed: a Client ID is a public app identifier, not a secret. |
 | Spotify **access and refresh tokens** | `%LOCALAPPDATA%\Deckify\spotify-session.json` | Encrypted (see below). |
 | Session metadata (the Client ID it belongs to, when the access token expires, when you authorized, the granted scopes) | The same file, outside the encrypted part | Not secret. |
-| Per-key settings: the Volume step; the chosen playlist's ID, URI and name (the name only to show it while offline) | Stream Deck's settings for that key | Stored by Stream Deck like any key setting. |
+| Per-key settings: the Volume step; the chosen playlist's ID, URI and name (the name is only a display cache; the key is identified by ID and URI) | Stream Deck's settings for that key | Stored by Stream Deck like any key setting. |
 | Logs | The plugin's `logs` folder (see [Logs](#logs)) | Plain text, without secrets. |
 
 - **How the tokens are encrypted:**
