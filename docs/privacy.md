@@ -52,15 +52,28 @@ The bundled helper (`deckify-media-bridge.exe`) receives only one of these comma
 The settings pages in the Stream Deck app talk only to the plugin.
 
 - **What they show:**
-  - Spotify Account: the setup guide, the connection status, your Spotify display name and plan, your Client ID and the Redirect URI;
+  - Spotify Account: the connection status, your Spotify display name and plan, your Client ID and the Redirect URI;
   - Volume: the step;
   - the playlist picker: your playlists' names, owners and sizes.
 - **What the Spotify Account page receives:** only that public account state and a short problem code (for example
-  `authorization-denied`), which it turns into guidance. The guided setup's step and tour page live only in the open page and are
-  forgotten when it closes.
+  `authorization-denied`).
 - **What they never receive:** tokens or API URLs.
 - **What they never do:** call Spotify, open links themselves, store anything in browser storage, or load remote scripts. **Open Spotify
   Dashboard** asks the plugin, which opens only `https://developer.spotify.com/dashboard`.
+
+## Deckify Setup
+
+The guided setup opens in your default browser, served by Deckify from your own PC.
+
+- **Where it runs:** only on `127.0.0.1`, on a random port, and only while setup is open. Nothing is hosted online, and nothing on your
+  network can reach it.
+- **What it receives:** the same public account state as the Spotify Account settings, plus a short problem code. Never tokens, the
+  encryption key or a Client Secret.
+- **What it can do:** only save your Client ID, connect, retry or cancel a sign-in, disconnect, and open the Spotify Developer Dashboard.
+- **Access:** a one-time link from Stream Deck and a session token kept only in the open page. The token is never put in a URL, a cookie
+  or browser storage, and it is never logged.
+- **What it stores:** nothing. It uses no cookies, no browser storage, no remote fonts or scripts, no analytics and no telemetry. The setup
+  step and tour page are forgotten when the tab closes.
 
 ## Logs
 

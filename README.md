@@ -64,7 +64,7 @@ Media keys send play, pause and skip to whichever app Windows thinks is playing,
 
 | Action | What the key shows | Path | Settings | Remote Spotify Connect |
 | --- | --- | --- | --- | --- |
-| **Spotify Account** | Set Up · Connect · Connecting · Connected · Reconnect · Error | Spotify sign-in (OAuth + PKCE) | Guided Spotify setup, Client ID, Connect / Disconnect | — |
+| **Spotify Account** | Set Up · Connect · Connecting · Connected · Reconnect · Error | Spotify sign-in (OAuth + PKCE) | Opens Deckify Setup; status, Reconnect / Disconnect | — |
 | **Previous Track** | Dimmed when unavailable | Local first, Web API fallback | — | ✓ |
 | **Play / Pause** | Play or Pause, whichever a press does | Local first, Web API fallback | — | ✓ |
 | **Next Track** | Dimmed when unavailable | Local first, Web API fallback | — | ✓ |
@@ -86,7 +86,7 @@ Media keys send play, pause and skip to whichever app Windows thinks is playing,
 - **Windows 10 or later.** macOS isn't supported.
 - **The Stream Deck app 7.1 or later** and an Elgato Stream Deck. Designed for and tested on the 15-key MK.2.
 - **Spotify Premium.** Spotify only allows playback control for Premium accounts.
-- **A Spotify app with your own Client ID.** It takes a couple of minutes, and Deckify's Spotify Account setup guides you through it.
+- **A Spotify app with your own Client ID.** It takes a couple of minutes, and Deckify Setup guides you through it.
 
 You do **not** need Node.js, Rust, Git, PowerShell, other developer tools or a Spotify Client Secret to use the packaged plugin.
 
@@ -98,7 +98,7 @@ See [Requirements](#requirements). Make sure you're signed in to Spotify with a 
 
 ### 2. Know what the setup will ask
 
-You don't need to prepare anything: Deckify's **Spotify Account** setup walks you through it step by step, with buttons to open the
+You don't need to prepare anything: **Deckify Setup** walks you through it step by step in your browser, with buttons to open the
 Spotify Developer Dashboard and copy the values it needs. For reference, it has you:
 
 1. Create an app in the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) (any name, for example *Deckify*) and
@@ -124,14 +124,17 @@ Until then, Deckify can be built from source; see [docs/development.md](docs/dev
 
 ### 4. Connect Spotify
 
-1. In the Stream Deck app, drag **Deckify → Spotify Account** onto a key and select it. Its settings open Deckify's guided setup.
-2. Press **Start setup** and follow the four steps: open the Spotify Dashboard, create the app, add your Client ID, and connect.
-3. When you press **Connect Spotify**, your browser opens Spotify's authorization page. Approve it; the page says *Deckify is connected
-   to Spotify*, and the key shows **Connected**.
-4. Optionally, press **Show me around** for a short tour of what Deckify's keys do.
+1. In the Stream Deck app, drag **Deckify → Spotify Account** onto a key and select it.
+2. In its settings, press **Set up Deckify**. **Deckify Setup** opens in your default browser. It runs only on your PC, served by Deckify
+   from `127.0.0.1`.
+3. Press **Start setup** and follow the four steps: open the Spotify Dashboard, create the app, add your Client ID, and connect.
+4. When you press **Connect Spotify**, a new tab opens Spotify's authorization page. Approve it; Deckify Setup shows **You're connected**,
+   and the key shows **Connected**.
+5. Optionally, press **Show me around** for a short tour of what Deckify's keys do, then **Done**.
 
-If something goes wrong (you cancel in the browser, Spotify doesn't answer, or Spotify refuses the account), the setup says what happened
-and what to try next. Reopening the settings later shows your connection, not the setup again.
+If something goes wrong (you cancel in the browser, Spotify doesn't answer, or Spotify refuses the account), Deckify Setup says what
+happened and what to try next. Afterwards, the Spotify Account settings show your connection, with **Open Deckify Setup** for anything
+else.
 
 ### 5. Add your keys
 
@@ -186,13 +189,15 @@ Deckify was designed to keep your Spotify account safe. It hasn't had a formal s
 
 - **Sign-in:** OAuth 2.0 Authorization Code with PKCE. No Client Secret, ever.
 - **Encrypted session:** tokens are encrypted locally (AES-256-GCM), with the key protected by Windows DPAPI (current user).
-- **Tokens stay in the plugin.** The Windows helper and the Property Inspector pages never receive them, and they never go into Stream
-  Deck settings or browser storage.
+- **Tokens stay in the plugin.** The Windows helper, the Property Inspector pages and Deckify Setup never receive them, and they never go
+  into Stream Deck settings or browser storage.
+- **Local-only setup page.** Deckify Setup is served on `127.0.0.1` only while it is open, on a random port, behind a one-time link and a
+  per-session token. It can only ask for a fixed set of account actions.
 - **No shell, fixed commands.** Media commands run without a shell: the helper accepts six fixed commands and only targets Spotify's
   media session.
 - **Clean logs.** Production logs leave out tokens and Spotify IDs, URIs and names.
-- **Validated links.** Links are checked before opening: only Spotify sign-in, the Spotify Developer Dashboard (a fixed address) and
-  `open.spotify.com` playlist, track and episode links.
+- **Validated links.** Links are checked before opening: only Spotify sign-in, the Spotify Developer Dashboard (a fixed address),
+  Deckify Setup on `127.0.0.1` and `open.spotify.com` playlist, track and episode links.
 - **No telemetry.** Deckify talks only to Spotify, with no analytics and no Deckify server.
 
 Details: [docs/privacy.md](docs/privacy.md) · Reporting a vulnerability: [SECURITY.md](SECURITY.md)
@@ -230,7 +235,7 @@ instead of guessing. Use the phone's own volume buttons for that device.
 <summary><b>Why do I need a Spotify Client ID?</b></summary>
 
 Deckify signs in through a Spotify developer app. Without Spotify's extended access, the supported way is for each user to create their
-own app (free, a couple of minutes, and the Spotify Account setup guides you). See
+own app (free, a couple of minutes, and Deckify Setup guides you). See
 [Your Spotify Client ID, explained](#your-spotify-client-id-explained).
 </details>
 
