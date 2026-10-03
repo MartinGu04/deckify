@@ -10,30 +10,16 @@ import streamDeck, {
 import { ActionUUID } from "../identifiers";
 import type { JsonObject } from "../shared/sdk-types";
 import { silentLogger, type Logger } from "../shared/logger";
+import { parseSpotifyAccountCommand, SpotifyAccountCommands, type ClientIdProblem } from "../spotify/account-commands";
 import type { SpotifyAuthService } from "../spotify/auth/auth-service";
-import { issueForError, type SpotifyAccountIssue } from "../spotify/account-issues";
-import { normalizeClientId } from "../spotify/client-id";
-import { SPOTIFY_REDIRECT_URI } from "../spotify/config";
-import { describeError } from "../spotify/errors";
-import { SPOTIFY_DEVELOPER_DASHBOARD_URL } from "../spotify/links";
 import type { SpotifyAuthSnapshot, SpotifyAuthState } from "../spotify/state/auth-state";
-import { getSpotifyAccountKeyView, toInspectorState } from "./spotify-account-view";
+import { getSpotifyAccountKeyView } from "./spotify-account-view";
 
-/**
- * Messages the Spotify Account Property Inspector sends to the plugin. None of them carries a URL: Open Dashboard always opens
- * {@link SPOTIFY_DEVELOPER_DASHBOARD_URL}.
- */
-type InspectorRequest =
-	| { type: "deckify:spotify:hello" }
-	| { type: "deckify:spotify:save-client-id"; clientId: string }
-	| { type: "deckify:spotify:connect" }
-	| { type: "deckify:spotify:retry-connect" }
-	| { type: "deckify:spotify:cancel-connect" }
-	| { type: "deckify:spotify:disconnect" }
-	| { type: "deckify:spotify:open-dashboard" };
+/** Prefix of every message the Spotify Account Property Inspector exchanges with the plugin. */
+const MESSAGE_PREFIX = "deckify:spotify:";
 
-/** A problem with the Client ID the Property Inspector sent, shown next to the Client ID field. */
-type ClientIdProblem = { readonly message: string; readonly issue: SpotifyAccountIssue };
+/** Where the Setup App starts: the welcome screen, or the account (Client ID / connection) part for people who already set up. */
+export type SetupEntry = "start" | "account";
 
 /** Event received from the Property Inspector (payload typed by the SDK as JSON). */
 type InspectorMessageEvent = Parameters<NonNullable<SingletonAction["onSendToPlugin"]>>[0];
@@ -48,8 +34,11 @@ export type SpotifyAccountActionOptions = {
 	/** Persists the Client ID in Deckify's global settings. */
 	readonly saveClientId: (clientId: string | undefined) => Promise<void>;
 
-	/** Opens a URL in the default browser; only ever called with {@link SPOTIFY_DEVELOPER_DASHBOARD_URL}. */
+	/** Opens a URL in the default browser; only ever called with the Spotify Developer Dashboard address. */
 	readonly openUrl: (url: string) => Promise<void>;
+
+	/** Opens the Deckify Setup App in the default browser. */
+	readonly openSetup: (entry: SetupEntry) => Promise<void>;
 	readonly logger?: Logger;
 };
 
@@ -62,8 +51,8 @@ export type SpotifyAccountActionOptions = {
 export class SpotifyAccountAction extends SingletonAction {
 	readonly #auth: SpotifyAuthService;
 	readonly #state: SpotifyAuthState;
-	readonly #saveClientId: (clientId: string | undefined) => Promise<void>;
-	readonly #openUrl: (url: string) => Promise<void>;
+	readonly #commands: SpotifyAccountCommands;
+	readonly #openSetup: (entry: SetupEntry) => Promise<void>;
 	readonly #logger: Logger;
 
 	/**
@@ -74,9 +63,15 @@ export class SpotifyAccountAction extends SingletonAction {
 		super();
 		this.#auth = options.auth;
 		this.#state = options.state;
-		this.#saveClientId = options.saveClientId;
-		this.#openUrl = options.openUrl;
+		this.#openSetup = options.openSetup;
 		this.#logger = options.logger ?? silentLogger;
+		this.#commands = new SpotifyAccountCommands({
+			auth: options.auth,
+			state: options.state,
+			saveClientId: options.saveClientId,
+			openUrl: options.openUrl,
+			logger: this.#logger,
+		});
 		this.#state.subscribe((snapshot) => {
 			void this.#renderAll(snapshot);
 		});
@@ -105,7 +100,7 @@ export class SpotifyAccountAction extends SingletonAction {
 				return;
 			}
 			if (status === "not-configured") {
-				this.#logger.info("Spotify Client ID missing; enter it in the Spotify Account Property Inspector.");
+				this.#logger.info("Spotify Client ID missing; set up Deckify from the Spotify Account Property Inspector.");
 				await ev.action.showAlert();
 				return;
 			}
@@ -138,58 +133,32 @@ export class SpotifyAccountAction extends SingletonAction {
 	 * @param ev The event.
 	 */
 	override async onSendToPlugin(ev: InspectorMessageEvent): Promise<void> {
-		const request = parseInspectorRequest(ev.payload);
-		if (request === undefined) {
+		const { payload } = ev;
+		const type = typeof payload === "object" && payload !== null && "type" in payload ? payload.type : undefined;
+		if (type === `${MESSAGE_PREFIX}hello`) {
+			await this.#sendInspectorState(this.#state.snapshot);
+			return;
+		}
+		if (type === `${MESSAGE_PREFIX}open-setup`) {
+			const entry: SetupEntry = typeof payload === "object" && payload !== null && "entry" in payload && payload.entry === "account" ? "account" : "start";
+			try {
+				await this.#openSetup(entry);
+			} catch (err) {
+				this.#logger.error("Could not open Deckify Setup.", err);
+				await this.#sendInspectorState(this.#state.snapshot, { message: "Deckify Setup could not be opened. Check the Deckify log.", issue: "unknown" });
+			}
+			return;
+		}
+
+		const command = parseSpotifyAccountCommand(payload, MESSAGE_PREFIX);
+		if (command === undefined) {
 			this.#logger.warn("Ignored an unrecognized Property Inspector message.");
 			return;
 		}
-
-		try {
-			switch (request.type) {
-				case "deckify:spotify:hello":
-					await this.#sendInspectorState(this.#state.snapshot);
-					break;
-				case "deckify:spotify:save-client-id":
-					await this.#handleSaveClientId(request.clientId);
-					break;
-				case "deckify:spotify:connect":
-					await this.#auth.connect();
-					break;
-				case "deckify:spotify:retry-connect":
-					await this.#auth.retryConnect();
-					break;
-				case "deckify:spotify:cancel-connect":
-					this.#auth.cancelConnect();
-					break;
-				case "deckify:spotify:disconnect":
-					await this.#auth.disconnect();
-					break;
-				case "deckify:spotify:open-dashboard":
-					this.#logger.info("Opening the Spotify Developer Dashboard.");
-					await this.#openUrl(SPOTIFY_DEVELOPER_DASHBOARD_URL);
-					break;
-			}
-		} catch (err) {
-			this.#logger.error("Property Inspector request failed.", err);
-			await this.#sendInspectorState(this.#state.snapshot, { message: describeError(err), issue: issueForError(err) });
+		const problem = await this.#commands.run(command);
+		if (problem !== undefined || command.type === "save-client-id") {
+			await this.#sendInspectorState(this.#state.snapshot, problem);
 		}
-	}
-
-	/**
-	 * Validates, stores and applies a Client ID from the Property Inspector.
-	 * @param input Raw Client ID.
-	 */
-	async #handleSaveClientId(input: string): Promise<void> {
-		let clientId: string | undefined;
-		try {
-			clientId = normalizeClientId(input);
-		} catch (err) {
-			await this.#sendInspectorState(this.#state.snapshot, { message: describeError(err), issue: issueForError(err) });
-			return;
-		}
-		await this.#saveClientId(clientId);
-		await this.#auth.setClientId(clientId);
-		await this.#sendInspectorState(this.#state.snapshot);
 	}
 
 	/**
@@ -223,59 +192,17 @@ export class SpotifyAccountAction extends SingletonAction {
 
 	/**
 	 * Sends the state to the Property Inspector when one of this action's inspectors is open.
-	 * @param snapshot Shared state.
+	 * @param _snapshot Shared state (the payload is built from the current state).
 	 * @param clientIdProblem Problem to show next to the Client ID field.
 	 */
-	async #sendInspectorState(snapshot: SpotifyAuthSnapshot, clientIdProblem?: ClientIdProblem): Promise<void> {
+	async #sendInspectorState(_snapshot: SpotifyAuthSnapshot, clientIdProblem?: ClientIdProblem): Promise<void> {
 		if (streamDeck.ui.action?.manifestId !== ActionUUID.SpotifyAccount) {
 			return;
 		}
-		const state = toInspectorState(snapshot, SPOTIFY_REDIRECT_URI);
 		try {
-			await streamDeck.ui.sendToPropertyInspector({
-				type: "deckify:spotify:state",
-				state: {
-					status: state.status,
-					clientId: state.clientId,
-					redirectUri: state.redirectUri,
-					displayName: state.displayName ?? null,
-					product: state.product ?? null,
-					authorizedAt: state.authorizedAt ?? null,
-					message: state.message ?? null,
-					issue: state.issue ?? null,
-					activity: state.activity ?? null,
-				},
-				clientIdError: clientIdProblem?.message ?? null,
-				clientIdIssue: clientIdProblem?.issue ?? null,
-			});
+			await streamDeck.ui.sendToPropertyInspector({ type: `${MESSAGE_PREFIX}state`, ...this.#commands.payload(clientIdProblem) });
 		} catch (err) {
 			this.#logger.error("Failed to update the Property Inspector.", err);
 		}
-	}
-}
-
-/**
- * Validates a Property Inspector message.
- * @param payload Raw payload.
- * @returns The request; otherwise `undefined`.
- */
-function parseInspectorRequest(payload: unknown): InspectorRequest | undefined {
-	if (typeof payload !== "object" || payload === null || !("type" in payload)) {
-		return undefined;
-	}
-	const { type } = payload;
-	switch (type) {
-		case "deckify:spotify:hello":
-		case "deckify:spotify:connect":
-		case "deckify:spotify:retry-connect":
-		case "deckify:spotify:cancel-connect":
-		case "deckify:spotify:disconnect":
-		case "deckify:spotify:open-dashboard":
-			// Any other field (e.g. a URL) is ignored.
-			return { type };
-		case "deckify:spotify:save-client-id":
-			return "clientId" in payload && typeof payload.clientId === "string" ? { type, clientId: payload.clientId } : undefined;
-		default:
-			return undefined;
 	}
 }

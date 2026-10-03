@@ -58,8 +58,9 @@ function setup() {
 	const auth = fakeAuth(state);
 	const saveClientId = vi.fn((_clientId: string | undefined) => Promise.resolve());
 	const openUrl = vi.fn((_url: string) => Promise.resolve());
-	const action = new SpotifyAccountAction({ auth: auth as unknown as SpotifyAuthService, state, saveClientId, openUrl });
-	return { state, auth, saveClientId, openUrl, action };
+	const openSetup = vi.fn((_entry: string) => Promise.resolve());
+	const action = new SpotifyAccountAction({ auth: auth as unknown as SpotifyAuthService, state, saveClientId, openUrl, openSetup });
+	return { state, auth, saveClientId, openUrl, openSetup, action };
 }
 
 /** Lets fire-and-forget renders settle. */
@@ -179,6 +180,23 @@ describe("SpotifyAccountAction", () => {
 		expect(openUrl.mock.calls).toEqual(Array.from({ length: 5 }, () => ["https://developer.spotify.com/dashboard"]));
 	});
 
+	it("opens Deckify Setup, at the start or at the account part, and nothing else", async () => {
+		const { openSetup, openUrl, auth, action } = setup();
+		await action.onSendToPlugin({ payload: { type: "deckify:spotify:open-setup" } } as unknown as Event);
+		await action.onSendToPlugin({ payload: { type: "deckify:spotify:open-setup", entry: "account" } } as unknown as Event);
+		await action.onSendToPlugin({ payload: { type: "deckify:spotify:open-setup", entry: "../../evil", url: "https://evil.example/" } } as unknown as Event);
+		expect(openSetup.mock.calls).toEqual([["start"], ["account"], ["start"]]);
+		expect(openUrl).not.toHaveBeenCalled();
+		expect(auth.connect).not.toHaveBeenCalled();
+	});
+
+	it("reports a failure to open Deckify Setup without crashing", async () => {
+		const { openSetup, action } = setup();
+		openSetup.mockRejectedValueOnce(new Error("no browser"));
+		await action.onSendToPlugin({ payload: { type: "deckify:spotify:open-setup" } } as unknown as Event);
+		expect(sdk.ui.sendToPropertyInspector).toHaveBeenLastCalledWith(expect.objectContaining({ clientIdIssue: "unknown" }));
+	});
+
 	it("reports a failure to open the dashboard without crashing", async () => {
 		const { openUrl, action } = setup();
 		openUrl.mockRejectedValueOnce(new Error("no browser"));
@@ -227,7 +245,13 @@ describe("shared state propagation (real auth service)", () => {
 			openUrl: () => Promise.reject(new Error("must not open a browser")),
 			http: { fetch },
 		});
-		new SpotifyAccountAction({ auth, state, saveClientId: () => Promise.resolve(), openUrl: () => Promise.reject(new Error("must not open a browser")) });
+		new SpotifyAccountAction({
+			auth,
+			state,
+			saveClientId: () => Promise.resolve(),
+			openUrl: () => Promise.reject(new Error("must not open a browser")),
+			openSetup: () => Promise.reject(new Error("must not open a browser")),
+		});
 		const keys = [fakeKey("a"), fakeKey("b")];
 		sdk.keys = keys;
 
