@@ -495,14 +495,11 @@
 		}
 		el.successBadge.hidden = !success;
 		el.successText.hidden = !success;
-		// Right after connecting, choosing an experience is the suggested next step (the tour stays optional); later, Done is.
+		// Choosing an experience is always the suggested next step (primary); the tour stays optional (secondary). Reopened later, Done is
+		// offered as a low-emphasis text action, so setup can still be left without choosing.
 		el.experienceStart.textContent = success ? "Choose my Deckify experience" : "Choose a Deckify experience";
-		el.experienceStart.classList.toggle("primary", success);
-		el.experienceStart.classList.toggle("large", success);
 		el.tourStart.textContent = success ? "Show me around first" : "Show me around";
 		el.accountDone.hidden = success;
-		el.accountDone.classList.toggle("primary", !success);
-		el.accountDone.classList.toggle("large", !success);
 
 		el.accountName.textContent = state.displayName || "Spotify account";
 		const product = state.product;

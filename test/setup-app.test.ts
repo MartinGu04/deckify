@@ -782,7 +782,14 @@ describe("connected", () => {
 		expect(app.buttons("tour-start")[0]?.classList.contains("primary")).toBe(false);
 		expect(app.buttons("tour-start")[0]?.textContent).toBe("Show me around");
 		// People who set up before can still pick an experience from here.
-		expect(app.buttons("experience-start").map((button) => [button.textContent, button.classList.contains("primary")])).toEqual([["Choose a Deckify experience", false]]);
+		// Hierarchy: choosing an experience is primary, the tour secondary, Done a low-emphasis text action that is still offered.
+		const emphasis = (button: HTMLButtonElement | undefined) => (button?.classList.contains("primary") ? "primary" : button?.classList.contains("link") ? "text" : "secondary");
+		const actions = [...app.view().querySelectorAll<HTMLButtonElement>(".actions button")].filter(app.shown).slice(0, 3);
+		expect(actions.map((button) => [button.textContent, emphasis(button)])).toEqual([
+			["Choose a Deckify experience", "primary"],
+			["Show me around", "secondary"],
+			["Done", "text"],
+		]);
 		expect(app.buttons("finish").map((button) => button.textContent)).toEqual(["Done"]);
 		expect(app.view().querySelector("details.help summary")?.textContent).toBe("Account setup help");
 
