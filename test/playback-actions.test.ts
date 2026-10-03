@@ -64,13 +64,17 @@ function setup(options: { connected?: boolean } = {}) {
 		auth.update({ status: "connected", profile: { id: "u", displayName: "Tester", product: "premium" }, authorizedAt: 1 });
 	}
 	const playback = new PlaybackService({ transport, auth, clock: () => Date.now() });
+	const openUrl = vi.fn((_url: string) => Promise.resolve());
 	const actions = {
 		playPause: new PlayPauseAction({ playback }),
 		next: new NextTrackAction({ playback }),
 		previous: new PreviousTrackAction({ playback }),
-		nowPlaying: new NowPlayingAction({ playback }),
+		nowPlaying: new NowPlayingAction({ playback, openUrl, spotifyIcon: "data:image/png;base64,aWNvbg==" }),
 	};
-	return { transport, auth, playback, actions };
+	return { transport, auth, playback, actions, openUrl, setItem: (item: PlaybackItem | undefined) => {
+			player = { ...player, item };
+		},
+	};
 }
 
 /** Places keys on the (fake) device for an action and fires willAppear for each. */
@@ -215,5 +219,62 @@ describe("playback actions", () => {
 		await ctx.actions.nowPlaying.onKeyDown({ action: key } as never);
 		expect(ctx.transport.getState).toHaveBeenCalledTimes(2);
 		expect(ctx.transport.pause).not.toHaveBeenCalled();
+	});
+
+	it("Now Playing press opens the current song or episode on Spotify, then refreshes", async () => {
+		const ctx = setup();
+		const key = fakeKey("np");
+		ctx.setItem({ ...SONG, uri: "spotify:track:4uLU6hMCjMI75M1A2tKUQC" });
+		await place(ctx.actions.nowPlaying, key);
+		await tick(0);
+		await ctx.actions.nowPlaying.onKeyDown({ action: key } as never);
+		expect(ctx.openUrl).toHaveBeenCalledExactlyOnceWith("https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC");
+		expect(ctx.transport.getState).toHaveBeenCalledTimes(2);
+		expect(ctx.transport.play).not.toHaveBeenCalled();
+		expect(ctx.transport.pause).not.toHaveBeenCalled();
+
+		ctx.setItem({ type: "episode", id: "e", uri: "spotify:episode:512ojhOuo1ktJprKbVcKyQ", title: "Episode", subtitle: "Show", durationMs: 1 });
+		await ctx.playback.refresh();
+		await ctx.actions.nowPlaying.onKeyDown({ action: key } as never);
+		expect(ctx.openUrl).toHaveBeenLastCalledWith("https://open.spotify.com/episode/512ojhOuo1ktJprKbVcKyQ");
+		expect(key.showAlert).not.toHaveBeenCalled();
+	});
+
+	it("Now Playing opens nothing for ads, local files or unexpected URIs, and only refreshes", async () => {
+		const ctx = setup();
+		const key = fakeKey("np");
+		await place(ctx.actions.nowPlaying, key);
+		for (const uri of [undefined, "spotify:local:Artist:Album:Song:180", "spotify:ad:4uLU6hMCjMI75M1A2tKUQC", "https://evil.example/track", "spotify:track:short"]) {
+			ctx.setItem({ ...SONG, uri });
+			await ctx.playback.refresh();
+			await ctx.actions.nowPlaying.onKeyDown({ action: key } as never);
+		}
+		ctx.setItem(undefined);
+		await ctx.playback.refresh();
+		await ctx.actions.nowPlaying.onKeyDown({ action: key } as never);
+		expect(ctx.openUrl).not.toHaveBeenCalled();
+		expect(key.showAlert).not.toHaveBeenCalled();
+	});
+
+	it("Now Playing alerts instead of opening anything when Spotify is not connected", async () => {
+		const ctx = setup({ connected: false });
+		const key = fakeKey("np");
+		await place(ctx.actions.nowPlaying, key);
+		await ctx.actions.nowPlaying.onKeyDown({ action: key } as never);
+		expect(key.showAlert).toHaveBeenCalledOnce();
+		expect(ctx.openUrl).not.toHaveBeenCalled();
+		expect(ctx.transport.getState).not.toHaveBeenCalled();
+	});
+
+	it("Now Playing alerts when the link cannot be opened, and still refreshes", async () => {
+		const ctx = setup();
+		const key = fakeKey("np");
+		ctx.setItem({ ...SONG, uri: "spotify:track:4uLU6hMCjMI75M1A2tKUQC" });
+		ctx.openUrl.mockRejectedValueOnce(new Error("no browser"));
+		await place(ctx.actions.nowPlaying, key);
+		await tick(0);
+		await ctx.actions.nowPlaying.onKeyDown({ action: key } as never);
+		expect(key.showAlert).toHaveBeenCalledOnce();
+		expect(ctx.transport.getState).toHaveBeenCalledTimes(2);
 	});
 });

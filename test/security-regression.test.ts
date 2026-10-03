@@ -206,10 +206,21 @@ describe("security regression checks", () => {
 	it("opens only validated links", async () => {
 		const src = (await sources()).filter((s) => s.file.startsWith("src/"));
 		const calls = codeOnly(matching(src, /openUrl\(/)).filter((line) => !/^\S+: (export type|readonly|openUrl\(url: string\))/.test(line.replace(/^(\S+:\d+): /, "$1: ")));
-		// The auth flow opens Spotify's authorize URL; the playlist picker opens only a link that passed toSpotifyPlaylistUrl.
-		expect(calls.map((line) => line.split(":")[0]).sort()).toEqual(["src/actions/playlist-key-action.ts", "src/plugin.ts", "src/plugin.ts", "src/spotify/auth/auth-service.ts"]);
+		// The auth flow opens Spotify's authorize URL; the playlist picker opens only a link that passed toSpotifyPlaylistUrl; Now Playing opens
+		// only a link built by spotifyItemUrl.
+		expect(calls.map((line) => line.split(":")[0]).sort()).toEqual([
+			"src/actions/now-playing.ts",
+			"src/actions/playlist-key-action.ts",
+			"src/plugin.ts",
+			"src/plugin.ts",
+			"src/plugin.ts",
+			"src/spotify/auth/auth-service.ts",
+		]);
 		const pickerOpen = calls.find((line) => line.startsWith("src/actions/playlist-key-action.ts"));
 		expect(pickerOpen).toContain("this.#inspector.openUrl(url)");
+		const nowPlaying = (await readFile(path.join(ROOT, "src/actions/now-playing.ts"), "utf8")).replaceAll("\r\n", "\n");
+		expect(nowPlaying).toContain("const url = snapshot.availability === \"active\" ? spotifyItemUrl(snapshot.item?.uri) : undefined;");
+		expect(calls.find((line) => line.startsWith("src/actions/now-playing.ts"))).toContain("this.#openUrl(url)");
 	});
 
 	it("never logs playlist or track identifiers or names", async () => {
