@@ -16,7 +16,7 @@
 		"lint": "eslint .",
 		"validate": "streamdeck validate com.marting.deckify.sdPlugin",
 		"check": "npm run typecheck && npm run lint && npm test && npm run build && npm run validate && npm run smoke",
-		"assets": "node scripts/export-brand-assets.mjs && node scripts/export-key-icons.mjs",
+		"assets": "node scripts/export-brand-assets.mjs && node scripts/export-key-icons.mjs && node scripts/export-deck-overview.mjs",
 		"link": "streamdeck link com.marting.deckify.sdPlugin",
 		"restart": "streamdeck restart com.marting.deckify",
 		"pack": "node scripts/pack.mjs",

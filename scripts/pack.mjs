@@ -18,6 +18,9 @@ const HELPER_ENTRY = "com.marting.deckify.sdPlugin/bin/native/deckify-media-brid
 /** Spotify's official full logo, shown next to the Spotify playlist information in the playlist picker (Spotify's attribution rules). */
 export const SPOTIFY_LOGO = "ui/playlist/Spotify_Full_Logo_RGB_White.png";
 
+/** Spotify's official icon, which the Now Playing key draws next to Spotify metadata (read at runtime, not referenced by the manifest). */
+export const SPOTIFY_ICON = "imgs/attribution/Spotify_Primary_Logo_RGB_Green.png";
+
 /** Files the manifest does not reference but the Property Inspectors load. */
 const INSPECTOR_FILES = [
 	"ui/shared/inspector.css",
@@ -101,12 +104,12 @@ export function verifyPackageEntries(entries, manifest, withNative) {
 }
 
 /**
- * Lists plugin-relative files the plugin needs that the manifest does not reference: every generated key image and the Property
- * Inspectors' scripts, styles and images.
+ * Lists plugin-relative files the plugin needs that the manifest does not reference: every generated key image, the Spotify icon
+ * Now Playing draws, and the Property Inspectors' scripts, styles and images.
  * @returns {string[]} Plugin-relative paths.
  */
 export function requiredFiles() {
-	return [...Object.keys(keyIconFiles()).map((file) => `imgs/actions/${file}`), ...INSPECTOR_FILES];
+	return [...Object.keys(keyIconFiles()).map((file) => `imgs/actions/${file}`), SPOTIFY_ICON, ...INSPECTOR_FILES];
 }
 
 /**

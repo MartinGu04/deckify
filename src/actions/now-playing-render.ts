@@ -1,4 +1,5 @@
 import type { PlaybackSnapshot } from "../playback/state";
+import { DECKIFY_VIOLET } from "../shared/brand";
 import { shortPlaybackStatus } from "./playback-views";
 
 /**
@@ -6,30 +7,46 @@ import { shortPlaybackStatus } from "./playback-views";
  *
  * Text is wrapped by an approximate character budget (Stream Deck's SVG renderer has no text layout), escaped, and truncated with an
  * ellipsis. No artwork is fetched or cached.
+ *
+ * Whenever Spotify metadata (title, artist or show) is shown, Spotify's official icon is shown with it (Spotify's attribution rules): in
+ * the top-left corner at 42 px of this drawing, i.e. 21 px on the MK.2's 72-pixel key, Spotify's minimum for its icon, with clear space of
+ * half its height (21 px here) kept free of everything else.
  */
 
-const GREEN = "#22D46E";
+const ACCENT = DECKIFY_VIOLET;
 const FONT = "Segoe UI, Arial, sans-serif";
 
+/** Spotify icon: position and size in this drawing, and its clear space (half the icon's height). */
+export const SPOTIFY_ICON_BOX = { x: 10, y: 10, size: 42 } as const;
+export const SPOTIFY_ICON_CLEAR_SPACE = SPOTIFY_ICON_BOX.size / 2;
+/** Top of the text area: everything below this line is outside the icon's clear space. */
+export const NOW_PLAYING_TEXT_TOP = SPOTIFY_ICON_BOX.y + SPOTIFY_ICON_BOX.size + SPOTIFY_ICON_CLEAR_SPACE;
+
 /**
- * Title sizes from largest to smallest, with the approximate characters per line that fit 124 px. Sizes are chosen for legibility on the
- * MK.2, which shows keys at 72×72 pixels (half of this 144 px drawing).
+ * Title sizes from largest to smallest, with the approximate characters per line that fit 124 px and the lines allowed at that size (the
+ * largest only fits one line below the icon's clear space). Sizes are chosen for legibility on the MK.2, which shows keys at 72×72 pixels
+ * (half of this 144 px drawing).
  */
 const TITLE_SIZES = [
-	{ size: 24, chars: 9, lineHeight: 27 },
-	{ size: 20, chars: 11, lineHeight: 23 },
-	{ size: 17, chars: 13, lineHeight: 20 },
+	{ size: 24, chars: 9, lines: 1, lineHeight: 26 },
+	{ size: 20, chars: 11, lines: 2, lineHeight: 21 },
+	{ size: 17, chars: 13, lines: 2, lineHeight: 19 },
 ] as const;
-const TITLE_LINES = 2;
-const SUBTITLE_SIZE = 17;
-const SUBTITLE_CHARS = 14;
+/** Baseline of the title's last line, and of a one-line title. */
+const TITLE_LAST_BASELINE = 109;
+const TITLE_SINGLE_BASELINE = 103;
+const SUBTITLE_SIZE = 16;
+const SUBTITLE_CHARS = 15;
+const SUBTITLE_BASELINE = 129;
 
 /**
  * Renders the key for a playback state.
  * @param snapshot Playback state.
+ * @param spotifyIcon Spotify's official icon as a data URI, shown whenever Spotify metadata is shown; `undefined` only when it could not be
+ * loaded.
  * @returns The SVG document.
  */
-export function renderNowPlayingSvg(snapshot: PlaybackSnapshot): string {
+export function renderNowPlayingSvg(snapshot: PlaybackSnapshot, spotifyIcon: string | undefined): string {
 	const item = snapshot.availability === "active" ? snapshot.item : undefined;
 	if (item === undefined) {
 		const subtitle =
@@ -51,27 +68,36 @@ export function renderNowPlayingSvg(snapshot: PlaybackSnapshot): string {
 
 	const titleText = item.title || (item.type === "ad" ? "Advertisement" : "Unknown");
 	// Use the largest size at which the title fits without splitting words or truncating.
-	const titleSize = TITLE_SIZES.find((t) => fits(titleText, t.chars, TITLE_LINES)) ?? TITLE_SIZES[2];
-	const title = wrap(titleText, titleSize.chars, TITLE_LINES);
-	const subtitle = wrap(item.subtitle, SUBTITLE_CHARS, 1);
+	const titleSize = TITLE_SIZES.find((t) => fits(titleText, t.chars, t.lines)) ?? TITLE_SIZES[2];
+	const title = wrap(titleText, titleSize.chars, titleSize.lines);
+	// A status (e.g. "Limited") is more useful than the artist while it applies, and it can't sit in the icon's clear space.
 	const status = shortPlaybackStatus(snapshot);
+	const subtitle = status === undefined ? wrap(item.subtitle, SUBTITLE_CHARS, 1) : [status];
 
 	return frame(
 		[
-			stateGlyph(snapshot.isPlaying),
-			status === undefined
+			spotifyIcon === undefined
 				? ""
-				: textLines([status], { x: 134, y: 26, size: 15, weight: 700, fill: "#F5B83D", anchor: "end", lineHeight: 16 }).join(""),
+				: `<image x="${SPOTIFY_ICON_BOX.x}" y="${SPOTIFY_ICON_BOX.y}" width="${SPOTIFY_ICON_BOX.size}" height="${SPOTIFY_ICON_BOX.size}" xlink:href="${spotifyIcon}"/>`,
+			stateGlyph(snapshot.isPlaying),
 			...textLines(title, {
 				x: 10,
-				y: title.length > 1 ? 60 : 74,
+				y: title.length > 1 ? TITLE_LAST_BASELINE - titleSize.lineHeight : TITLE_SINGLE_BASELINE,
 				size: titleSize.size,
 				weight: 700,
 				fill: "#FFFFFF",
 				anchor: "start",
 				lineHeight: titleSize.lineHeight,
 			}),
-			...textLines(subtitle, { x: 10, y: 116, size: SUBTITLE_SIZE, weight: 400, fill: "#B3B3B3", anchor: "start", lineHeight: 19 }),
+			...textLines(subtitle, {
+				x: 10,
+				y: SUBTITLE_BASELINE,
+				size: SUBTITLE_SIZE,
+				weight: status === undefined ? 400 : 700,
+				fill: status === undefined ? "#B3B3B3" : "#F5B83D",
+				anchor: "start",
+				lineHeight: 19,
+			}),
 			progressBar(snapshot.progressMs, item.durationMs),
 		].join(""),
 	);
@@ -157,7 +183,7 @@ function graphemes(text: string): string[] {
 }
 
 function frame(content: string): string {
-	return `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144"><rect width="144" height="144" fill="#121212"/>${content}</svg>`;
+	return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="144" height="144" viewBox="0 0 144 144"><rect width="144" height="144" fill="#121212"/>${content}</svg>`;
 }
 
 function textLines(
@@ -170,14 +196,15 @@ function textLines(
 	);
 }
 
+/** Play / pause indicator in the top-right corner, outside the Spotify icon's clear space. */
 function stateGlyph(isPlaying: boolean): string {
 	return isPlaying
-		? `<path d="M10 10l13 8-13 8z" fill="${GREEN}"/>`
-		: `<rect x="10" y="10" width="5" height="16" rx="1.5" fill="#8A8A8A"/><rect x="19" y="10" width="5" height="16" rx="1.5" fill="#8A8A8A"/>`;
+		? `<path d="M118 14l15 9-15 9z" fill="${ACCENT}"/>`
+		: `<rect x="116" y="14" width="6" height="18" rx="1.5" fill="#8A8A8A"/><rect x="127" y="14" width="6" height="18" rx="1.5" fill="#8A8A8A"/>`;
 }
 
 function noteGlyph(): string {
-	return `<path d="M78 22v26.5a8 8 0 1 1-4-6.9V28l-14 3v21.5a8 8 0 1 1-4-6.9V26z" fill="${GREEN}"/>`;
+	return `<path d="M78 22v26.5a8 8 0 1 1-4-6.9V28l-14 3v21.5a8 8 0 1 1-4-6.9V26z" fill="${ACCENT}"/>`;
 }
 
 function progressBar(progressMs: number | undefined, durationMs: number | undefined): string {
@@ -185,7 +212,7 @@ function progressBar(progressMs: number | undefined, durationMs: number | undefi
 		return "";
 	}
 	const width = Math.round(Math.min(Math.max(progressMs / durationMs, 0), 1) * 124);
-	return `<rect x="10" y="130" width="124" height="5" rx="2.5" fill="#2E2E2E"/><rect x="10" y="130" width="${width}" height="5" rx="2.5" fill="${GREEN}"/>`;
+	return `<rect x="10" y="135" width="124" height="5" rx="2.5" fill="#2E2E2E"/><rect x="10" y="135" width="${width}" height="5" rx="2.5" fill="${ACCENT}"/>`;
 }
 
 function escapeXml(value: string): string {

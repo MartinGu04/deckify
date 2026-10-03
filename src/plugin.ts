@@ -7,6 +7,7 @@ import type { PlaylistInspectorBridge } from "./actions/playlist-key-action";
 import { PlayPauseAction } from "./actions/play-pause";
 import { NextTrackAction, PreviousTrackAction } from "./actions/skip-track";
 import { SpotifyAccountAction } from "./actions/spotify-account";
+import { loadSpotifyIcon } from "./actions/spotify-attribution";
 import { StatusAction } from "./actions/status";
 import { MuteAction, VolumeDownAction, VolumeUpAction } from "./actions/volume";
 import { LibraryService } from "./library/service";
@@ -92,7 +93,16 @@ streamDeck.actions.registerAction(
 streamDeck.actions.registerAction(new PlayPauseAction({ playback, logger: playbackLogger }));
 streamDeck.actions.registerAction(new NextTrackAction({ playback, logger: playbackLogger }));
 streamDeck.actions.registerAction(new PreviousTrackAction({ playback, logger: playbackLogger }));
-streamDeck.actions.registerAction(new NowPlayingAction({ playback, logger: playbackLogger }));
+// Now Playing shows Spotify's icon with Spotify metadata and links back to the current item on Spotify (only open.spotify.com track and
+// episode links built from the item's URI).
+streamDeck.actions.registerAction(
+	new NowPlayingAction({
+		playback,
+		logger: playbackLogger,
+		openUrl: (url) => streamDeck.system.openUrl(url),
+		spotifyIcon: loadSpotifyIcon(playbackLogger),
+	}),
+);
 streamDeck.actions.registerAction(new VolumeDownAction({ playback, logger: playbackLogger }));
 streamDeck.actions.registerAction(new VolumeUpAction({ playback, logger: playbackLogger }));
 streamDeck.actions.registerAction(new MuteAction({ playback, logger: playbackLogger }));

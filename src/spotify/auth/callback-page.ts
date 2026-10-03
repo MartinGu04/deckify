@@ -1,10 +1,12 @@
+import { DECKIFY_VIOLET } from "../../shared/brand";
+
 /**
  * Tone of a callback page.
  */
 export type CallbackPageTone = "success" | "denied" | "error";
 
 const ACCENT: Record<CallbackPageTone, string> = {
-	success: "#22D46E",
+	success: DECKIFY_VIOLET,
 	denied: "#F5B83D",
 	error: "#FF6B6B",
 };
@@ -35,7 +37,7 @@ export function renderCallbackPage(tone: CallbackPageTone, message: string): str
 		font: 16px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif; }
 	main { max-width: 420px; padding: 32px; text-align: center; }
 	.brand { font-weight: 800; letter-spacing: 0.08em; font-size: 28px; margin: 0 0 24px; }
-	.brand span { color: #22D46E; }
+	.brand span { color: ${DECKIFY_VIOLET}; }
 	.status { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
 		color: #0d0d0d; background: ${ACCENT[tone]}; margin-bottom: 16px; }
 	p { margin: 0; color: #cfcfcf; }
