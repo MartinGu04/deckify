@@ -2,14 +2,14 @@
  * Generates Deckify's vector key images for the volume, Liked Songs and playlist actions from simple geometry (no third-party icon sets or Spotify
  * artwork). Run with `npm run assets`; `test/key-icons.test.ts` fails when the committed files differ from this output.
  *
- * Key images are 144×144 drawings shown at 72×72 on the Stream Deck MK.2, in the Deckify style of the playback keys: a dark key, a green
- * symbol in the upper part (the bottom is left free for the title), grey when unavailable. Action icons are white on transparent.
+ * Key images are 144×144 drawings shown at 72×72 on the Stream Deck MK.2, in the Deckify style of the playback keys: a dark key, a Deckify
+ * violet symbol in the upper part (the bottom is left free for the title), grey when unavailable. Action icons are white on transparent.
  */
 import fs from "node:fs";
 import path from "node:path";
 
-const BACKGROUND = "#121212";
-const GREEN = "#22D46E";
+import { KEY_BACKGROUND as BACKGROUND, VIOLET } from "./brand.mjs";
+
 const UNAVAILABLE = "#4F4F4F";
 const WHITE = "#FFFFFF";
 const RED = "#FF5C5C";
@@ -78,21 +78,21 @@ function icon(comment, ...shapes) {
  */
 export function keyIconFiles() {
 	return {
-		"volume/volume-up.svg": key("Volume Up key", speaker(GREEN), plus(GREEN)),
+		"volume/volume-up.svg": key("Volume Up key", speaker(VIOLET), plus(VIOLET)),
 		"volume/volume-up-disabled.svg": key("Volume Up key: unavailable", speaker(UNAVAILABLE), plus(UNAVAILABLE)),
-		"volume/volume-down.svg": key("Volume Down key", speaker(GREEN), minus(GREEN)),
+		"volume/volume-down.svg": key("Volume Down key", speaker(VIOLET), minus(VIOLET)),
 		"volume/volume-down-disabled.svg": key("Volume Down key: unavailable", speaker(UNAVAILABLE), minus(UNAVAILABLE)),
-		"volume/speaker.svg": key("Mute / Unmute key: sound on (press to mute)", speaker(GREEN), waves(GREEN)),
+		"volume/speaker.svg": key("Mute / Unmute key: sound on (press to mute)", speaker(VIOLET), waves(VIOLET)),
 		"volume/speaker-muted.svg": key("Mute / Unmute key: muted, Spotify volume 0 (press to unmute)", speaker(WHITE), cross(RED)),
 		"volume/speaker-disabled.svg": key("Mute / Unmute key: unavailable", speaker(UNAVAILABLE), waves(UNAVAILABLE)),
-		"library/heart-outline.svg": key("Like / Unlike key: current track is not in Liked Songs (press to like)", heart(GREEN, false)),
-		"library/heart-filled.svg": key("Like / Unlike key: current track is in Liked Songs (press to unlike)", heart(GREEN, true)),
+		"library/heart-outline.svg": key("Like / Unlike key: current track is not in Liked Songs (press to like)", heart(VIOLET, false)),
+		"library/heart-filled.svg": key("Like / Unlike key: current track is in Liked Songs (press to unlike)", heart(VIOLET, true)),
 		"library/heart-unknown.svg": key("Like / Unlike key: checking whether the current track is liked", heart(CHECKING, false)),
 		"library/heart-disabled.svg": key("Like / Unlike key: unavailable (not connected, no device, or not a song)", heart(UNAVAILABLE, false)),
-		"playlist/add.svg": key("Add to Playlist key: adds the current song to the key's playlist", listLines(GREEN), listPlus(GREEN)),
-		"playlist/add-done.svg": key("Add to Playlist key: the song was added (or already in the playlist)", listLines(GREEN), listCheck(GREEN)),
+		"playlist/add.svg": key("Add to Playlist key: adds the current song to the key's playlist", listLines(VIOLET), listPlus(VIOLET)),
+		"playlist/add-done.svg": key("Add to Playlist key: the song was added (or already in the playlist)", listLines(VIOLET), listCheck(VIOLET)),
 		"playlist/add-disabled.svg": key("Add to Playlist key: unavailable (no playlist chosen, not a song, not connected, ...)", listLines(UNAVAILABLE), listPlus(UNAVAILABLE)),
-		"playlist/play.svg": key("Play Playlist key: starts the key's playlist on the active device", listLines(GREEN), listPlay(GREEN)),
+		"playlist/play.svg": key("Play Playlist key: starts the key's playlist on the active device", listLines(VIOLET), listPlay(VIOLET)),
 		"playlist/play-disabled.svg": key("Play Playlist key: unavailable (no playlist chosen, no device, not connected, ...)", listLines(UNAVAILABLE), listPlay(UNAVAILABLE)),
 		"volume/volume-up-icon.svg": icon("Volume Up action icon", speaker(WHITE), plus(WHITE)),
 		"volume/volume-down-icon.svg": icon("Volume Down action icon", speaker(WHITE), minus(WHITE)),

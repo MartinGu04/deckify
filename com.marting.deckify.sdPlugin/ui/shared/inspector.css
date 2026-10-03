@@ -4,7 +4,7 @@
 	--field: #3d3d3d;
 	--text: #d8d8d8;
 	--muted: #9a9a9a;
-	--accent: #22d46e;
+	--accent: #7c5cff;
 	--warn: #f5b83d;
 	--error: #ff6b6b;
 }
@@ -92,7 +92,7 @@ button[hidden] {
 
 #connect {
 	background: var(--accent);
-	color: #0d0d0d;
+	color: #ffffff;
 	font-weight: 600;
 }
 
@@ -130,7 +130,7 @@ code {
 
 .badge[data-status="connected"] {
 	background: var(--accent);
-	color: #0d0d0d;
+	color: #ffffff;
 }
 
 .badge[data-status="connecting"],

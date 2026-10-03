@@ -1,4 +1,5 @@
 import type { PlaybackSnapshot } from "../playback/state";
+import { DECKIFY_VIOLET } from "../shared/brand";
 import { shortPlaybackStatus } from "./playback-views";
 
 /**
@@ -12,7 +13,7 @@ import { shortPlaybackStatus } from "./playback-views";
  * half its height (21 px here) kept free of everything else.
  */
 
-const GREEN = "#22D46E";
+const ACCENT = DECKIFY_VIOLET;
 const FONT = "Segoe UI, Arial, sans-serif";
 
 /** Spotify icon: position and size in this drawing, and its clear space (half the icon's height). */
@@ -198,12 +199,12 @@ function textLines(
 /** Play / pause indicator in the top-right corner, outside the Spotify icon's clear space. */
 function stateGlyph(isPlaying: boolean): string {
 	return isPlaying
-		? `<path d="M118 14l15 9-15 9z" fill="${GREEN}"/>`
+		? `<path d="M118 14l15 9-15 9z" fill="${ACCENT}"/>`
 		: `<rect x="116" y="14" width="6" height="18" rx="1.5" fill="#8A8A8A"/><rect x="127" y="14" width="6" height="18" rx="1.5" fill="#8A8A8A"/>`;
 }
 
 function noteGlyph(): string {
-	return `<path d="M78 22v26.5a8 8 0 1 1-4-6.9V28l-14 3v21.5a8 8 0 1 1-4-6.9V26z" fill="${GREEN}"/>`;
+	return `<path d="M78 22v26.5a8 8 0 1 1-4-6.9V28l-14 3v21.5a8 8 0 1 1-4-6.9V26z" fill="${ACCENT}"/>`;
 }
 
 function progressBar(progressMs: number | undefined, durationMs: number | undefined): string {
@@ -211,7 +212,7 @@ function progressBar(progressMs: number | undefined, durationMs: number | undefi
 		return "";
 	}
 	const width = Math.round(Math.min(Math.max(progressMs / durationMs, 0), 1) * 124);
-	return `<rect x="10" y="135" width="124" height="5" rx="2.5" fill="#2E2E2E"/><rect x="10" y="135" width="${width}" height="5" rx="2.5" fill="${GREEN}"/>`;
+	return `<rect x="10" y="135" width="124" height="5" rx="2.5" fill="#2E2E2E"/><rect x="10" y="135" width="${width}" height="5" rx="2.5" fill="${ACCENT}"/>`;
 }
 
 function escapeXml(value: string): string {

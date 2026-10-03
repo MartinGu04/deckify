@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 144 144">
-	<!-- Placeholder key image for the "Ready" state. Replace with final brand artwork. -->
-	<rect width="144" height="144" fill="#0D2A19"/>
-	<rect x="5" y="5" width="134" height="134" rx="18" fill="none" stroke="#22D46E" stroke-width="6"/>
-	<circle cx="72" cy="58" r="34" fill="#22D46E"/>
-	<path fill="none" stroke="#0D2A19" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" d="M56 59l11 11 21-23"/>
+	<!-- Deckify Status key, "Ready" state: a check in Deckify violet on the dark key. -->
+	<rect width="144" height="144" fill="#121212"/>
+	<rect x="5" y="5" width="134" height="134" rx="18" fill="none" stroke="#7C5CFF" stroke-width="6"/>
+	<circle cx="72" cy="58" r="34" fill="#7C5CFF"/>
+	<path fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" d="M56 59l11 11 21-23"/>
 </svg>

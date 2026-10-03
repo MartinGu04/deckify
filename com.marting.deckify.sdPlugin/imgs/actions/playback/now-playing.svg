@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 144 144">
 	<!-- Now Playing key: default image before Deckify renders the current track -->
 	<rect width="144" height="144" fill="#121212"/>
-	<path d="M84 30v34a10 10 0 1 1-5-8.7V42l-18 4v26a10 10 0 1 1-5-8.7V34z" fill="#22D46E"/>
+	<path d="M84 30v34a10 10 0 1 1-5-8.7V42l-18 4v26a10 10 0 1 1-5-8.7V34z" fill="#7C5CFF"/>
 </svg>
