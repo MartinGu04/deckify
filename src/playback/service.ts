@@ -2,6 +2,7 @@ import { Observable } from "../shared/observable";
 import { silentLogger, type Logger } from "../shared/logger";
 import {
 	describeError,
+	SpotifyApiError,
 	SpotifyDeviceRestrictedError,
 	SpotifyNoActiveDeviceError,
 	SpotifyNotConnectedError,
@@ -19,6 +20,7 @@ import { PlaybackUnavailableError } from "./errors";
 import type { LocalCommandResult, LocalPlaybackCommand, LocalPlaybackCommandTransport } from "./local-commands";
 import type { PlaybackCommand, PlaybackItem, PlaybackObservation } from "./model";
 import { SIGNED_OUT_SNAPSHOT, type PlaybackNotice, type PlaybackSnapshot } from "./state";
+import { playlistIdFromUri } from "../playlists/model";
 import type { PlaybackTransport } from "./transport";
 
 /**
@@ -207,6 +209,32 @@ export class PlaybackService {
 	}
 
 	/**
+	 * Starts a playlist on the active device through the Spotify Web API (never the local media session: it cannot start a specific
+	 * playlist). Like the other commands it requires a connected Premium account and an active, controllable device, is refused while
+	 * rate limited, and is ignored (`"busy"`) while another playback command is in flight.
+	 * @param contextUri `spotify:playlist:<id>`.
+	 * @returns `"done"` on success; `"busy"` when ignored.
+	 * @throws {SpotifyError} When playback is not possible or Spotify refuses it.
+	 */
+	async playContext(contextUri: string): Promise<CommandOutcome> {
+		if (playlistIdFromUri(contextUri) === undefined) {
+			throw new RangeError("Only Spotify playlist URIs can be played.");
+		}
+		if (this.#commandInFlight !== undefined) {
+			this.#logger.debug("Ignoring a playlist start: another playback command is in flight.");
+			return "busy";
+		}
+		const run = this.#runContextCommand(contextUri);
+		this.#commandInFlight = run;
+		try {
+			await run;
+			return "done";
+		} finally {
+			this.#commandInFlight = undefined;
+		}
+	}
+
+	/**
 	 * The volume Unmute restores, when known.
 	 * @returns Whole percent above zero; otherwise `undefined`.
 	 */
@@ -342,6 +370,38 @@ export class PlaybackService {
 		}
 
 		this.#completeCommand(command, before);
+	}
+
+	/**
+	 * Starts a playlist (see {@link playContext}).
+	 * @param contextUri Playlist URI.
+	 */
+	async #runContextCommand(contextUri: string): Promise<void> {
+		this.#assertAccountAllowsCommands();
+		await this.#assertWebApiCommandAllowed();
+		const before = this.state.value;
+		this.state.update({ pendingCommand: "play" });
+
+		try {
+			await this.#transport.playContext(contextUri);
+		} catch (err) {
+			this.#commandEpoch++;
+			this.state.update({ pendingCommand: undefined });
+			// A playlist Spotify cannot find (HTTP 404 without a player reason) says nothing about the player itself.
+			if (!(err instanceof SpotifyApiError && err.constructor === SpotifyApiError && err.status === 404)) {
+				this.#handleError(err);
+			}
+			this.#logger.warn(`Starting a playlist failed: ${describeError(err)}`);
+			this.#schedule(this.#nextInterval());
+			throw err;
+		}
+
+		this.#commandEpoch++;
+		// The new item is not known yet: keep the old metadata until Spotify reports the playlist's first item.
+		this.#awaitingItemChange = itemKey(before.item);
+		const notice = this.#isBlocked() ? this.state.value.notice : undefined;
+		this.state.update({ pendingCommand: undefined, isPlaying: true, optimistic: true, notice });
+		this.#schedule(this.#timing.reconcileDelayMs, { replace: true });
 	}
 
 	/**

@@ -45,6 +45,7 @@ function setup(options: { connected?: boolean } = {}) {
 	};
 	const transport: PlaybackTransport = {
 		id: "fake",
+		playContext: vi.fn(() => Promise.resolve()),
 		getState: vi.fn(() => Promise.resolve(player)),
 		play: vi.fn(() => {
 			player = { ...player, isPlaying: true };

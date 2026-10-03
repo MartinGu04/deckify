@@ -57,6 +57,7 @@ function fakeTransport() {
 		});
 	const transport: PlaybackTransport = {
 		id: "fake",
+		playContext: vi.fn(() => Promise.resolve()),
 		getState: vi.fn(async () => {
 			control.calls.push("getState");
 			if (control.gate) {

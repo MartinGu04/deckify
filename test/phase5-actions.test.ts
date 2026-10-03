@@ -53,6 +53,7 @@ function setup(options: { device?: Partial<PlaybackDevice>; item?: PlaybackItem;
 				};
 	const transport: PlaybackTransport = {
 		id: "fake",
+		playContext: vi.fn(() => Promise.resolve()),
 		getState: vi.fn(() => Promise.resolve(player)),
 		play: vi.fn(() => Promise.resolve()),
 		pause: vi.fn(() => Promise.resolve()),
