@@ -140,14 +140,13 @@ else.
 
 ### 5. Choose your experience
 
-Deckify includes three editable starter layouts for the 15-key Stream Deck and Stream Deck MK.2. They use the same Deckify actions; they
+Deckify includes two editable starter layouts for the 15-key Stream Deck and Stream Deck MK.2. They use the same Deckify actions; they
 only differ in which keys they place where.
 
 | Experience | What you get |
 | --- | --- |
-| **SIMPLE** | The essentials, clean and focused: playback, Now Playing, Like, volume and your account in a centred 3 × 3 block. |
-| **DECKIFY** (recommended) | The complete Deckify experience: every Deckify action once, with Now Playing in the centre. |
-| **POWER** | Everything within reach on one page: the SIMPLE controls plus a bank of four Play Playlist and two Add to Playlist keys. |
+| **DECKIFY ⭐ Recommended** | Complete: every Deckify action once, with Now Playing in the centre. |
+| **SIMPLE** | Minimal: playback, Now Playing, Like, volume and your account in a centred 3 × 3 block. |
 
 1. Right after connecting, press **Choose my Deckify experience** (or **Show me around first** for a short tour that ends at the same
    place).
@@ -214,7 +213,7 @@ Deckify was designed to keep your Spotify account safe. It hasn't had a formal s
 - **Tokens stay in the plugin.** The Windows helper, the Property Inspector pages and Deckify Setup never receive them, and they never go
   into Stream Deck settings or browser storage.
 - **Local-only setup page.** Deckify Setup is served on `127.0.0.1` only while it is open, on a random port, behind a one-time link and a
-  per-session token. It can only ask for a fixed set of account actions, or for one of Deckify's three bundled layouts by name; it can't
+  per-session token. It can only ask for a fixed set of account actions, or for one of Deckify's two bundled layouts by name; it can't
   reach any other Stream Deck profile.
 - **No shell, fixed commands.** Media commands run without a shell: the helper accepts six fixed commands and only targets Spotify's
   media session.
@@ -339,7 +338,7 @@ No. Deckify is an independent project. It isn't made, endorsed or supported by S
 - **Volume:** Volume Up / Down and Mute / Unmute.
 - **Library and playlists:** Like / Unlike, Add to Playlist with duplicate protection, Play Playlist with a real playlist picker.
 - **Remote devices:** Spotify Connect control.
-- **Starter layouts:** SIMPLE, DECKIFY and POWER for the 15-key Stream Deck / MK.2, chosen in Deckify Setup.
+- **Starter layouts:** DECKIFY (recommended) and SIMPLE for the 15-key Stream Deck / MK.2, chosen in Deckify Setup.
 
 **Under consideration** (no dates, no promises):
 
@@ -354,7 +353,7 @@ No. Deckify is an independent project. It isn't made, endorsed or supported by S
 | Document | Contents |
 | --- | --- |
 | [Architecture](docs/architecture.md) | Services, local and Web API paths, the Windows helper, attribution. |
-| [Experiences](docs/profiles.md) | The three bundled starter layouts, how they are made and checked. |
+| [Experiences](docs/profiles.md) | The two bundled starter layouts, how they are made and checked. |
 | [Privacy](docs/privacy.md) | What Deckify stores, sends and logs. |
 | [Security policy](SECURITY.md) | Supported versions and how to report vulnerabilities. |
 | [Development](docs/development.md) | Building, testing, packaging, CI and logs. |

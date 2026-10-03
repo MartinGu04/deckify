@@ -1,11 +1,19 @@
 /**
- * Deckify's bundled Stream Deck profiles (the three experiences): checks real `.streamDeckProfile` exports and installs them into the plugin.
+ * Deckify's bundled Stream Deck profiles (the two experiences): checks real `.streamDeckProfile` exports and installs them into the plugin.
  *
  * Profiles are made in the Stream Deck app and exported from there (Elgato's documented workflow); this script never writes a profile. It
- * only reads an export (a ZIP archive) to check that it is safe and that it matches the layout Deckify Setup previews:
- *   - exactly one page whose keys are exactly the experience's layout (ui/setup/experiences.js), with Deckify actions only;
- *   - no personal data: playlist keys unconfigured, no Spotify links or IDs, no images, no user paths, nothing token- or Client-ID-shaped;
- *   - the profile is named as Deckify presents it in Stream Deck.
+ * only reads an export to check that it is safe and that it matches the layout Deckify Setup previews. An export is a ZIP archive with the
+ * structure the Stream Deck app (7.x, profile version 3.0) writes:
+ *
+ *   package.json                                      app version, device model, RequiredPlugins
+ *   Profiles/<PROFILE>.sdProfile/manifest.json        the profile: Name, Device, Pages { Default, Pages[] }
+ *   Profiles/<PROFILE>.sdProfile/Profiles/<PAGE>/manifest.json
+ *                                                     a page: Controllers[{ Type: "Keypad", Actions: { "column,row": action } | null }]
+ *   …/Images/                                         (empty folders; any file in them is rejected)
+ *
+ * The checks: Deckify is the only required plugin; one profile, named as the manifest names it; exactly one page with keys, whose keys
+ * are exactly the experience's layout (ui/setup/experiences.js) with Deckify actions only; no settings except a volume step, no custom
+ * titles or images; and no personal data anywhere (playlists, Spotify links or IDs, Client ID- or token-shaped values, emails, user paths).
  *
  *   npm run profiles:check                         check every profile the manifest declares
  *   npm run profiles:import -- <experience> <file> check an export, then copy it to the path the manifest declares
@@ -13,18 +21,22 @@
  */
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import vm from "node:vm";
 import { inflateRawSync } from "node:zlib";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 export const PLUGIN_DIR = path.join(ROOT, "com.marting.deckify.sdPlugin");
 export const PROFILE_EXTENSION = ".streamDeckProfile";
+const PLUGIN_UUID = "com.marting.deckify";
 
-/** Experience → manifest profile name; must equal `EXPERIENCE_PROFILES` in src/experiences/experiences.ts (a test compares them). */
+/**
+ * Experience → manifest profile name; must equal `EXPERIENCE_PROFILES` in src/experiences/experiences.ts (a test compares them). The file
+ * name is the name of the real export, which is also the profile's name inside it.
+ */
 export const EXPERIENCE_PROFILES = Object.freeze({
-	simple: "profiles/Deckify Simple",
-	deckify: "profiles/Deckify",
-	power: "profiles/Deckify Power",
+	deckify: "profiles/DECKIFY ⭐ Recommended",
+	simple: "profiles/SIMPLE",
 });
 
 /** Settings a bundled key may carry. Every other key must start with no settings at all. */
@@ -44,7 +56,9 @@ const PERSONAL_DATA = Object.freeze([
 	[/[\w.+-]+@[\w-]+\.[a-z]{2,}/i, "an email address"],
 ]);
 
-const IMAGE = /\.(png|jpe?g|gif|bmp|webp|svg|ico)$/i;
+const PACKAGE = "package.json";
+const PROFILE_MANIFEST = /^Profiles\/([^/]+)\.sdProfile\/manifest\.json$/;
+const PAGE_MANIFEST = /^Profiles\/([^/]+)\.sdProfile\/Profiles\/([^/]+)\/manifest\.json$/;
 
 /**
  * Loads the experience layouts the Setup App previews (ui/setup/experiences.js), without a browser.
@@ -77,6 +91,15 @@ export function expectedKeys(catalog, id) {
 		}),
 	);
 	return keys;
+}
+
+/**
+ * The profile name an experience's export must carry (shown in the Stream Deck app): the file name of its manifest entry.
+ * @param {string} id Experience ID.
+ * @returns {string} The name.
+ */
+export function profileName(id) {
+	return path.posix.basename(EXPERIENCE_PROFILES[id]);
 }
 
 /**
@@ -128,34 +151,89 @@ export function readZip(zip) {
 }
 
 /**
- * Finds what a profile export contains: its pages (every `Actions` map keyed by "column,row"), profile names and images.
+ * Reads a Stream Deck profile export into its parts, noting anything that does not fit the export structure.
  * @param {Buffer} archive The `.streamDeckProfile` bytes.
- * @returns {{files: {name: string, data: Buffer}[], pages: {file: string, keys: Map<string, {uuid: string, settings: unknown}>}[], names: string[], images: string[]}} The contents.
+ * @returns {{files: {name: string, data: Buffer}[], requiredPlugins: unknown, name: string | undefined, pages: {id: string, keys: Map<string, Record<string, unknown>>}[], problems: string[]}} The contents.
  */
 export function inspectProfile(archive) {
 	const files = readZip(archive);
-	const pages = [];
-	const names = [];
-	for (const file of files) {
-		if (!file.name.toLowerCase().endsWith(".json")) {
-			continue;
-		}
-		let json;
+	const problems = [];
+	const json = (file) => {
 		try {
-			json = JSON.parse(file.data.toString("utf8").replace(/^\uFEFF/, ""));
+			return JSON.parse(file.data.toString("utf8").replace(/^\uFEFF/, ""));
 		} catch {
+			problems.push(`${file.name} is not valid JSON.`);
+			return undefined;
+		}
+	};
+
+	const packageFile = files.find((file) => file.name === PACKAGE);
+	const packageInfo = packageFile ? json(packageFile) : undefined;
+	if (!packageFile) {
+		problems.push("It has no package.json, so it is not a Stream Deck profile export.");
+	}
+
+	const profiles = files.filter((file) => PROFILE_MANIFEST.test(file.name));
+	if (profiles.length !== 1) {
+		problems.push(`Expected exactly one profile, found ${String(profiles.length)}.`);
+	}
+	const profileId = profiles.length === 1 ? PROFILE_MANIFEST.exec(profiles[0].name)?.[1] : undefined;
+	const profile = profiles.length === 1 ? json(profiles[0]) : undefined;
+	if (profiles.length === 1 && !(isObject(profile) && typeof profile.Name === "string" && isObject(profile.Pages))) {
+		problems.push(`${profiles[0].name} is not a Stream Deck profile manifest (Name, Pages).`);
+	}
+	const declaredPages = isObject(profile) && isObject(profile.Pages)
+		? new Set([profile.Pages.Default, ...(Array.isArray(profile.Pages.Pages) ? profile.Pages.Pages : [])].filter((id) => typeof id === "string").map((id) => id.toLowerCase()))
+		: new Set();
+
+	const pages = [];
+	for (const file of files) {
+		if (file.name === PACKAGE || PROFILE_MANIFEST.test(file.name)) {
 			continue;
 		}
-		if (isObject(json) && typeof json.Name === "string" && ("Pages" in json || "Device" in json)) {
-			names.push(json.Name);
+		const match = PAGE_MANIFEST.exec(file.name);
+		if (!match) {
+			problems.push(`It contains an unexpected file (${file.name}). Deckify profiles hold only manifests: no images or other files.`);
+			continue;
+		}
+		if (match[1] !== profileId) {
+			problems.push(`${file.name} belongs to another profile.`);
+			continue;
+		}
+		if (!declaredPages.has(match[2].toLowerCase())) {
+			problems.push(`${file.name} is a page the profile does not list.`);
+		}
+		const page = json(file);
+		if (!isObject(page) || !Array.isArray(page.Controllers)) {
+			problems.push(`${file.name} is not a Stream Deck page manifest (Controllers).`);
+			continue;
 		}
 		const keys = new Map();
-		collectKeys(json, keys);
+		for (const controller of page.Controllers) {
+			if (!isObject(controller) || controller.Type !== "Keypad") {
+				problems.push(`${file.name} has a controller other than the keypad.`);
+				continue;
+			}
+			if (controller.Actions === null || controller.Actions === undefined) {
+				continue;
+			}
+			if (!isObject(controller.Actions)) {
+				problems.push(`${file.name} has malformed actions.`);
+				continue;
+			}
+			for (const [position, action] of Object.entries(controller.Actions)) {
+				if (!/^\d+,\d+$/.test(position) || !isObject(action)) {
+					problems.push(`${file.name} has a malformed key "${position}".`);
+					continue;
+				}
+				keys.set(position, action);
+			}
+		}
 		if (keys.size > 0) {
-			pages.push({ file: file.name, keys });
+			pages.push({ id: match[2], keys });
 		}
 	}
-	return { files, pages, names, images: files.filter((file) => IMAGE.test(file.name)).map((file) => file.name) };
+	return { files, requiredPlugins: isObject(packageInfo) ? packageInfo.RequiredPlugins : undefined, name: isObject(profile) ? profile.Name : undefined, pages, problems };
 }
 
 /**
@@ -172,32 +250,45 @@ export function checkProfileExport(archive, id, catalog = loadCatalog()) {
 	} catch (err) {
 		return [`It is not a Stream Deck profile export (${err instanceof Error ? err.message : String(err)}).`];
 	}
-	const problems = [];
+	const problems = [...contents.problems];
 	const expected = expectedKeys(catalog, id);
 	const deckifyUuids = new Map(Object.values(catalog.ACTIONS).map((action) => [action.uuid, action.name]));
 	const label = (uuid) => deckifyUuids.get(uuid) ?? uuid;
 
+	if (contents.requiredPlugins !== undefined && !isDeepStrictEqual(contents.requiredPlugins, [PLUGIN_UUID])) {
+		problems.push(`It requires plugins other than Deckify (${JSON.stringify(contents.requiredPlugins)}).`);
+	}
+	if (contents.name !== undefined && contents.name !== profileName(id)) {
+		problems.push(`The profile is named "${contents.name}", but the ${id} experience is "${profileName(id)}".`);
+	}
 	if (contents.pages.length !== 1) {
 		problems.push(`Expected exactly one page with keys, found ${String(contents.pages.length)}. Deckify's experiences are single-page profiles.`);
 	}
 	for (const page of contents.pages) {
-		for (const [position, key] of page.keys) {
+		for (const [position, action] of page.keys) {
+			const uuid = typeof action.UUID === "string" ? action.UUID : String(action.UUID);
 			const [column, row] = position.split(",").map(Number);
 			if (column >= catalog.COLUMNS || row >= catalog.ROWS) {
 				problems.push(`Key ${position} is outside the 5 × 3 Stream Deck / MK.2 layout.`);
 			}
-			if (!deckifyUuids.has(key.uuid)) {
-				problems.push(`Key ${position} holds "${key.uuid}", which is not a Deckify action. Bundled profiles may contain Deckify actions only.`);
-			} else if (expected.get(position) !== key.uuid) {
-				problems.push(`Key ${position} holds ${label(key.uuid)} but the ${id} layout has ${expected.has(position) ? label(expected.get(position)) : "no key"} there.`);
+			if (!deckifyUuids.has(uuid) || (isObject(action.Plugin) && action.Plugin.UUID !== PLUGIN_UUID)) {
+				problems.push(`Key ${position} holds "${uuid}", which is not a Deckify action. Bundled profiles may contain Deckify actions only.`);
+			} else if (expected.get(position) !== uuid) {
+				problems.push(`Key ${position} holds ${label(uuid)} but the ${id} layout has ${expected.has(position) ? label(expected.get(position)) : "no key"} there.`);
 			}
-			if (!settingsAllowed(key.uuid, key.settings)) {
-				const playlist = /playlist/.test(key.uuid);
+			if (!settingsAllowed(uuid, action.Settings)) {
 				problems.push(
-					playlist
-						? `${label(key.uuid)} at ${position} carries a playlist selection. Bundled playlist keys must start unconfigured: add a fresh key from the actions list without choosing a playlist.`
-						: `${label(key.uuid)} at ${position} carries settings (${Object.keys(isObject(key.settings) ? key.settings : {}).join(", ")}). Bundled keys must start with their defaults.`,
+					/playlist/.test(uuid)
+						? `${label(uuid)} at ${position} carries a playlist selection. Bundled playlist keys must start unconfigured: add a fresh key from the actions list without choosing a playlist.`
+						: `${label(uuid)} at ${position} carries settings (${Object.keys(isObject(action.Settings) ? action.Settings : {}).join(", ")}). Bundled keys must start with their defaults.`,
 				);
+			}
+			const states = Array.isArray(action.States) ? action.States : [];
+			if (states.some((state) => isObject(state) && ((typeof state.Image === "string" && state.Image !== "") || (typeof state.Title === "string" && state.Title !== "")))) {
+				problems.push(`${label(uuid)} at ${position} has a custom title or image. Bundled keys use Deckify's own.`);
+			}
+			if (action.Resources !== null && action.Resources !== undefined) {
+				problems.push(`${label(uuid)} at ${position} carries resources. Bundled keys must not.`);
 			}
 		}
 		for (const [position, uuid] of expected) {
@@ -206,26 +297,13 @@ export function checkProfileExport(archive, id, catalog = loadCatalog()) {
 			}
 		}
 	}
-	if (contents.pages.length === 0 && expected.size > 0) {
-		problems.push("No key layout was found in the export.");
-	}
-	if (contents.images.length > 0) {
-		problems.push(`It contains images (${contents.images.join(", ")}). Deckify keys draw their own images: reset any custom key image or icon in Stream Deck, then export again.`);
-	}
 	for (const file of contents.files) {
-		if (IMAGE.test(file.name)) {
-			continue;
-		}
 		const text = file.data.toString("utf8");
 		for (const [pattern, what] of PERSONAL_DATA) {
 			if (pattern.test(text)) {
 				problems.push(`${file.name} contains ${what}. Bundled profiles must not contain personal data.`);
 			}
 		}
-	}
-	const expectedName = path.posix.basename(EXPERIENCE_PROFILES[id]);
-	if (contents.names.length > 0 && !contents.names.includes(expectedName)) {
-		problems.push(`The profile is named "${contents.names.join('", "')}"; rename it to "${expectedName}" in Stream Deck before exporting.`);
 	}
 	return problems;
 }
@@ -284,27 +362,6 @@ export function layoutTable(catalog, experience) {
 	return cells.map((row) => `| ${row.map((cell) => cell.padEnd(width)).join(" | ")} |`).join("\n");
 }
 
-function collectKeys(node, keys) {
-	if (Array.isArray(node)) {
-		node.forEach((child) => collectKeys(child, keys));
-		return;
-	}
-	if (!isObject(node)) {
-		return;
-	}
-	for (const [name, value] of Object.entries(node)) {
-		if (name === "Actions" && isObject(value) && Object.keys(value).length > 0 && Object.keys(value).every((position) => /^\d+,\d+$/.test(position))) {
-			for (const [position, action] of Object.entries(value)) {
-				if (isObject(action) && typeof action.UUID === "string") {
-					keys.set(position, { uuid: action.UUID, settings: action.Settings ?? {} });
-				}
-			}
-		} else {
-			collectKeys(value, keys);
-		}
-	}
-}
-
 function settingsAllowed(uuid, settings) {
 	if (!isObject(settings)) {
 		return settings === undefined || settings === null;
@@ -331,7 +388,7 @@ function main(args) {
 	const [command, id, file] = args;
 	if (command === "layouts") {
 		for (const experience of catalog.EXPERIENCES) {
-			console.log(`${experience.label} → "${path.posix.basename(EXPERIENCE_PROFILES[experience.id])}" (${EXPERIENCE_PROFILES[experience.id]}${PROFILE_EXTENSION})\n${layoutTable(catalog, experience)}\n`);
+			console.log(`${experience.label} → profile "${profileName(experience.id)}" (${EXPERIENCE_PROFILES[experience.id]}${PROFILE_EXTENSION})\n${layoutTable(catalog, experience)}\n`);
 		}
 		return 0;
 	}

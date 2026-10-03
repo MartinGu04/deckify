@@ -930,21 +930,22 @@ describe("choosing an experience", () => {
 	const cards = (app: Awaited<ReturnType<typeof openSetup>>) => [...app.el("experience-list").querySelectorAll<HTMLButtonElement>(".experience-card")];
 	const checked = (app: Awaited<ReturnType<typeof openSetup>>) => cards(app).map((card) => card.getAttribute("aria-checked"));
 
-	it("offers SIMPLE, DECKIFY and POWER as layout choices, with DECKIFY recommended and selected first", async () => {
+	it("offers exactly two layout choices, DECKIFY first, recommended and selected, then SIMPLE", async () => {
 		const app = await openChooser();
 		expect(app.screen()).toBe("experiences");
 		expect(app.heading()).toBe("Choose your Deckify experience");
 		expect(app.el("experience-list").getAttribute("role")).toBe("radiogroup");
-		expect(cards(app).map((card) => card.querySelector(".experience-name")?.textContent)).toEqual(["SIMPLE", "DECKIFY", "POWER"]);
+		expect(cards(app).map((card) => card.querySelector(".experience-name")?.textContent)).toEqual(["DECKIFY", "SIMPLE"]);
 		expect(cards(app).map((card) => card.querySelector(".experience-description")?.textContent)).toEqual([
-			"The essentials. Clean and focused.",
 			"The complete Deckify experience.",
-			"Everything within reach.",
+			"The essentials. Clean and focused.",
 		]);
-		expect(cards(app).map((card) => card.getAttribute("role"))).toEqual(["radio", "radio", "radio"]);
-		expect(checked(app)).toEqual(["false", "true", "false"]);
+		expect(cards(app).map((card) => card.getAttribute("role"))).toEqual(["radio", "radio"]);
+		expect(cards(app).map((card) => card.dataset.experience)).toEqual(["deckify", "simple"]);
+		expect(checked(app)).toEqual(["true", "false"]);
 		// Exactly one badge, on DECKIFY.
-		expect(cards(app).map((card) => card.querySelector(".experience-badge")?.textContent ?? null)).toEqual([null, "Recommended", null]);
+		expect(cards(app).map((card) => card.querySelector(".experience-badge")?.textContent ?? null)).toEqual(["Recommended", null]);
+		expect(app.text()).not.toMatch(/power/i);
 		expect(app.buttons("experience-use").map((button) => [button.textContent, button.classList.contains("primary")])).toEqual([["Use this experience", true]]);
 		// Layouts, not plans: no prices, tiers or feature checklists.
 		expect(app.text()).not.toMatch(/\$|€|£|price|per month|\/mo\b|plan\b|tier|free trial|upgrade/i);
@@ -982,28 +983,30 @@ describe("choosing an experience", () => {
 
 	it("selects with a click or the arrow keys without sending anything", async () => {
 		const app = await openChooser();
-		app.click("experience-select", 0);
-		expect(checked(app)).toEqual(["true", "false", "false"]);
-		expect(app.document.activeElement).toBe(cards(app)[0]);
+		app.click("experience-select", 1);
+		expect(checked(app)).toEqual(["false", "true"]);
+		expect(app.document.activeElement).toBe(cards(app)[1]);
 		app.el("experience-list").dispatchEvent(new app.window.KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
-		expect(checked(app)).toEqual(["false", "false", "true"]);
+		expect(checked(app)).toEqual(["true", "false"]);
 		app.el("experience-list").dispatchEvent(new app.window.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
-		expect(checked(app)).toEqual(["true", "false", "false"]);
+		expect(checked(app)).toEqual(["false", "true"]);
+		app.el("experience-list").dispatchEvent(new app.window.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+		expect(checked(app)).toEqual(["true", "false"]);
 		expect(app.commands().filter((command) => command.type === "choose-experience")).toEqual([]);
 	});
 
 	it("sends only the experience ID, once, then asks the user to finish in Stream Deck without claiming success", async () => {
 		const app = await openChooser();
 		app.server.holdCommands = true;
-		app.click("experience-select", 2);
+		app.click("experience-select", 1);
 		const use = app.click("experience-use");
 		// A double-click (or any click while the request is on its way) sends nothing more.
 		use.click();
 		app.click("experience-select", 0);
 		expect(use.disabled).toBe(true);
 		const sent = app.commands().filter((command) => command.type === "choose-experience");
-		expect(sent).toEqual([{ type: "choose-experience", experience: "power" }]);
-		expect(checked(app)).toEqual(["false", "false", "true"]);
+		expect(sent).toEqual([{ type: "choose-experience", experience: "simple" }]);
+		expect(checked(app)).toEqual(["false", "true"]);
 
 		app.server.holdCommands = false;
 		const fresh = await openChooser();
@@ -1033,8 +1036,8 @@ describe("choosing an experience", () => {
 
 		app.click("experience-start");
 		expect(app.screen()).toBe("experiences");
-		expect(checked(app)).toEqual(["false", "true", "false"]);
-		app.click("experience-select", 0);
+		expect(checked(app)).toEqual(["true", "false"]);
+		app.click("experience-select", 1);
 		app.click("experience-use");
 		await settle();
 		app.click("experience-done");
@@ -1179,7 +1182,7 @@ describe("security and privacy of the page", () => {
 		app.click("tour-next");
 		app.click("tour-next");
 		app.click("tour-done");
-		app.click("experience-select", 2);
+		app.click("experience-select", 1);
 		app.click("experience-use");
 		await settle();
 		app.click("experience-done");
@@ -1194,7 +1197,7 @@ describe("security and privacy of the page", () => {
 			expect(Object.keys(command).filter((key) => key !== "type" && key !== extraKeys[String(command.type)])).toEqual([]);
 		}
 		// Only the experience ID: no profile name, file path or device.
-		expect(commands.find((command) => command.type === "choose-experience")).toEqual({ type: "choose-experience", experience: "power" });
+		expect(commands.find((command) => command.type === "choose-experience")).toEqual({ type: "choose-experience", experience: "simple" });
 		const wire = JSON.stringify(app.server.requests.map((request) => [request.path, request.body]));
 		expect(findSecrets(wire)).toEqual([]);
 		expect(wire).not.toMatch(/https?:\/\/|token|secret|verifier/i);

@@ -507,23 +507,22 @@ describe("experiences", () => {
 		const setup = await startSetup();
 		const token = await setup.token();
 		for (const [id, profile] of [
-			["simple", "profiles/Deckify Simple"],
-			["deckify", "profiles/Deckify"],
-			["power", "profiles/Deckify Power"],
+			["deckify", "profiles/DECKIFY ⭐ Recommended"],
+			["simple", "profiles/SIMPLE"],
 		]) {
 			const reply = await setup.command(token, choose(id));
 			expect(reply.status, id).toBe(200);
 			expect(reply.json().experience).toEqual({ id, outcome: "requested" });
 			expect(setup.switchToProfile).toHaveBeenLastCalledWith("mk2-device", profile);
 		}
-		expect(setup.switchToProfile).toHaveBeenCalledTimes(3);
+		expect(setup.switchToProfile).toHaveBeenCalledTimes(2);
 	});
 
 	it("targets whichever Stream Deck opened setup", async () => {
 		const setup = await startSetup({ origin: "second-mk2" });
 		const token = await setup.token();
 		await setup.command(token, choose("deckify"));
-		expect(setup.switchToProfile.mock.calls).toEqual([["second-mk2", "profiles/Deckify"]]);
+		expect(setup.switchToProfile.mock.calls).toEqual([["second-mk2", "profiles/DECKIFY ⭐ Recommended"]]);
 	});
 
 	it("accepts only a fixed experience ID: no profile names, paths, devices, pages or other SDK commands", async () => {
@@ -533,10 +532,13 @@ describe("experiences", () => {
 			{ type: "choose-experience" },
 			choose(undefined),
 			choose(""),
+			choose("power"),
 			choose("Deckify"),
 			choose("DECKIFY"),
-			choose("profiles/Deckify"),
-			choose("profiles/Deckify Power"),
+			choose("SIMPLE"),
+			choose("DECKIFY ⭐ Recommended"),
+			choose("profiles/SIMPLE"),
+			choose("profiles/DECKIFY ⭐ Recommended"),
 			choose("../../manifest"),
 			choose("C:\\Users\\someone\\My Profile"),
 			choose("my-own-profile"),
@@ -546,8 +548,8 @@ describe("experiences", () => {
 			{ ...choose("deckify"), deviceId: "second-mk2" },
 			{ ...choose("deckify"), profile: "profiles/Other" },
 			{ ...choose("deckify"), page: 2 },
-			{ type: "switch-profile", profile: "profiles/Deckify" },
-			{ type: "switchToProfile", device: "mk2-device", profile: "profiles/Deckify" },
+			{ type: "switch-profile", profile: "profiles/SIMPLE" },
+			{ type: "switchToProfile", device: "mk2-device", profile: "profiles/SIMPLE" },
 			{ type: "choose-experience", experience: "deckify", type2: "x" },
 		]) {
 			expect((await setup.command(token, body)).status, JSON.stringify(body)).toBe(400);
@@ -592,9 +594,9 @@ describe("experiences", () => {
 		setup.switchToProfile.mockImplementationOnce(() => new Promise<void>((resolve) => (release = resolve)));
 		const first = setup.command(token, choose("deckify"));
 		const second = setup.command(token, choose("deckify"));
-		const other = setup.command(token, choose("power"));
+		const other = setup.command(token, choose("simple"));
 		await vi.waitFor(() => expect(setup.switchToProfile).toHaveBeenCalledTimes(1));
-		expect((await other).json().experience).toEqual({ id: "power", outcome: "busy" });
+		expect((await other).json().experience).toEqual({ id: "simple", outcome: "busy" });
 		release();
 		expect((await first).json().experience).toEqual({ id: "deckify", outcome: "requested" });
 		expect((await second).json().experience).toEqual({ id: "deckify", outcome: "requested" });
@@ -750,7 +752,7 @@ describe("Setup App end to end (real page, real local server)", () => {
 		expect(setup.switchToProfile).not.toHaveBeenCalled();
 		click("experience-use");
 		await vi.waitFor(() => expect(heading()).toBe("Finish in Stream Deck"));
-		expect(setup.switchToProfile.mock.calls).toEqual([["mk2-device", "profiles/Deckify"]]);
+		expect(setup.switchToProfile.mock.calls).toEqual([["mk2-device", "profiles/DECKIFY ⭐ Recommended"]]);
 		click("experience-done");
 		expect(heading()).toBe("Deckify is ready.");
 		expect(doc.getElementById("ready-experience")?.textContent).toBe("DECKIFY · Recommended");

@@ -6,19 +6,18 @@ import { silentLogger, type Logger } from "../shared/logger";
  * The Setup App may only send one of these fixed IDs. The plugin alone maps an ID to its bundled profile (registered in the manifest's
  * `Profiles` array) and to the device that opened Deckify Setup; the browser never sends a profile name, path or device ID.
  */
-export const EXPERIENCE_IDS = ["simple", "deckify", "power"] as const;
+export const EXPERIENCE_IDS = ["deckify", "simple"] as const;
 
 /** One of the fixed experience IDs. */
 export type ExperienceId = (typeof EXPERIENCE_IDS)[number];
 
 /**
  * Bundled profile of each experience: the manifest `Profiles[].Name` (the path of the `.streamDeckProfile` without its extension), which is
- * exactly what Stream Deck's `switchToProfile` expects.
+ * exactly what Stream Deck's `switchToProfile` expects. The file names are the names of the real Stream Deck exports.
  */
 export const EXPERIENCE_PROFILES: Readonly<Record<ExperienceId, string>> = Object.freeze({
-	simple: "profiles/Deckify Simple",
-	deckify: "profiles/Deckify",
-	power: "profiles/Deckify Power",
+	deckify: "profiles/DECKIFY ⭐ Recommended",
+	simple: "profiles/SIMPLE",
 });
 
 /** Stream Deck device type the bundled profiles are made for: Stream Deck / Stream Deck MK.2 (15 keys, 5 × 3). */

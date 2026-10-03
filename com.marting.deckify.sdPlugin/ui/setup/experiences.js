@@ -1,4 +1,4 @@
-// Deckify experiences: the three ready-made Stream Deck layouts Deckify Setup offers after Spotify is connected. Pure data only; nothing here
+// Deckify experiences: the two ready-made Stream Deck layouts Deckify Setup offers after Spotify is connected. Pure data only; nothing here
 // touches a page, the plugin, the network or browser storage.
 //
 // These are editable starting layouts for the same plugin and the same actions, bundled as Stream Deck profiles (manifest "Profiles").
@@ -29,20 +29,8 @@
 
 	const row = (...keys) => Object.freeze(keys);
 
-	/** The experiences, in the order the chooser shows them. */
+	/** The experiences, in the order the chooser shows them: the recommended one first. */
 	const EXPERIENCES = Object.freeze([
-		Object.freeze({
-			id: "simple",
-			label: "SIMPLE",
-			description: "The essentials. Clean and focused.",
-			recommended: false,
-			// A centred 3 × 3 block: playback on top, volume below, Now Playing in the middle between Like and the account key.
-			layout: Object.freeze([
-				row(null, "previous", "play-pause", "next", null),
-				row(null, "like", "now-playing", "account", null),
-				row(null, "volume-down", "mute", "volume-up", null),
-			]),
-		}),
 		Object.freeze({
 			id: "deckify",
 			label: "DECKIFY",
@@ -57,16 +45,15 @@
 			]),
 		}),
 		Object.freeze({
-			id: "power",
-			label: "POWER",
-			description: "Everything within reach.",
+			id: "simple",
+			label: "SIMPLE",
+			description: "The essentials. Clean and focused.",
 			recommended: false,
-			// One dense page: the SIMPLE controls on the left, and a bank of playlist keys on the right (four Play Playlist and two Add to
-			// Playlist keys, each one set to its own playlist).
+			// A centred 3 × 3 block: playback on top, volume below, Now Playing in the middle between Like and the account key.
 			layout: Object.freeze([
-				row("previous", "play-pause", "next", "play-playlist", "play-playlist"),
-				row("like", "now-playing", "account", "play-playlist", "play-playlist"),
-				row("volume-down", "mute", "volume-up", "add-to-playlist", "add-to-playlist"),
+				row(null, "previous", "play-pause", "next", null),
+				row(null, "like", "now-playing", "account", null),
+				row(null, "volume-down", "mute", "volume-up", null),
 			]),
 		}),
 	]);

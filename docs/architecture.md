@@ -41,7 +41,7 @@ flowchart LR
 | Actions | `src/actions/` | One class per action UUID. Each turns shared state into a key image and title and handles presses. |
 | Property Inspectors | `com.marting.deckify.sdPlugin/ui/` | Local HTML + JavaScript pages for the Spotify Account (a compact entry point to Deckify Setup), Volume and playlist settings. No remote scripts, no browser storage; they talk only to the plugin. |
 | Deckify Setup | `src/setup/`, `ui/setup/` | The guided Spotify setup in the default browser, served by the plugin on `127.0.0.1` while open. See [Deckify Setup](#deckify-setup). |
-| Experiences | `src/experiences/`, `ui/setup/experiences.js`, `profiles/` | Three bundled, editable Stream Deck profiles the user picks in Deckify Setup. See [Experiences](#experiences). |
+| Experiences | `src/experiences/`, `ui/setup/experiences.js`, `profiles/` | Two bundled, editable Stream Deck profiles the user picks in Deckify Setup. See [Experiences](#experiences). |
 | Manifest | `com.marting.deckify.sdPlugin/manifest.json` | Plugin and action definitions. The plugin and action UUIDs are permanent. |
 
 The legacy **Deckify Status** action (`com.marting.deckify.status`) is still registered so existing keys keep working, but it is hidden from
@@ -120,7 +120,7 @@ entry point (status, account summary, **Set up Deckify** / **Open Deckify Setup*
   - A session ends when the user presses **Done**, when setup is opened again (the old token stops working), after ten idle minutes or
     after two hours. The server then stops. Reloading the page needs a new link from Stream Deck.
 - **API:** `GET /api/state?after=<version>` returns the public account state, waiting up to 25 seconds for a change.
-  `POST /api/command` runs one of the fixed account commands, `choose-experience` with one of three fixed IDs, or `finish`. Nothing else
+  `POST /api/command` runs one of the fixed account commands, `choose-experience` with one of two fixed IDs, or `finish`. Nothing else
   is exposed: no URLs, files, profile names, device IDs, shell or generic plugin commands.
 - **Checks on every request:** the `Host` header must be exactly `127.0.0.1:<port>`. API requests must carry the session token; POSTs must
   come from the page's own origin (`Origin`, `Sec-Fetch-Site`) as `application/json`, with bodies of at most 4 KB. There are no CORS
@@ -140,8 +140,8 @@ Code: `src/experiences/experiences.ts` (plugin side), `com.marting.deckify.sdPlu
 `com.marting.deckify.sdPlugin/profiles/` (the exports) and `scripts/profiles.mjs` (checks). Details, layouts and how the exports are made:
 [profiles.md](profiles.md).
 
-- **What they are:** SIMPLE, DECKIFY (recommended) and POWER, three editable starting layouts for the 15-key Stream Deck / MK.2, bundled
-  as Stream Deck profiles and registered in the manifest's `Profiles` (`DeviceType 0`, `Readonly`, `AutoInstall` and
+- **What they are:** DECKIFY ⭐ Recommended and SIMPLE, two editable starting layouts for the 15-key Stream Deck / MK.2, bundled as
+  real Stream Deck profile exports and registered in the manifest's `Profiles` (`DeviceType 0`, `Readonly`, `AutoInstall` and
   `DontAutoSwitchWhenInstalled` all `false`).
 - **Choosing:** after Spotify connects, Deckify Setup offers **Choose my Deckify experience** (the tour stays optional and ends at the
   chooser). The page sends only the experience ID.

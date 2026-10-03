@@ -8,8 +8,8 @@ are not screenshots of the Stream Deck app. These files are review material, not
 | Screen | File |
 | --- | --- |
 | You're connected: **Choose my Deckify experience** first, tour optional | [experiences-01-connected.png](experiences-01-connected.png) |
-| Choose your Deckify experience (DECKIFY preselected, Recommended) | [experiences-02-chooser.png](experiences-02-chooser.png) |
-| POWER selected | [experiences-03-chooser-power.png](experiences-03-chooser-power.png) |
+| Choose your Deckify experience: two cards, DECKIFY preselected and Recommended | [experiences-02-chooser.png](experiences-02-chooser.png) |
+| SIMPLE selected | [experiences-03-chooser-simple.png](experiences-03-chooser-simple.png) |
 | Narrow window | [experiences-04-chooser-narrow.png](experiences-04-chooser-narrow.png) |
 | Finish in Stream Deck (after **Use this experience**) | [experiences-05-finish.png](experiences-05-finish.png) |
 | Deckify is ready: DECKIFY · Recommended | [experiences-06-ready.png](experiences-06-ready.png) |
@@ -21,25 +21,24 @@ are not screenshots of the Stream Deck app. These files are review material, not
 
 ## Physical MK.2 checklist
 
-To pass before merge, with the real profile exports bundled ([docs/profiles.md](../profiles.md)):
+To pass before merge, with the bundled exports SIMPLE and DECKIFY ⭐ Recommended ([docs/profiles.md](../profiles.md)):
 
 1. A fresh Deckify Setup reaches **Choose your Deckify experience** after the Spotify connection.
-2. The SIMPLE preview matches the installed SIMPLE profile.
-3. The DECKIFY preview matches the installed DECKIFY profile.
-4. The POWER preview matches the installed POWER profile.
-5. DECKIFY is visibly marked Recommended.
-6. Choosing an experience triggers only the selected bundled profile.
-7. The first-time Stream Deck install prompt is understandable.
-8. The selected profile switches onto the originating MK.2.
-9. The profiles are editable.
+2. The chooser shows exactly two cards: DECKIFY (visibly marked Recommended and preselected) and SIMPLE.
+3. The DECKIFY preview matches the installed **DECKIFY ⭐ Recommended** profile.
+4. The SIMPLE preview matches the installed **SIMPLE** profile.
+5. Choosing an experience triggers only the selected bundled profile.
+6. The first-time Stream Deck install prompt is understandable.
+7. The selected profile switches onto the originating MK.2.
+8. The profiles are editable.
+9. DECKIFY controls work.
 10. SIMPLE controls work.
-11. DECKIFY controls work.
-12. POWER controls work.
-13. Playlist actions contain no developer or user playlist configuration and can be configured normally.
-14. The Account key still opens the compact Account Property Inspector.
-15. The Account Property Inspector still opens Deckify Setup.
-16. The existing Spotify session survives.
-17. Existing actions keep their settings and behaviour.
-18. No CMD or PowerShell windows appear.
-19. The package installs normally.
-20. Phase 8 Setup App security hasn't regressed.
+11. Playlist actions contain no developer or user playlist configuration and can be configured normally.
+12. The ready screen shows `DECKIFY · Recommended` or `SIMPLE`, and **Choose a different experience** returns to the chooser.
+13. The Account key still opens the compact Account Property Inspector.
+14. The Account Property Inspector still opens Deckify Setup.
+15. The existing Spotify session survives.
+16. Existing actions keep their settings and behaviour.
+17. No CMD or PowerShell windows appear.
+18. The package installs normally.
+19. Phase 8 Setup App security hasn't regressed.

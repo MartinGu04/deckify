@@ -93,7 +93,7 @@ export type SetupExperiences = {
 };
 
 /**
- * Parses the one experience command: exactly `{ type: "choose-experience", experience: "simple" | "deckify" | "power" }`. Anything else
+ * Parses the one experience command: exactly `{ type: "choose-experience", experience: "deckify" | "simple" }`. Anything else
  * (a profile name, a path, a device ID, an extra field) is rejected.
  * @param body Untrusted request body.
  * @returns The experience; otherwise `undefined`.

@@ -31,9 +31,9 @@ function switcher() {
 }
 
 describe("experience IDs", () => {
-	it("are exactly simple, deckify and power, each mapped to its bundled profile", () => {
-		expect(EXPERIENCE_IDS).toEqual(["simple", "deckify", "power"]);
-		expect(EXPERIENCE_PROFILES).toEqual({ simple: "profiles/Deckify Simple", deckify: "profiles/Deckify", power: "profiles/Deckify Power" });
+	it("are exactly deckify and simple, each mapped to its real bundled export", () => {
+		expect(EXPERIENCE_IDS).toEqual(["deckify", "simple"]);
+		expect(EXPERIENCE_PROFILES).toEqual({ deckify: "profiles/DECKIFY ⭐ Recommended", simple: "profiles/SIMPLE" });
 		expect(Object.isFrozen(EXPERIENCE_PROFILES)).toBe(true);
 		expect(EXPERIENCE_DEVICE_TYPE).toBe(0);
 	});
@@ -42,7 +42,27 @@ describe("experience IDs", () => {
 		for (const id of EXPERIENCE_IDS) {
 			expect(parseExperienceId(id)).toBe(id);
 		}
-		for (const value of ["Deckify", "DECKIFY", " deckify", "profiles/Deckify", "../deckify", "toString", "__proto__", "constructor", "", 0, null, undefined, ["simple"], { id: "simple" }]) {
+		for (const value of [
+			"power",
+			"POWER",
+			"Deckify",
+			"DECKIFY",
+			"SIMPLE",
+			" deckify",
+			"DECKIFY ⭐ Recommended",
+			"profiles/SIMPLE",
+			"profiles/DECKIFY ⭐ Recommended",
+			"../deckify",
+			"toString",
+			"__proto__",
+			"constructor",
+			"",
+			0,
+			null,
+			undefined,
+			["simple"],
+			{ id: "simple" },
+		]) {
 			expect(parseExperienceId(value), JSON.stringify(value)).toBeUndefined();
 		}
 	});
@@ -63,10 +83,10 @@ describe("ExperienceSwitcher", () => {
 	it("switches the given device to the experience's bundled profile", async () => {
 		const { experiences, switchToProfile } = switcher();
 		expect(await experiences.choose("simple", "mk2")).toBe("requested");
-		expect(await experiences.choose("power", "other-mk2")).toBe("requested");
+		expect(await experiences.choose("deckify", "other-mk2")).toBe("requested");
 		expect(switchToProfile.mock.calls).toEqual([
-			["mk2", "profiles/Deckify Simple"],
-			["other-mk2", "profiles/Deckify Power"],
+			["mk2", "profiles/SIMPLE"],
+			["other-mk2", "profiles/DECKIFY ⭐ Recommended"],
 		]);
 	});
 
@@ -122,7 +142,7 @@ describe("ExperienceSwitcher", () => {
 		await experiences.choose("deckify", "mk2");
 		await experiences.choose("deckify", "plus");
 		const log = logger.lines.join("\n");
-		expect(log).toContain("profiles/Deckify");
+		expect(log).toContain("profiles/DECKIFY ⭐ Recommended");
 		expect(log).not.toMatch(/\bmk2\b|\bplus\b/);
 	});
 });

@@ -25,21 +25,14 @@
 	},
 	"Profiles": [
 		{
-			"Name": "profiles/Deckify Simple",
+			"Name": "profiles/DECKIFY ⭐ Recommended",
 			"DeviceType": 0,
 			"Readonly": false,
 			"AutoInstall": false,
 			"DontAutoSwitchWhenInstalled": false
 		},
 		{
-			"Name": "profiles/Deckify",
-			"DeviceType": 0,
-			"Readonly": false,
-			"AutoInstall": false,
-			"DontAutoSwitchWhenInstalled": false
-		},
-		{
-			"Name": "profiles/Deckify Power",
+			"Name": "profiles/SIMPLE",
 			"DeviceType": 0,
 			"Readonly": false,
 			"AutoInstall": false,

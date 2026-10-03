@@ -160,9 +160,9 @@ listener because port 43821 … is already in use"*.
 
 **Bundled profiles (experiences).** See [profiles.md](profiles.md) for the layouts and the manual export steps.
 
-- `npm run profiles:layouts` prints the three layouts to build in the Stream Deck app.
-- `npm run profiles:import -- <simple|deckify|power> <file>` checks an export and copies it to the manifest path.
-- `npm run profiles:check` checks every bundled profile. It runs in `npm run pack` and in the tests, and fails while an export is missing.
+- `npm run profiles:layouts` prints the two layouts.
+- `npm run profiles:import -- <deckify|simple> <file>` checks an export and copies it to the manifest path.
+- `npm run profiles:check` checks every bundled profile against the real export structure. It runs in `npm run pack` and in the tests.
 - *"Stream Deck may ask you to install…" appears every time:* the profile was deleted in Stream Deck, so it is offered again. Deckify
   only asks Stream Deck to switch; it never installs or replaces profiles itself.
 
@@ -192,7 +192,7 @@ src/
   playlists/                PlaylistService: shared cache, writable filter, duplicate cache by snapshot, add, play; model and validation
   windows/                  Windows media bridge client: spawns the bundled helper, JSON-lines IPC, timeouts, restarts
   setup/                    Deckify Setup server: 127.0.0.1-only, dynamic port, one-time launch code, session token, fixed commands
-  experiences/              the three experiences: fixed ID → bundled profile, device checks, race-safe switchToProfile
+  experiences/              the two experiences: fixed ID → bundled profile, device checks, race-safe switchToProfile
   settings/                 Stream Deck global settings (Client ID only)
   shared/                   logger contract, SDK type helpers
   spotify/
@@ -209,7 +209,7 @@ src/
     state/                  shared Spotify account state + subscriptions
 com.marting.deckify.sdPlugin/
   manifest.json             plugin + action definitions, bundled profiles
-  profiles/                 bundled experience profiles (real Stream Deck exports; see docs/profiles.md)
+  profiles/                 bundled experience profiles: real Stream Deck exports SIMPLE and DECKIFY ⭐ Recommended (docs/profiles.md)
   imgs/                     plugin icon, category icon, action/key images, Spotify attribution icon
   ui/                       Property Inspectors: spotify-account/ (compact entry point), volume/, playlist/ (shared picker);
                             setup/ (Deckify Setup page, experience layouts); shared/ (stylesheet, onboarding model used by both)

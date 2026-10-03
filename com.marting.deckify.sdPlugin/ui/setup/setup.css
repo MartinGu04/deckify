@@ -860,11 +860,11 @@ details.help ul {
 	background: var(--accent-ring);
 }
 
-/* Experiences: three layout choices (not plans), each with a schematic 5 × 3 preview of its keys. */
+/* Experiences: two layout choices (not plans), each with a schematic 5 × 3 preview of its keys. */
 .experience-list {
 	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: 14px;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 16px;
 }
 
 .experience-card {
@@ -874,7 +874,7 @@ details.help ul {
 	align-items: stretch;
 	gap: 10px;
 	min-height: 0;
-	padding: 16px 16px 18px;
+	padding: 18px 20px 20px;
 	border: 1px solid var(--border);
 	border-radius: 16px;
 	background: var(--surface-sunken);
@@ -925,8 +925,8 @@ details.help ul {
 
 .experience-check {
 	position: absolute;
-	top: 18px;
-	right: 16px;
+	top: 20px;
+	right: 20px;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -949,7 +949,6 @@ details.help ul {
 }
 
 .experience-description {
-	min-height: 2.9em;
 	color: var(--muted);
 	font-size: 13.5px;
 	line-height: 1.45;
@@ -963,6 +962,7 @@ details.help ul {
 .deck-preview {
 	display: grid;
 	margin-top: auto;
+	max-width: 320px;
 	grid-template-columns: repeat(5, minmax(0, 1fr));
 	gap: 6px;
 	padding: 10px;
@@ -1064,10 +1064,6 @@ details.help ul {
 
 	.experience-list {
 		grid-template-columns: 1fr;
-	}
-
-	.experience-description {
-		min-height: 0;
 	}
 
 	.deck-preview {

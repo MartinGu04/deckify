@@ -197,23 +197,24 @@ state source and the fallback.
 
 - **Goal:** Deckify should feel ready-made, not like a box of separate actions. The product flow became **Install → Connect → Choose →
   Play**; Phase 8 had covered Install → Connect.
-- **Experiences:** three editable starting layouts for the 15-key Stream Deck / MK.2, built from the existing actions only
+- **Experiences:** two editable starting layouts for the 15-key Stream Deck / MK.2, built from the existing actions only
   ([profiles.md](profiles.md)):
+  - **DECKIFY ⭐ Recommended:** every action once, with Now Playing in the centre.
   - **SIMPLE:** a centred 3 × 3 block of the essentials.
-  - **DECKIFY** (recommended): every action once, with Now Playing in the centre.
-  - **POWER:** the SIMPLE controls plus a playlist bank, on one page. More pages weren't justified by today's actions.
 - **Official profile support:** the layouts are Stream Deck profiles bundled in `profiles/` and registered in the manifest's `Profiles`
   (`DeviceType 0`, editable, installed only when chosen, shown once installed). The plugin switches to them with the SDK's
   `switchToProfile`, and only to those.
 - **Deckify Setup:** after connecting, **Choose my Deckify experience** comes first and **Show me around first** is optional; the tour
-  ends at the chooser. Three cards with schematic 5 × 3 previews drawn from the same data the profiles are checked against. Nothing is
+  ends at the chooser. Two cards with schematic 5 × 3 previews drawn from the same data the profiles are checked against. Nothing is
   installed until **Use this experience**. Then **Finish in Stream Deck** (Stream Deck may ask to install the profile once) and
   **Deckify is ready.**, which names the experience.
-- **Security:** one new command, `choose-experience`, accepting only `simple`, `deckify` or `power` and no other field. The target device
+- **Security:** one new command, `choose-experience`, accepting only `deckify` or `simple` and no other field. The target device
   is the one whose Spotify Account key opened setup, from the SDK event, and it is never exposed to the page. Unsupported devices get a
   message instead of a switch. Requests are collapsed, so a double-click can't trigger two switches.
-- **Profiles are real exports:** Deckify doesn't write the `.streamDeckProfile` format. The exports are made in the Stream Deck app and
-  imported with `npm run profiles:import`, which checks the layout and rejects personal data, configured playlist keys and images.
-  `npm run pack` refuses to build without them.
-- **Verification:** automated tests cover the switcher, the server command, the page, the layouts, the checker and packaging. The real
-  profile exports and the physical MK.2 review are pending.
+- **Profiles are real exports:** Deckify doesn't write the `.streamDeckProfile` format.
+  - `SIMPLE` and `DECKIFY ⭐ Recommended` were made and exported in Stream Deck 7.6 on the MK.2.
+  - They are bundled unchanged under their own names.
+  - `npm run profiles:check` validates them against the real export structure: Deckify only, layout key by key, unconfigured playlist
+    keys, no images or personal data. `npm run pack` refuses to build without them.
+- **Verification:** automated tests cover the switcher, the server command, the page, the layouts, the real exports, the checker and
+  packaging. The physical MK.2 review is pending.
