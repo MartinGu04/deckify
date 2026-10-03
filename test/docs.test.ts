@@ -158,7 +158,7 @@ describe("code facts the documentation relies on", () => {
 
 	it("keeps documentation and brand-review files out of the plugin folder", async () => {
 		const files = await readdir(PLUGIN, { recursive: true });
-		expect(files.filter((f) => /concept-[abc]\.svg|deck-layout-overview|deckify-(icon|logo)\.png/.test(f))).toEqual([]);
+		expect(files.filter((f) => /concept-|deck-layout-overview|deckify-(icon|logo)\.png/.test(f))).toEqual([]);
 	});
 });
 
@@ -177,7 +177,7 @@ describe("brand-review concepts", () => {
 		return [(hue * 60 + 360) % 360, saturation];
 	}
 
-	it.each(["a", "b", "c"])("concept %s avoids Spotify Green, circles and waves", async (concept) => {
+	it.each(["a", "b", "c", "b1", "b2", "b3"])("concept %s avoids Spotify Green, circles and waves", async (concept) => {
 		const svg = await read(`docs/brand-review/concept-${concept}.svg`);
 		const colours = [...svg.matchAll(/#[0-9A-Fa-f]{6}\b/g)].map((m) => m[0]);
 		expect(colours.length).toBeGreaterThan(3);
@@ -188,5 +188,13 @@ describe("brand-review concepts", () => {
 		}
 		expect(svg).not.toMatch(/<circle|<ellipse/);
 		expect(svg).toContain("REVIEW CONCEPT");
+	});
+
+	it.each(["b1", "b2", "b3"])("refined concept %s uses the Deckify violet and shows every required size", async (concept) => {
+		const svg = await read(`docs/brand-review/concept-${concept}.svg`);
+		expect(svg).toContain("#7C5CFF");
+		for (const part of ["Symbol", "lockup on dark", "lockup on light", "288×288", "Key 144×144", "72×72", "Glyph 40×40 and 20×20", "One-colour"]) {
+			expect(svg, part).toContain(part);
+		}
 	});
 });

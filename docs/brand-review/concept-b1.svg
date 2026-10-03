@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1200" height="720" viewBox="0 0 1200 720">
+<title>Deckify brand review: Concept B1 · Frame D (review concept, not production artwork)</title>
+<defs>
+<symbol id="mark" viewBox="0 0 100 100"><path fill="#7C5CFF" fill-rule="evenodd" d="M18 10H50C74 10 90 28 90 50C90 72 74 90 50 90H18A6 6 0 0 1 12 84V16A6 6 0 0 1 18 10Z M27 25H50C65 25 75 36 75 50C75 64 65 75 50 75H27Z"/><rect x="32" y="33" width="14" height="14" rx="3" fill="#7C5CFF"/><rect x="49" y="33" width="14" height="14" rx="3" fill="#7C5CFF"/><rect x="32" y="50" width="14" height="14" rx="3" fill="#7C5CFF"/><rect x="49" y="50" width="14" height="14" rx="3" fill="#7C5CFF"/></symbol>
+<symbol id="mono" viewBox="0 0 100 100"><path fill="currentColor" fill-rule="evenodd" d="M18 10H50C74 10 90 28 90 50C90 72 74 90 50 90H18A6 6 0 0 1 12 84V16A6 6 0 0 1 18 10Z M27 25H50C65 25 75 36 75 50C75 64 65 75 50 75H27Z"/><rect x="32" y="33" width="14" height="14" rx="3" fill="currentColor"/><rect x="49" y="33" width="14" height="14" rx="3" fill="currentColor"/><rect x="32" y="50" width="14" height="14" rx="3" fill="currentColor"/><rect x="49" y="50" width="14" height="14" rx="3" fill="currentColor"/></symbol>
+<symbol id="glyph" viewBox="0 0 100 100"><path fill="currentColor" fill-rule="evenodd" d="M18 8H50C76 8 92 27 92 50C92 73 76 92 50 92H18A6 6 0 0 1 12 86V14A6 6 0 0 1 18 8Z M31 27H50C64 27 73 37 73 50C73 63 64 73 50 73H31Z"/><rect x="39" y="34" width="15" height="15" rx="3" fill="currentColor"/><rect x="39" y="52" width="15" height="15" rx="3" fill="currentColor"/></symbol>
+</defs>
+<text x="40" y="44" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700" fill="#8B949E" text-anchor="start">CONCEPT B1 · FRAME D</text>
+<text x="1160" y="44" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700" fill="#8B949E" text-anchor="end">REVIEW CONCEPT — NOT PRODUCTION ARTWORK</text>
+<text x="40" y="66" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#8B949E" text-anchor="start">Classic round-bowl D frame around a 2×2 key grid. Single solid violet.</text>
+<use href="#mark" xlink:href="#mark" x="40" y="96" width="180" height="180"/>
+<text x="40" y="306" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#8B949E" text-anchor="start">Symbol (transparent)</text>
+<rect x="260" y="96" width="420" height="180" rx="20" fill="#15171C"/>
+<use href="#mark" xlink:href="#mark" x="290" y="136" width="100" height="100"/>
+<text x="410" y="206" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="50" font-weight="800" letter-spacing="4" fill="#FFFFFF">DECKIFY</text>
+<rect x="700" y="96" width="420" height="180" rx="20" fill="#F4F4F7"/>
+<use href="#mark" xlink:href="#mark" x="730" y="136" width="100" height="100"/>
+<text x="850" y="206" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="50" font-weight="800" letter-spacing="4" fill="#15171C">DECKIFY</text>
+<text x="260" y="306" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#8B949E" text-anchor="start">DECKIFY lockup on dark</text>
+<text x="700" y="306" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#8B949E" text-anchor="start">DECKIFY lockup on light</text>
+<rect x="40" y="370" width="200" height="200" rx="40" fill="#15171C"/>
+<use href="#mark" xlink:href="#mark" x="70" y="400" width="140" height="140"/>
+<text x="40" y="596" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#8B949E" text-anchor="start">288×288 Marketplace icon</text>
+<text x="40" y="614" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#8B949E" text-anchor="start">(template, shown at 69%)</text>
+<rect x="280" y="398" width="144" height="144" rx="18" fill="#15171C"/>
+<use href="#mark" xlink:href="#mark" x="310" y="428" width="84" height="84"/>
+<text x="280" y="596" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#8B949E" text-anchor="start">Key 144×144</text>
+<text x="280" y="614" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#8B949E" text-anchor="start">(72×72 at 2×)</text>
+<rect x="452" y="434" width="72" height="72" rx="9" fill="#15171C"/>
+<use href="#mark" xlink:href="#mark" x="467" y="449" width="42" height="42"/>
+<text x="452" y="596" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#8B949E" text-anchor="start">72×72</text>
+<text x="452" y="614" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#8B949E" text-anchor="start">(actual size)</text>
+<rect x="564" y="410" width="120" height="120" rx="14" fill="#15171C"/>
+<use href="#glyph" xlink:href="#glyph" x="580" y="450" width="40" height="40" style="color:#FFFFFF"/>
+<use href="#glyph" xlink:href="#glyph" x="640" y="460" width="20" height="20" style="color:#FFFFFF"/>
+<rect x="700" y="410" width="120" height="120" rx="14" fill="#F4F4F7"/>
+<use href="#glyph" xlink:href="#glyph" x="716" y="450" width="40" height="40" style="color:#15171C"/>
+<use href="#glyph" xlink:href="#glyph" x="776" y="460" width="20" height="20" style="color:#15171C"/>
+<text x="564" y="596" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#8B949E" text-anchor="start">Glyph 40×40 and 20×20</text>
+<text x="564" y="614" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#8B949E" text-anchor="start">monochrome, simplified grid, dark and light</text>
+<rect x="860" y="410" width="140" height="140" rx="20" fill="#15171C"/>
+<use href="#mono" xlink:href="#mono" x="880" y="430" width="100" height="100" style="color:#FFFFFF"/>
+<rect x="1020" y="410" width="140" height="140" rx="20" fill="#F4F4F7"/>
+<use href="#mono" xlink:href="#mono" x="1040" y="430" width="100" height="100" style="color:#15171C"/>
+<text x="860" y="596" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#8B949E" text-anchor="start">One-colour mark</text>
+<text x="860" y="614" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#8B949E" text-anchor="start">white and black</text>
+<text x="40" y="680" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#8B949E" text-anchor="start">Accent #7C5CFF (Deckify violet) · base #15171C · white</text>
+</svg>
