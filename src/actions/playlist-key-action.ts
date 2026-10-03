@@ -180,9 +180,11 @@ export abstract class PlaylistKeyAction extends SingletonAction {
 				break;
 			}
 			case "deckify:playlist:open": {
-				const selection = this.#selections.get(keyId);
-				const lookup = selection === undefined ? undefined : this.playlists.lookup(selection.playlistId);
-				const url = lookup?.status === "found" ? toSpotifyPlaylistUrl(lookup.playlist.spotifyUrl, lookup.playlist.id) : undefined;
+				// The key's selected playlist, or a playlist row the picker offers (for Add, only writable ones); never anything else.
+				const playlistId = request.playlistId ?? this.#selections.get(keyId)?.playlistId;
+				const lookup = playlistId === undefined ? undefined : this.playlists.lookup(playlistId);
+				const offered = lookup?.status === "found" && (request.playlistId === undefined || this.mode === "play" || lookup.playlist.writable);
+				const url = offered ? toSpotifyPlaylistUrl(lookup.playlist.spotifyUrl, lookup.playlist.id) : undefined;
 				if (url === undefined) {
 					await this.#sendState(keyId, request.requestId, "This playlist has no Spotify link.");
 					return;

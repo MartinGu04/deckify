@@ -1,0 +1,3 @@
+# Spotify's official assets are shipped byte-for-byte (tests pin their SHA-256): never convert line endings.
+assets/spotify-like-icon/** binary
+com.marting.deckify.sdPlugin/imgs/attribution/** binary

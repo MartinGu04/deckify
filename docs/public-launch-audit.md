@@ -1,8 +1,10 @@
 # Public-launch audit
 
-An audit of Deckify against Spotify's Design & Branding Guidelines and Elgato's Stream Deck plugin guidelines, as of Phase 7. It says what
-is compliant, what Phase 7 changed, and what still blocks making the repository public, publishing a release, or submitting to the
-Marketplace. Marketplace listing details are in [marketplace-readiness.md](marketplace-readiness.md).
+An audit of Deckify against Spotify's Design & Branding Guidelines and Elgato's Stream Deck plugin guidelines, first written in Phase 7
+and updated for the **v1.0 release cleanup** (version `1.0.0.0`, author `MARTIN.G`). It says what is compliant, what is
+[resolved](#resolved-for-v10), what still [blocks the release](#still-open-before-v10), what waits for
+[Marketplace media](#marketplace-media-pending) and what is [after v1.0](#post-v10-roadmap). Marketplace listing details are in
+[marketplace-readiness.md](marketplace-readiness.md).
 
 ## Sources and limits
 
@@ -11,8 +13,8 @@ Marketplace. Marketplace listing details are in [marketplace-readiness.md](marke
   - [plugin guidelines](https://docs.elgato.com/guidelines/stream-deck/plugins/);
   - [plugin metadata](https://docs.elgato.com/guidelines/streamdeck/plugins/metadata/);
   - [Marketplace thumbnails and app icons](https://docs.elgato.com/en/general/creating-a-product/thumbnails-and-app-icons).
-- **How the rules were read:** Phase 7 was prepared in an environment that can't open `developer.spotify.com`, `docs.elgato.com` or
-  `newsroom.spotify.com`. The rules below come from search-engine excerpts of those pages, plus the project brief.
+- **How the rules were read:** Phase 7 and the v1.0 cleanup were prepared in an environment that can't open `developer.spotify.com`,
+  `docs.elgato.com` or `newsroom.spotify.com`. The rules below come from search-engine excerpts of those pages, plus the project brief.
 - **Verify before launch:** read both guideline pages in full once more, as they change. Items marked **verify** depend on wording that
   could not be read in full.
 - **Spotify assets:** the two Spotify image files Deckify ships come byte-for-byte from Spotify's brand-asset storage
@@ -41,23 +43,23 @@ back to the content on Spotify.
 | Surface | Spotify metadata shown | Attribution | Link back | Status |
 | --- | --- | --- | --- | --- |
 | **Now Playing key** | Track title and artists, or episode and show name | **Added in Phase 7:** Spotify's official icon (green, unmodified), top-left, 21 px on a 72-pixel key, clear space of half its height | **Added in Phase 7:** a press opens the song or episode on `open.spotify.com` (built only from a valid item URI) | ✅ hardware review pending |
-| **Playlist picker** (Property Inspector) | Playlist names, owner names, item counts | Spotify's official full logo, 90 px wide, with *Playlist information provided by Spotify* | **Open in Spotify** for the selected playlist (validated `open.spotify.com/playlist/<id>`) | ✅ (row-level links: 🟡) |
-| **Add to Playlist / Play Playlist keys** | The chosen playlist's name as the key title | None on the key | None from the key; the picker has Open in Spotify | 🟡 open question |
+| **Playlist picker** (Property Inspector) | Playlist names, owner names, item counts | Spotify's official full logo, 90 px wide, with *Playlist information provided by Spotify* | **Open in Spotify** for the selected playlist and, **since v1.0, on every playlist row**. The plugin opens only a validated `open.spotify.com/playlist/<id>` for the selected playlist or a playlist the picker offers | ✅ (v1.0) |
+| **Add to Playlist / Play Playlist keys** | **None since v1.0.** The keys show Deckify's own labels, *Add to Playlist* and *Play Playlist* | n/a | n/a (the picker has Open in Spotify) | ✅ (v1.0) |
 | **Spotify Account** (key and Property Inspector) | The user's own Spotify display name, in the Property Inspector only | The page is about connecting Spotify and names it in text; no logo | n/a | 🟡 low risk |
 | Like / Unlike, Volume, Mute, Play / Pause, Next, Previous keys | No content metadata (state and percentages only) | n/a | n/a | ✅ |
 | Logs, README, docs, overview illustration | No Spotify metadata | n/a | n/a | ✅ |
 
-**Open questions** (documented rather than guessed):
+**Decisions (v1.0):**
 
-1. **Playlist names on playlist keys.** The key title is a playlist name the user picked.
-   - **Possible readings:** it may count as displayed Spotify metadata, or as the user's own configuration label.
-   - **If attribution is required,** the options are:
-     - a small official Spotify icon on those keys, with clear space (it would compete with the Deckify glyph on a 72-pixel key);
-     - showing a Deckify label instead of the name by default;
-     - relying on the picker's attribution and link.
-   - **Today:** unchanged, pending a decision.
-2. **Row-level links in the picker.** Each playlist row shows Spotify metadata, but only the selected playlist has an Open in Spotify link.
-   Adding a link per row would change the picker's request protocol.
+1. **Playlist names on playlist keys: removed.** The conservative reading is that a playlist name on a key is displayed Spotify metadata
+   without attribution or a link back, which a 72-pixel key can't carry. The keys now show Deckify-owned labels (*Add to Playlist*,
+   *Play Playlist*), plus Deckify's own status and feedback titles. The selection itself is unchanged: stored per key by playlist ID and
+   URI, with the display-only name cache kept in step with Spotify, and shown only in the Property Inspector, next to Spotify's logo and
+   with Open in Spotify. Tests check that no playlist name, owner or ID reaches a key title.
+2. **Row-level links in the picker: added.** Every row that has a validated Spotify link offers **Open in Spotify**. The picker sends
+   only the playlist ID; the plugin checks it (format, present in the current list, and for Add to Playlist writable) and opens
+   `https://open.spotify.com/playlist/<id>`. The picker still never receives or opens links itself, and opening a row never changes the
+   key's playlist.
 3. **Now Playing at 21 px.**
    - **Size:** Spotify's minimum icon size (21 px digital) is met in key pixels on the MK.2. The full logo (70 px minimum) doesn't fit a
      72-pixel key, and Spotify allows the icon alone when there isn't room for the full logo.
@@ -68,20 +70,14 @@ back to the content on Spotify.
 
 | Item | Status | Notes |
 | --- | --- | --- |
-| Behaviour | ✅ | Likes or unlikes on Spotify (nothing is stored by Deckify), songs only, with race handling and no polling. Unchanged. |
-| States | ✅ | Explicit: `add` (not in Liked Songs), `added` (active state), `checking`, `unavailable`, with a test listing every case (`test/like-states.test.ts`). |
-| Icon | ⛔ blocker for public launch | Spotify's guidelines represent Like with a **+ icon** and an active state, and provide the icons to download, in all states (SVG and PNG). That download is on `developer.spotify.com`, which couldn't be reached. Deckify must not redraw Spotify's icon, so the **Phase 5 heart artwork is unchanged** until the official files are supplied. |
-| Messages | 🟡 | Spotify's guidance pairs the + icon with "Added to Liked Songs" / "Removed from Liked Songs" messages. On a key that would be a brief **Added** / **Removed** title after a press. Not implemented yet, so the Like visuals stay unchanged for hardware review. Do it together with the icon swap. |
+| Behaviour | ✅ | Likes or unlikes on Spotify (nothing is stored by Deckify), songs only, with race handling and no polling. Unchanged. Permanent UUID `com.marting.deckify.spotify.like` unchanged. |
+| States | ✅ | Explicit: `add` (not in Liked Songs, inactive), `added` (active state), `checking`, `unavailable`, with a test listing every case (`test/like-states.test.ts`). The artwork is one table, `LIKE_KEY_IMAGES` in `src/actions/like-view.ts`. |
+| Icon | ✅ (v1.0) | Spotify's official Like icon files, downloaded by the owner from Spotify's Design & Branding Guidelines (`like-icon-svg.zip` and `like-icon-png.zip`, files dated 2024-09-20), are kept unmodified in `assets/spotify-like-icon/` with their SHA-256 pinned (`test/spotify-like-icon.test.ts`). **Inactive** (`add`): the white **+ icon**. **Active** (`added`): Spotify's green active state. Both are embedded byte-for-byte (the 135×135 PNGs, as data URIs) in Deckify's dark 72×72 key at 72/144 size, centred in the upper part, at their original proportions, with nothing drawn over them and no filter, recolouring or cropping (the way Now Playing embeds Spotify's icon). **Checking** and **unavailable** use Deckify's own grey glyphs (three dots; a dash), so Spotify's icon is never altered to show them; the title says why (Connect, No Device, Track Only, …). The **action-list icon** is Spotify's official `like-icon-like.svg` itself, unmodified (`imgs/attribution/`). The heart artwork is deleted, and a test keeps it out. |
+| Messages | ✅ (v1.0) | Following Spotify's "Added to Liked Songs" / "Removed from Liked Songs", a successful press shows **Added** or **Removed** as the key title for 1.5 s, on the pressed key only, while the image already shows the new state. A failed or ignored press shows no message (an alert instead, as before). The message is a timer only: no extra request, no polling. |
+| README illustration | ✅ | The README stays free of Spotify artwork: its overview illustration shows the Like key in Deckify's neutral (unavailable) state. |
 
-**To finish Like / Unlike:**
-
-1. Download the official Like icon set from Spotify's Design & Branding page.
-2. Add the needed state files, unmodified, under `imgs/actions/library/`.
-3. Point `LIKE_KEY_IMAGES` in `src/actions/like-view.ts` at them (white on the dark key, or the official coloured active state). Keep the
-   `checking` / `unavailable` states distinguishable, for example with Deckify's dimmed treatment if Spotify provides no disabled state.
-4. Add the files to the package check, and pin their hashes in a test like `test/spotify-attribution.test.ts`.
-5. Decide on the action-list icon. It is Deckify's own glyph; a heart today.
-6. Review on the MK.2.
+**Before launch:** on the physical MK.2, confirm that Stream Deck draws the embedded PNGs in the Like key images (the same technique as
+Now Playing's icon), that both states are legible, and how the 135×135 official SVG looks as the action-list icon in the Stream Deck app.
 
 ## Elgato: plugin and action list
 
@@ -97,9 +93,9 @@ back to the content on Spotify.
 | Category icon | ✅ (Phase 7) | The B1 28×28 pixel-grid glyph: SVG, monochrome white, transparent. |
 | Key images | ✅ | SVG at 72×72 with a 144×144 drawing; the Status key PNGs are 72×72 and 144×144. Dark key backgrounds are intended (key images, not action-list icons). |
 | Plugin icon | ✅ (Phase 7) | `imgs/plugin/marketplace.png` 256×256 and `@2x` 512×512 PNG: the B1 symbol on the charcoal tile. |
-| Author | 🟡 | `MARTIN.G`. It is shown on the Marketplace and in Stream Deck; confirm the public author name before release. |
-| `Nodejs.Debug: "enabled"` | 🟡 **verify** | The manifest asks Stream Deck to run the plugin with the Node.js inspector in debug mode (`--inspect=127.0.0.1:{port}`). Confirm whether that applies to installed packages outside Stream Deck's developer mode. Either way, release packages should not request it; have `npm run pack` write `"disabled"` into the packaged manifest. |
-| Version | 🟡 | `0.1.0.0`. Choose the first public version when a release is planned. |
+| Author | ✅ (v1.0) | `MARTIN.G`, the public author name, in the manifest and `package.json` (checked by a test). |
+| Node.js debugging | ✅ (v1.0) | The committed manifest keeps `Nodejs.Debug: "enabled"` for development. `npm run pack` packs a staged copy whose manifest has **no `Debug` option** (`"Nodejs": { "Version": "24" }`), so Stream Deck never starts the released plugin with an inspector. The pack reads the manifest back from the finished `.streamDeckPlugin` and fails if it enables debugging; `test/release-package.test.ts` packs with the real Stream Deck CLI and checks the same. |
+| Version | ✅ (v1.0) | `1.0.0.0` in the manifest; `1.0.0` in `package.json` and `package-lock.json` (checked by tests). |
 | Devices | 🟡 | Keypad actions only. Designed and hardware-tested on the MK.2; other models with keys should work but are untested. No dial (Stream Deck +) support. |
 
 ## Repository
@@ -122,24 +118,44 @@ On the production B1 build (`a13b8e9`), the owner checked Deckify on a physical 
 - **Regression:** functional testing passed, and the existing controls remain operational.
 - **README:** the review passed in GitHub's rendered view (light and dark), covering copy, links and media structure.
 
-## Blockers before going public
+## Resolved for v1.0
 
-**Before making the repository public:**
+- **Version and author:** `1.0.0.0` and `MARTIN.G`, synchronized in the manifest, `package.json`, `package-lock.json` and the smoke test.
+  Plugin UUID, category, product name and all twelve action UUIDs are unchanged (a test lists them literally).
+- **Release Node.js configuration:** packages ship without `Nodejs.Debug`, verified on the actual package.
+- **Playlist metadata:** no playlist names on keys; Open in Spotify on the selected playlist and every picker row.
+- **Like / Unlike:** Spotify's official + icon and active state, unmodified and hash-pinned, for the inactive and active states; Spotify's
+  + icon as the action-list icon; Deckify's own glyphs for checking and unavailable; no heart anywhere; brief **Added** / **Removed** after a
+  successful press.
+- **Elgato metadata:** Windows 10+ only, Stream Deck 7.1+, Node.js 24, keypad actions only (unchanged).
+- **Phase 7:** brand, attribution assets, hidden legacy action, security policy and privacy documentation (see above).
 
-1. Choose a licence, or deliberately decide to publish without one.
-2. Enable private vulnerability reporting.
+## Still open before v1.0
 
 **Before publishing a release:**
 
-1. Everything above.
-2. Official Spotify Like icons, or a decision recorded with Spotify's guidance in hand.
-3. Settle the open metadata questions above.
-4. `Nodejs.Debug` handled for release packages.
-5. Public author name and version.
-6. A real hardware capture for the README.
+1. The **physical MK.2 review** of the v1.0 release package (listed in the v1.0 pull request), including the Like key with Spotify's
+   icons.
+2. **Licence:** choose one, or deliberately decide to publish without one (a decision for the owner; no licence file is added).
 
-**Before submitting to the Marketplace:**
+**Before making the repository public:** the licence decision, and enabling GitHub private vulnerability reporting.
 
-1. Everything above.
-2. The Marketplace thumbnail and gallery (1920×960) from real product media; see [marketplace-readiness.md](marketplace-readiness.md). The 288×288 app icon is done.
-3. Re-check Spotify's developer terms for distributing an app that each user connects with their own Client ID.
+**Before submitting to the Marketplace:** everything above, the [Marketplace media](#marketplace-media-pending), and re-checking Spotify's
+developer terms for distributing an app that each user connects with their own Client ID.
+
+## Marketplace media pending
+
+Real product media is handled separately from the code; nothing fake is added in the meantime.
+
+- The Marketplace thumbnail and gallery (1920×960) from real captures; see [marketplace-readiness.md](marketplace-readiness.md). The
+  288×288 app icon is done.
+- A real hardware capture for the README ([capture plan](media/README.md)).
+- The playlist picker screenshot (now with Open in Spotify on each row) and the Like key with Spotify's icons.
+
+## Post-v1.0 roadmap
+
+Not v1.0 blockers:
+
+- **v1.1:** Phase 10 (dynamic key visuals) and Stream Deck + support (dials and touch strip).
+- **macOS:** not supported in v1.0 (Deckify's local controls use Windows' media controls); the listing says Windows only.
+- Other ideas in the README's roadmap (device choice, queue controls, layouts for other models).

@@ -37,7 +37,8 @@ Individual steps: `npm run typecheck`, `npm run lint`, `npm test`, `npm run vali
 - **`npm run assets`** regenerates image exports:
   - the brand masters in `assets/brand/` and every brand export (plugin icon, category and Status icons, Status key images, Marketplace
     app icon), all generated from `scripts/brand.mjs` (`scripts/export-brand-assets.mjs`);
-  - the volume / Like / playlist key images (`scripts/export-key-icons.mjs`);
+  - the volume / Like / playlist key images (`scripts/export-key-icons.mjs`; the Like inactive and active images embed Spotify's icons from
+    `assets/spotify-like-icon/`);
   - the README overview illustration (`scripts/export-deck-overview.mjs`).
 
   Tests fail if a committed generated file differs from its generator.
@@ -67,8 +68,8 @@ npm run watch         # optional: rebuild and restart automatically on every cha
 ```
 
 - **To undo the link:** `npx streamdeck unlink com.marting.deckify`.
-- **Debugging:** the manifest enables Node.js debugging (`Nodejs.Debug`). Use the **Attach to Plugin** VS Code launch configuration to
-  attach a debugger.
+- **Debugging:** the committed manifest enables Node.js debugging (`Nodejs.Debug: "enabled"`) for development. Use the **Attach to Plugin**
+  VS Code launch configuration to attach a debugger. Release packages never include it (see [Package](#package)).
 
 ## Package
 
@@ -78,16 +79,19 @@ npm run pack          # builds the native helper (Windows), bundles, packs and v
 
 1. **On Windows,** `npm run pack` builds the release helper and stages it at
    `com.marting.deckify.sdPlugin/bin/native/deckify-media-bridge.exe`.
-2. It runs the Stream Deck CLI pack, which validates the manifest.
+2. It runs the Stream Deck CLI pack, which validates the manifest, on a temporary copy of the plugin folder whose manifest has no
+   `Nodejs.Debug`: the released plugin never starts with a Node.js inspector. The committed manifest is not modified.
 3. It checks that the package contains:
    - `bin/plugin.js` and the manifest;
    - every file the manifest references;
    - every generated key image;
    - the Spotify attribution images;
    - the Property Inspector scripts and styles;
-   - on Windows, the helper.
+   - on Windows, the helper;
+   - a manifest that does not enable Node.js debugging and otherwise matches the committed one (read back from the package).
 
-   It fails if anything is missing.
+   It fails if anything is missing or wrong. `test/release-package.test.ts` packs the plugin folder the same way and checks the packaged
+   manifest.
 4. **On other systems** it packs without the helper (Web API only).
 
 - **Not in the package:** only `com.marting.deckify.sdPlugin/` is packed, so `docs/` (including the brand-review concepts and media) and
@@ -216,6 +220,7 @@ com.marting.deckify.sdPlugin/
   bin/, logs/               build output (plugin.js, native/deckify-media-bridge.exe) and runtime logs (git-ignored)
 native/media-bridge/        Rust helper: GSMTC Spotify session selection and commands
 assets/brand/               Deckify brand masters (B1) and the Marketplace app icon; archive/ keeps the retired development-era mark
+assets/spotify-like-icon/   Spotify's official Like icons, unmodified (embedded in the Like key images; hashes pinned by tests)
 docs/                       architecture, privacy, history, launch audits, brand review, media capture guide
 scripts/                    asset generators, smoke test, dev-only token expiry helper, native build, pack + package verification,
                             bundled profile checks and import (profiles.mjs)

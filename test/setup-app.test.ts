@@ -889,7 +889,7 @@ describe("tour and finish", () => {
 		expect(app.text()).toContain("You can close this tab.");
 	});
 
-	it("names only actions that exist, using Deckify's own icons, which the Setup App serves", async () => {
+	it("names only actions that exist, using the actions' own icons (Like: Spotify's official + icon), which the Setup App serves", async () => {
 		const model = await loadModel();
 		const manifest = JSON.parse(await readFile(path.join(PLUGIN, "manifest.json"), "utf8")) as { Actions: { Name: string; Icon: string }[] };
 		const names = manifest.Actions.map((action) => action.Name);

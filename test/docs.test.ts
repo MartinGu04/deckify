@@ -145,7 +145,8 @@ describe("code facts the documentation relies on", () => {
 
 	it("keeps action-list and category icons monochrome white on transparent", async () => {
 		const { CategoryIcon, Actions } = await manifest();
-		for (const icon of [CategoryIcon, ...Actions.map((a) => a.Icon)]) {
+		// Like / Unlike's action-list icon is Spotify's official + icon itself (white on transparent; pinned in spotify-like-icon.test.ts).
+		for (const icon of [CategoryIcon, ...Actions.map((a) => a.Icon)].filter((icon) => icon !== "imgs/attribution/like-icon-like")) {
 			const svg = await read(`com.marting.deckify.sdPlugin/${icon}.svg`);
 			const colours = new Set([...svg.matchAll(/(?:fill|stroke)="([^"]+)"/g)].map((m) => m[1]));
 			expect([...colours].filter((c) => c !== "#FFFFFF" && c !== "none"), icon).toEqual([]);

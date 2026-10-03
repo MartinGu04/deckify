@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { LIKE_KEY_IMAGES, likeKeyState, likeView } from "../src/actions/like-view";
+import { LIKE_FEEDBACK, LIKE_KEY_IMAGES, likeKeyState, likeView } from "../src/actions/like-view";
+import { ActionUUID } from "../src/identifiers";
 import { EMPTY_LIBRARY_SNAPSHOT, type LibrarySnapshot } from "../src/library/state";
 import { SIGNED_OUT_SNAPSHOT, type PlaybackSnapshot } from "../src/playback/state";
 
@@ -39,12 +40,23 @@ describe("Like / Unlike key states", () => {
 		expect(likeView(playback, library)).toEqual({ image: LIKE_KEY_IMAGES[expected.state], title: expected.title });
 	});
 
-	it("uses one distinct image per state (the Phase 5 artwork until official Spotify Like icons are supplied)", () => {
+	it("uses one distinct image per state: Spotify's official Like icons for inactive and active, Deckify's own glyphs otherwise", () => {
 		expect(LIKE_KEY_IMAGES).toEqual({
-			add: "imgs/actions/library/heart-outline.svg",
-			added: "imgs/actions/library/heart-filled.svg",
-			checking: "imgs/actions/library/heart-unknown.svg",
-			unavailable: "imgs/actions/library/heart-disabled.svg",
+			add: "imgs/actions/library/like-add.svg",
+			added: "imgs/actions/library/like-added.svg",
+			checking: "imgs/actions/library/like-checking.svg",
+			unavailable: "imgs/actions/library/like-unavailable.svg",
 		});
+		expect(Object.values(LIKE_KEY_IMAGES).join(" ")).not.toMatch(/heart/i);
+	});
+
+	it("keeps the image of the current state while Added / Removed is shown after a press", () => {
+		expect(LIKE_FEEDBACK).toEqual({ added: "Added", removed: "Removed" });
+		expect(likeView(playing, track({ saved: true }), "added")).toEqual({ image: LIKE_KEY_IMAGES.added, title: "Added" });
+		expect(likeView(playing, track({ saved: false }), "removed")).toEqual({ image: LIKE_KEY_IMAGES.add, title: "Removed" });
+	});
+
+	it("keeps the permanent Like / Unlike action UUID", () => {
+		expect(ActionUUID.Like).toBe("com.marting.deckify.spotify.like");
 	});
 });

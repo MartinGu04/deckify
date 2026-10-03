@@ -1,8 +1,8 @@
 # Elgato Marketplace readiness
 
-What a Marketplace submission of Deckify would need, checked against Elgato's current guidelines. **Nothing has been submitted**, and no
-final Marketplace artwork exists yet: it waits for an approved Deckify brand ([brand review](brand-review/README.md)). Spotify-specific
-items are in the [public-launch audit](public-launch-audit.md).
+What a Marketplace submission of Deckify v1.0 would need, checked against Elgato's current guidelines. **Nothing has been submitted.** The
+brand, plugin icon and app icon are done; the listing thumbnail and gallery wait for real product media. Spotify-specific items are in the
+[public-launch audit](public-launch-audit.md).
 
 Sources: Elgato's [plugin guidelines](https://docs.elgato.com/guidelines/stream-deck/plugins/),
 [plugin metadata](https://docs.elgato.com/guidelines/streamdeck/plugins/metadata/) and
@@ -21,9 +21,11 @@ Status key: ✅ ready · 🟡 decision or small change needed · ⛔ missing.
 | Action names accurate and concise (about 30 characters or less) | Longest: "Spotify Account" / "Previous Track" / "Add to Playlist" (15) | ✅ |
 | Tooltips | One per action, describing the behaviour | ✅ |
 | Category: specified, same as or similar to the plugin name, no author name | "Deckify" | ✅ |
-| Author: identifies the creator, shown on Marketplace and in Stream Deck | `MARTIN.G` | 🟡 confirm the public name |
+| Author: identifies the creator, shown on Marketplace and in Stream Deck | `MARTIN.G` | ✅ |
+| Version | `1.0.0.0` (first public release) | ✅ |
+| Release package without a debugger | The packaged manifest has no `Nodejs.Debug` (checked on the package by `npm run pack` and a test) | ✅ |
 | Description | "A dynamic Spotify control center for Elgato Stream Deck." | 🟡 finalize with the listing copy |
-| Supported OS and app version | Windows 10+, Stream Deck 7.1+ | ✅ (macOS isn't supported, so the listing must say Windows only) |
+| Supported OS and app version | Windows 10+, Stream Deck 7.1+ | ✅ (macOS isn't supported in v1.0, so the listing must say Windows only) |
 
 ## Images inside the plugin
 
@@ -31,7 +33,7 @@ Status key: ✅ ready · 🟡 decision or small change needed · ⛔ missing.
 | --- | --- | --- |
 | Plugin icon 256×256 and 512×512 PNG | `imgs/plugin/marketplace.png` / `@2x`: the B1 symbol on the charcoal tile | ✅ |
 | Category icon 28×28 (56×56 when raster), monochrome white, transparent | The B1 28×28 pixel-grid glyph, SVG, `#FFFFFF`, transparent | ✅ |
-| Action icons 20×20 (40×40 when raster), monochrome white, transparent | 12 SVGs, 20×20, `#FFFFFF`, transparent | ✅ (Like's heart may change with official Spotify Like icons) |
+| Action icons 20×20 (40×40 when raster), monochrome white, transparent | 11 Deckify SVGs, 20×20, `#FFFFFF`, transparent. Like / Unlike uses Spotify's official + icon SVG, unmodified (white on transparent, 135×135 viewBox, scaled by Stream Deck) | ✅ (check the Like icon in the actions list during the MK.2 review) |
 | Key images 72×72 with 144×144 high-DPI | SVG drawn at 144×144, shown at 72×72, in Deckify violet; Status PNGs (B1 symbol) at 72×72 and 144×144 | ✅ |
 
 ## Marketplace listing assets
@@ -61,8 +63,16 @@ Each image: 1920×960 PNG, English text, no Spotify logo used as decoration, and
 
 ## Before submitting
 
-1. Capture the real product media, then compose the 1920×960 thumbnail and gallery from it with the B1 logo. The brand, plugin icon, category icon, key accent and 288×288 app icon are done.
-2. Resolve the Spotify items in the [public-launch audit](public-launch-audit.md): Like icons, playlist-key attribution and the Development
-   Mode / Client ID model for public users.
-3. Set the release version and author, and handle `Nodejs.Debug` for the package.
-4. Build with `npm run pack` on Windows (CI does this) and install the package on a clean machine.
+**Resolved in the v1.0 cleanup:** version `1.0.0.0`, author `MARTIN.G`, no Node.js debugging in the package, no Spotify playlist
+metadata on keys (the picker links every playlist back to Spotify), and Spotify's official Like icons
+([public-launch audit](public-launch-audit.md#spotify-like--unlike)).
+
+**Still open:**
+
+1. The Development Mode / Client ID model for public users: re-check Spotify's developer terms.
+2. Build with `npm run pack` on Windows (CI does this), install the package on a clean machine, and run the physical MK.2 review.
+
+**Marketplace media pending:** capture the real product media, then compose the 1920×960 thumbnail and gallery from it with the B1
+logo. The brand, plugin icon, category icon, key accent and 288×288 app icon are done.
+
+**After v1.0 (not blockers):** Phase 10 dynamic visuals and Stream Deck + support are planned for v1.1; macOS isn't supported in v1.0.

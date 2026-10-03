@@ -1,7 +1,7 @@
 {
 	"$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
 	"Name": "Deckify",
-	"Version": "0.1.0.0",
+	"Version": "1.0.0.0",
 	"Author": "MARTIN.G",
 	"Description": "A dynamic Spotify control center for Elgato Stream Deck.",
 	"UUID": "com.marting.deckify",
@@ -220,7 +220,7 @@
 		{
 			"Name": "Like / Unlike",
 			"UUID": "com.marting.deckify.spotify.like",
-			"Icon": "imgs/actions/library/like-icon",
+			"Icon": "imgs/attribution/like-icon-like",
 			"Tooltip": "Add the current Spotify song to Liked Songs, or remove it. Shows whether it is liked.",
 			"Controllers": [
 				"Keypad"
@@ -228,7 +228,7 @@
 			"SupportedInMultiActions": false,
 			"States": [
 				{
-					"Image": "imgs/actions/library/heart-disabled",
+					"Image": "imgs/actions/library/like-unavailable",
 					"ShowTitle": true,
 					"TitleAlignment": "bottom",
 					"TitleColor": "#FFFFFF"

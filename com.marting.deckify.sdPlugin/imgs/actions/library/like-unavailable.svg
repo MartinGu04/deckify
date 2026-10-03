@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 144 144">
+	<!-- Like / Unlike key: unavailable, e.g. not connected, no device or not a song (Deckify's own glyph) -->
+	<rect width="144" height="144" fill="#121212"/>
+	<rect x="46" y="44" width="52" height="12" rx="6" fill="#4F4F4F"/>
+</svg>

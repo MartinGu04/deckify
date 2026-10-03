@@ -25,7 +25,7 @@ const PLAY_PAUSE_UUID = "com.marting.deckify.spotify.play-pause";
 const SIGNED_OUT_KEYS = [
 	{ uuid: "com.marting.deckify.spotify.volume-up", context: "smoke-volume-up-key", image: "imgs/actions/volume/volume-up-disabled.svg" },
 	{ uuid: "com.marting.deckify.spotify.mute", context: "smoke-mute-key", image: "imgs/actions/volume/speaker-disabled.svg" },
-	{ uuid: "com.marting.deckify.spotify.like", context: "smoke-like-key", image: "imgs/actions/library/heart-disabled.svg" },
+	{ uuid: "com.marting.deckify.spotify.like", context: "smoke-like-key", image: "imgs/actions/library/like-unavailable.svg" },
 	{ uuid: "com.marting.deckify.spotify.add-to-playlist", context: "smoke-add-to-playlist-key", image: "imgs/actions/playlist/add-disabled.svg" },
 	{ uuid: "com.marting.deckify.spotify.play-playlist", context: "smoke-play-playlist-key", image: "imgs/actions/playlist/play-disabled.svg" },
 ];
@@ -41,7 +41,7 @@ const info = {
 	colors: {},
 	devicePixelRatio: 2,
 	devices: [{ id: device, name: "Stream Deck MK.2 (simulated)", size: { columns: 5, rows: 3 }, type: 7 }],
-	plugin: { uuid: "com.marting.deckify", version: "0.1.0.0" },
+	plugin: { uuid: "com.marting.deckify", version: "1.0.0.0" },
 };
 
 const received = [];

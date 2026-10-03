@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-Deckify is pre-1.0 and has no public release yet. Until 1.0, only the latest code on `main` (and, once releases exist, the latest
-release) receives security fixes. Older builds won't be patched; update to the latest version instead.
+Deckify 1.0.0 is being prepared as the first public release; there is no public release yet. Only the latest code on `main` (and, once
+releases exist, the latest release) receives security fixes. Older builds won't be patched; update to the latest version instead.
 
 ## Reporting a vulnerability
 

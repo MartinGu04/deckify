@@ -43,7 +43,7 @@ export const SETUP_ASSETS: Readonly<Record<string, { readonly file: string; read
 	[`${SETUP_PATH}/experiences.js`]: { file: "ui/setup/experiences.js", type: "text/javascript; charset=utf-8" },
 	[`${SETUP_PATH}/icon.svg`]: { file: "ui/setup/icon.svg", type: "image/svg+xml" },
 	[`${SETUP_PATH}/icons/now-playing.svg`]: { file: "imgs/actions/playback/now-playing-icon.svg", type: "image/svg+xml" },
-	[`${SETUP_PATH}/icons/like.svg`]: { file: "imgs/actions/library/like-icon.svg", type: "image/svg+xml" },
+	[`${SETUP_PATH}/icons/like.svg`]: { file: "imgs/attribution/like-icon-like.svg", type: "image/svg+xml" },
 	[`${SETUP_PATH}/icons/playlists.svg`]: { file: "imgs/actions/playlist/add-icon.svg", type: "image/svg+xml" },
 	[`${SETUP_PATH}/icons/volume.svg`]: { file: "imgs/actions/volume/volume-up-icon.svg", type: "image/svg+xml" },
 	// Key icons of the experience layout previews.

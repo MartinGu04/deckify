@@ -37,7 +37,7 @@ Deckify is a Stream Deck plugin for Windows that turns your keys into a Spotify 
 - **Fast control:** commands reach the Spotify app on your PC instantly, and Spotify on your phone or speakers through Spotify Connect.
 - **Actions basic media keys can't do:** like songs, add them to a playlist (without duplicates) and start your playlists.
 
-> **Status:** Deckify works today and has been tested on a Stream Deck MK.2. Preparation for a public release is in progress; there is no
+> **Status:** Deckify works today and has been tested on a Stream Deck MK.2. Version 1.0 is in final release preparation; there is no
 > downloadable release yet. See [Getting started](#getting-started).
 
 ## Why Deckify
@@ -72,9 +72,9 @@ Media keys send play, pause and skip to whichever app Windows thinks is playing,
 | **Volume Down** | The current volume | Web API | Volume step (1–50%, default 10%) | ✓ when the device allows it |
 | **Volume Up** | The current volume | Web API | Volume step (1–50%, default 10%) | ✓ when the device allows it |
 | **Mute / Unmute** | Sound on or muted | Web API | — | ✓ when the device allows it |
-| **Like / Unlike** | Whether the current song is in Liked Songs | Web API | — | ✓ |
-| **Add to Playlist** | The playlist's name, then **Added** or **Already Added** | Web API | Playlist (your own or collaborative) | ✓ |
-| **Play Playlist** | The playlist's name, then **Started** | Web API | Playlist (any in your library) | ✓ |
+| **Like / Unlike** | Whether the current song is in Liked Songs, then **Added** or **Removed** | Web API | — | ✓ |
+| **Add to Playlist** | **Add to Playlist**, then **Added** or **Already Added** | Web API | Playlist (your own or collaborative) | ✓ |
+| **Play Playlist** | **Play Playlist**, then **Started** | Web API | Playlist (any in your library) | ✓ |
 
 - **Local first:** a command goes to the Spotify desktop app through Windows' media controls when it is running. Otherwise it goes
   through the Spotify Web API to the active device.
@@ -160,7 +160,8 @@ later from **Open Deckify Setup** in the Spotify Account settings, or skip this 
 ### 6. Play
 
 Start playing something in Spotify and press away. To add more keys, drag any Deckify actions from the actions list. For **Add to
-Playlist** and **Play Playlist**, choose a playlist in the key's settings.
+Playlist** and **Play Playlist**, choose a playlist in the key's settings. The key keeps its Deckify label; the settings show the chosen
+playlist, with **Open in Spotify**.
 
 ## Your Spotify Client ID, explained
 
@@ -346,7 +347,7 @@ No. Deckify is an independent project. It isn't made, endorsed or supported by S
 - queue controls;
 - layouts tuned for Stream Deck +, XL and Neo;
 - a public release and Elgato Marketplace listing, once the remaining [launch audit](docs/public-launch-audit.md) items are done
-  (licence, official Spotify Like icons, release packaging and real product media).
+  (licence and real product media).
 
 ## Documentation
 
@@ -357,7 +358,7 @@ No. Deckify is an independent project. It isn't made, endorsed or supported by S
 | [Privacy](docs/privacy.md) | What Deckify stores, sends and logs. |
 | [Security policy](SECURITY.md) | Supported versions and how to report vulnerabilities. |
 | [Development](docs/development.md) | Building, testing, packaging, CI and logs. |
-| [Development history](docs/development-history.md) | Phases 1–9 and the decisions behind them. |
+| [Development history](docs/development-history.md) | Phases 1–9, the v1.0 cleanup and the decisions behind them. |
 | [Public-launch audit](docs/public-launch-audit.md) | Spotify and Elgato compliance status and launch blockers. |
 | [Marketplace readiness](docs/marketplace-readiness.md) | The Elgato Marketplace checklist. |
 | [Brand](assets/brand/README.md) · [brand review](docs/brand-review/README.md) | The Deckify brand masters, and how the B1 mark was chosen. |

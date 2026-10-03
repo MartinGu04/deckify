@@ -61,7 +61,7 @@
 	/**
 	 * Sends a request to the plugin and remembers it as the latest one.
 	 * @param {string} type Request type.
-	 * @param {object} [extra] Extra fields (only playlistId / playlistUri for selections).
+	 * @param {object} [extra] Extra fields (playlistId / playlistUri for selections, playlistId to open a row in Spotify).
 	 */
 	function request(type, extra) {
 		nextRequest += 1;
@@ -199,6 +199,18 @@
 					request("deckify:playlist:select", { playlistId: playlist.id, playlistUri: playlist.uri });
 				});
 				item.append(button);
+				if (playlist.canOpen) {
+					// Spotify's link back for the metadata shown in this row. The plugin validates the playlist and opens the link.
+					const open = document.createElement("button");
+					open.type = "button";
+					open.className = "open-row";
+					open.textContent = "Open in Spotify";
+					open.setAttribute("aria-label", `Open ${playlist.name || "Untitled playlist"} in Spotify`);
+					open.addEventListener("click", () => {
+						request("deckify:playlist:open", { playlistId: playlist.id });
+					});
+					item.append(open);
+				}
 				return item;
 			}),
 		);

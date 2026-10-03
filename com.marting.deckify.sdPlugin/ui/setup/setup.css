@@ -958,7 +958,7 @@ details.help ul {
 	opacity: 0.55;
 }
 
-/* The preview frame stands in for the device; keys use Deckify's own monochrome action icons. */
+/* The preview frame stands in for the device; keys use the actions' own icons (Like: Spotify's official + icon). */
 .deck-preview {
 	display: grid;
 	margin-top: auto;

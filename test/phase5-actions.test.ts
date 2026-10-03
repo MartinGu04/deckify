@@ -23,6 +23,7 @@ vi.mock("@elgato/streamdeck", () => ({
 
 const { VolumeUpAction, VolumeDownAction, MuteAction } = await import("../src/actions/volume");
 const { LikeAction } = await import("../src/actions/like");
+const { LIKE_KEY_IMAGES } = await import("../src/actions/like-view");
 const { DEFAULT_VOLUME_STEP, normalizeVolumeStep } = await import("../src/actions/volume-settings");
 
 const SONG: PlaybackItem = { type: "track", id: "songA", uri: "spotify:track:songA", title: "Secret Title", subtitle: "Secret Artist", durationMs: 1 };
@@ -267,28 +268,76 @@ describe("Mute / Unmute key", () => {
 });
 
 describe("Like / Unlike key", () => {
-	it("shows an outline heart for a track that is not liked and fills it after a press", async () => {
+	it("shows the inactive state for a track that is not liked and the active state after a press", async () => {
 		const ctx = setup();
 		const like = fakeKey("like");
 		await place(ctx.actions.like, like);
 		await tick();
-		expect(like.setImage).toHaveBeenLastCalledWith("imgs/actions/library/heart-outline.svg");
+		expect(like.setImage).toHaveBeenLastCalledWith(LIKE_KEY_IMAGES.add);
 
 		await press(ctx.actions.like, like);
 		expect(ctx.libraryTransport.save).toHaveBeenCalledWith("spotify:track:songA");
-		expect(like.setImage).toHaveBeenLastCalledWith("imgs/actions/library/heart-filled.svg");
+		expect(like.setImage).toHaveBeenLastCalledWith(LIKE_KEY_IMAGES.added);
 
 		await press(ctx.actions.like, like);
 		expect(ctx.libraryTransport.remove).toHaveBeenCalledWith("spotify:track:songA");
-		expect(like.setImage).toHaveBeenLastCalledWith("imgs/actions/library/heart-outline.svg");
+		expect(like.setImage).toHaveBeenLastCalledWith(LIKE_KEY_IMAGES.add);
 	});
 
-	it("shows a filled heart for a liked track", async () => {
+	it("shows the active state for a liked track", async () => {
 		const ctx = setup({ saved: true });
 		const like = fakeKey("like");
 		await place(ctx.actions.like, like);
 		await tick();
-		expect(like.setImage).toHaveBeenLastCalledWith("imgs/actions/library/heart-filled.svg");
+		expect(like.setImage).toHaveBeenLastCalledWith(LIKE_KEY_IMAGES.added);
+	});
+
+	it("briefly shows Added, then Removed, after successful presses, without any extra Spotify request", async () => {
+		const ctx = setup();
+		const like = fakeKey("like");
+		const other = fakeKey("like-2");
+		await place(ctx.actions.like, like, other);
+		await tick();
+		const checks = vi.mocked(ctx.libraryTransport.contains).mock.calls.length;
+
+		await press(ctx.actions.like, like);
+		expect(like.setTitle).toHaveBeenLastCalledWith("Added");
+		expect(like.setImage).toHaveBeenLastCalledWith(LIKE_KEY_IMAGES.added);
+		// Only the pressed key shows the feedback; the other key shows the new state.
+		expect(other.setTitle).not.toHaveBeenCalledWith("Added");
+		expect(other.setImage).toHaveBeenLastCalledWith(LIKE_KEY_IMAGES.added);
+		await tick(1_400);
+		expect(like.setTitle).toHaveBeenLastCalledWith("Added");
+		await tick(200);
+		expect(like.setTitle).toHaveBeenLastCalledWith("");
+
+		await press(ctx.actions.like, like);
+		expect(like.setTitle).toHaveBeenLastCalledWith("Removed");
+		expect(like.setImage).toHaveBeenLastCalledWith(LIKE_KEY_IMAGES.add);
+		await tick(1_600);
+		expect(like.setTitle).toHaveBeenLastCalledWith("");
+		expect(like.showOk).not.toHaveBeenCalled();
+		// The feedback is a timer only: no polling, no new saved-state checks.
+		expect(vi.mocked(ctx.libraryTransport.contains).mock.calls.length).toBe(checks);
+		expect(ctx.libraryTransport.save).toHaveBeenCalledTimes(1);
+		expect(ctx.libraryTransport.remove).toHaveBeenCalledTimes(1);
+	});
+
+	it("shows no feedback for a failed or ignored press, and drops pending feedback when the key disappears", async () => {
+		const ctx = setup();
+		const like = fakeKey("like");
+		await place(ctx.actions.like, like);
+		await tick();
+		ctx.libraryControl.error = new SpotifyNetworkError();
+		await press(ctx.actions.like, like);
+		expect(like.setTitle.mock.calls.flat()).not.toContain("Added");
+
+		ctx.libraryControl.error = undefined;
+		await tick(60_000);
+		await press(ctx.actions.like, like);
+		expect(like.setTitle).toHaveBeenLastCalledWith("Added");
+		ctx.actions.like.onWillDisappear({ action: like } as never);
+		expect(vi.getTimerCount()).toBe(0);
 	});
 
 	it("shows Track Only for an episode and alerts without a library request", async () => {
@@ -296,7 +345,7 @@ describe("Like / Unlike key", () => {
 		const like = fakeKey("like");
 		await place(ctx.actions.like, like);
 		await tick();
-		expect(like.setImage).toHaveBeenLastCalledWith("imgs/actions/library/heart-disabled.svg");
+		expect(like.setImage).toHaveBeenLastCalledWith(LIKE_KEY_IMAGES.unavailable);
 		expect(like.setTitle).toHaveBeenLastCalledWith("Track Only");
 
 		await press(ctx.actions.like, like);
@@ -313,7 +362,7 @@ describe("Like / Unlike key", () => {
 		ctx.libraryControl.error = new SpotifyNetworkError();
 		await press(ctx.actions.like, like);
 		expect(like.showAlert).toHaveBeenCalledTimes(1);
-		expect(like.setImage).toHaveBeenLastCalledWith("imgs/actions/library/heart-outline.svg");
+		expect(like.setImage).toHaveBeenLastCalledWith(LIKE_KEY_IMAGES.add);
 		expect(ctx.logger.lines.join("\n")).not.toMatch(/songA|Secret Title|Secret Artist/);
 	});
 
