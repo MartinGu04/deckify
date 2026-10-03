@@ -8,11 +8,21 @@ import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { keyIconFiles } from "./export-key-icons.mjs";
 import { buildNative } from "./native.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const PACKAGE = path.join(ROOT, "dist", "com.marting.deckify.streamDeckPlugin");
 const HELPER_ENTRY = "com.marting.deckify.sdPlugin/bin/native/deckify-media-bridge.exe";
+
+/** Files the manifest does not reference but the Property Inspectors load. */
+const INSPECTOR_FILES = [
+	"ui/shared/inspector.css",
+	"ui/spotify-account/inspector.js",
+	"ui/volume/inspector.js",
+	"ui/playlist/inspector.js",
+	"ui/playlist/playlist.css",
+];
 const MANIFEST = path.join(ROOT, "com.marting.deckify.sdPlugin", "manifest.json");
 
 /**
@@ -57,8 +67,10 @@ function pack() {
 	const missing = manifestFiles(JSON.parse(readFileSync(MANIFEST, "utf8"))).filter(
 		(file) => !(file.endsWith(".html") ? [file] : [`${file}.svg`, `${file}.png`]).some((candidate) => entries.includes(`com.marting.deckify.sdPlugin/${candidate}`)),
 	);
+	// Key images set at runtime (e.g. "Added") and the Property Inspectors' scripts and styles are not in the manifest.
+	missing.push(...requiredFiles().filter((file) => !entries.includes(`com.marting.deckify.sdPlugin/${file}`)));
 	if (missing.length > 0) {
-		console.error(`The package is missing files the manifest references: ${missing.join(", ")}`);
+		console.error(`The package is missing files the plugin uses: ${missing.join(", ")}`);
 		process.exit(1);
 	}
 	if (withNative && !entries.includes(HELPER_ENTRY)) {
@@ -66,6 +78,15 @@ function pack() {
 		process.exit(1);
 	}
 	console.log(withNative ? `Verified: package includes ${HELPER_ENTRY}` : "Note: package built without the Windows media bridge (not built on Windows).");
+}
+
+/**
+ * Lists plugin-relative files the plugin needs that the manifest does not reference: every generated key image and the Property
+ * Inspectors' scripts and styles.
+ * @returns {string[]} Plugin-relative paths.
+ */
+export function requiredFiles() {
+	return [...Object.keys(keyIconFiles()).map((file) => `imgs/actions/${file}`), ...INSPECTOR_FILES];
 }
 
 /**
