@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="referrer" content="no-referrer" />
+		<title>Playlist</title>
+		<link rel="stylesheet" href="../shared/inspector.css" />
+		<link rel="stylesheet" href="playlist.css" />
+	</head>
+	<body>
+		<!--
+			Shared playlist picker for Add to Playlist and Play Playlist. It only talks to the Deckify plugin, which calls Spotify: this page
+			never sees tokens or the Client ID, never calls the Spotify API, never opens links itself, and stores nothing in browser storage.
+			The selection is saved per key by playlist ID and URI (never by name).
+		-->
+		<div class="row">
+			<span class="label">Playlist</span>
+			<span class="value">
+				<span id="selected-name" class="selected-name">None selected</span>
+				<span id="selected-detail" class="muted"></span>
+				<span id="selected-warning" class="message warning" hidden></span>
+				<span class="inline">
+					<button id="open" type="button" hidden>Open in Spotify</button>
+				</span>
+			</span>
+		</div>
+
+		<div class="row">
+			<label class="label" for="search">Search</label>
+			<span class="value">
+				<span class="inline">
+					<input id="search" type="search" placeholder="Search playlists" autocomplete="off" spellcheck="false" maxlength="100" />
+					<button id="refresh" type="button" title="Refresh playlists">Refresh</button>
+				</span>
+				<span id="filter-note" class="muted"></span>
+			</span>
+		</div>
+
+		<div class="row">
+			<span class="label"></span>
+			<span class="value">
+				<span id="status" class="message" hidden></span>
+				<ul id="list" class="playlist-list" role="listbox" aria-label="Playlists"></ul>
+			</span>
+		</div>
+
+		<div class="row">
+			<span class="label"></span>
+			<span class="value"><span class="muted attribution">Playlist information provided by Spotify.</span></span>
+		</div>
+
+		<script src="inspector.js"></script>
+	</body>
+</html>

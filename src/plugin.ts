@@ -2,18 +2,22 @@ import streamDeck from "@elgato/streamdeck";
 
 import { LikeAction } from "./actions/like";
 import { NowPlayingAction } from "./actions/now-playing";
+import { AddToPlaylistAction, PlayPlaylistAction } from "./actions/playlist-actions";
+import type { PlaylistInspectorBridge } from "./actions/playlist-key-action";
 import { PlayPauseAction } from "./actions/play-pause";
 import { NextTrackAction, PreviousTrackAction } from "./actions/skip-track";
 import { SpotifyAccountAction } from "./actions/spotify-account";
 import { StatusAction } from "./actions/status";
 import { MuteAction, VolumeDownAction, VolumeUpAction } from "./actions/volume";
 import { LibraryService } from "./library/service";
+import { PlaylistService } from "./playlists/service";
 import { PlaybackService } from "./playback/service";
 import { loadGlobalSettings, saveSpotifyClientId } from "./settings/global-settings";
 import { SpotifyAuthService } from "./spotify/auth/auth-service";
 import { normalizeClientId } from "./spotify/client-id";
 import { describeError } from "./spotify/errors";
 import { SpotifyWebApiLibrary } from "./spotify/library/web-api-library";
+import { SpotifyWebApiPlaylists } from "./spotify/playlists/web-api-playlists";
 import { SpotifyWebApiTransport } from "./spotify/playback/web-api-transport";
 import { SpotifyAuthState } from "./spotify/state/auth-state";
 import { createTokenStore } from "./spotify/storage";
@@ -60,6 +64,22 @@ const library = new LibraryService({
 	logger: libraryLogger,
 });
 
+// The user's playlists, shared by every playlist key and picker; loaded on demand and cached briefly (never polled).
+const playlistLogger = logger.createScope("Playlists");
+const playlists = new PlaylistService({
+	transport: new SpotifyWebApiPlaylists(spotifyAuth.api),
+	auth: spotifyState,
+	playback,
+	onAuthRejected: () => spotifyAuth.verify(),
+	logger: playlistLogger,
+});
+// The playlist pickers talk to the plugin only; links are validated before they are opened.
+const playlistInspector: PlaylistInspectorBridge = {
+	current: () => streamDeck.ui.action,
+	send: (payload) => streamDeck.ui.sendToPropertyInspector(payload),
+	openUrl: (url) => streamDeck.system.openUrl(url),
+};
+
 streamDeck.actions.registerAction(new StatusAction());
 streamDeck.actions.registerAction(
 	new SpotifyAccountAction({
@@ -77,6 +97,8 @@ streamDeck.actions.registerAction(new VolumeDownAction({ playback, logger: playb
 streamDeck.actions.registerAction(new VolumeUpAction({ playback, logger: playbackLogger }));
 streamDeck.actions.registerAction(new MuteAction({ playback, logger: playbackLogger }));
 streamDeck.actions.registerAction(new LikeAction({ playback, library, logger: libraryLogger }));
+streamDeck.actions.registerAction(new AddToPlaylistAction({ playback, playlists, inspector: playlistInspector, logger: playlistLogger }));
+streamDeck.actions.registerAction(new PlayPlaylistAction({ playback, playlists, inspector: playlistInspector, logger: playlistLogger }));
 
 streamDeck
 	.connect()

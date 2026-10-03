@@ -217,6 +217,44 @@
 					"TitleColor": "#FFFFFF"
 				}
 			]
+		},
+		{
+			"Name": "Add to Playlist",
+			"UUID": "com.marting.deckify.spotify.add-to-playlist",
+			"Icon": "imgs/actions/playlist/add-icon",
+			"Tooltip": "Add the current Spotify song to a playlist you choose (your own or collaborative). Never adds a song twice.",
+			"PropertyInspectorPath": "ui/playlist/index.html",
+			"Controllers": [
+				"Keypad"
+			],
+			"SupportedInMultiActions": false,
+			"States": [
+				{
+					"Image": "imgs/actions/playlist/add-disabled",
+					"ShowTitle": true,
+					"TitleAlignment": "bottom",
+					"TitleColor": "#FFFFFF"
+				}
+			]
+		},
+		{
+			"Name": "Play Playlist",
+			"UUID": "com.marting.deckify.spotify.play-playlist",
+			"Icon": "imgs/actions/playlist/play-icon",
+			"Tooltip": "Start a playlist you choose on the active Spotify device.",
+			"PropertyInspectorPath": "ui/playlist/index.html",
+			"Controllers": [
+				"Keypad"
+			],
+			"SupportedInMultiActions": false,
+			"States": [
+				{
+					"Image": "imgs/actions/playlist/play-disabled",
+					"ShowTitle": true,
+					"TitleAlignment": "bottom",
+					"TitleColor": "#FFFFFF"
+				}
+			]
 		}
 	]
 }

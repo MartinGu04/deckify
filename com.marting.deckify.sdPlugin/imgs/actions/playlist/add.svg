@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 144 144">
+	<!-- Add to Playlist key: adds the current song to the key's playlist -->
+	<rect width="144" height="144" fill="#121212"/>
+	<rect x="26" y="36" width="56" height="10" rx="4" fill="#22D46E"/>
+	<rect x="26" y="54" width="56" height="10" rx="4" fill="#22D46E"/>
+	<rect x="26" y="72" width="38" height="10" rx="4" fill="#22D46E"/>
+	<rect x="78" y="73" width="34" height="11" rx="4" fill="#22D46E"/>
+	<rect x="89.5" y="61.5" width="11" height="34" rx="4" fill="#22D46E"/>
+</svg>
