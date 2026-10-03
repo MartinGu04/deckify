@@ -161,3 +161,9 @@ state source and the fallback.
   - **Where it is used:** the B1 masters live in `assets/brand/`; the plugin icon, category and Status icons, the Status key, the README
     hero and the 288×288 Marketplace icon use it.
   - **Key colour:** Deckify's key accent changed from green to violet `#7C5CFF`.
+- **Verification:**
+  - **README:** reviewed in GitHub's rendered view.
+  - **Physical MK.2:** the production B1 build passed on Windows. The B1 plugin and category artwork looks good in the Stream Deck app, and
+    the violet key artwork reads well on the device.
+  - **Actions list:** Deckify Status is hidden.
+  - **Regression:** functional testing passed, and the existing controls still work.

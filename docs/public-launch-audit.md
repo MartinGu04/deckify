@@ -112,23 +112,31 @@ back to the content on Spotify.
 | Media | 🟡 | No real screenshots or hardware captures yet. The capture plan is in [`media/README.md`](media/README.md). The README has no image placeholders or broken links. |
 | Documentation | ✅ | A product-first README; engineering detail moved to `docs/`; tests keep links and key facts in sync. |
 
+## Phase 7 verification (completed)
+
+On the production B1 build (`a13b8e9`), the owner checked Deckify on a physical Stream Deck MK.2 under Windows, and reviewed the README:
+
+- **Stream Deck app:** the B1 plugin and category artwork looks good and is legible.
+- **Physical MK.2:** the violet key artwork reads well on the device.
+- **Actions list:** Deckify Status is hidden, as intended.
+- **Regression:** functional testing passed, and the existing controls remain operational.
+- **README:** the review passed in GitHub's rendered view (light and dark), covering copy, links and media structure.
+
 ## Blockers before going public
 
 **Before making the repository public:**
 
 1. Choose a licence, or deliberately decide to publish without one.
-2. Review the rendered README (now with the B1 logo).
-3. Enable private vulnerability reporting.
+2. Enable private vulnerability reporting.
 
 **Before publishing a release:**
 
 1. Everything above.
-2. Review the violet key artwork, the B1 plugin icon and the Status key on the physical MK.2.
-3. Official Spotify Like icons, or a decision recorded with Spotify's guidance in hand.
-4. Settle the open metadata questions above.
-5. `Nodejs.Debug` handled for release packages.
-6. Public author name and version.
-7. A real hardware capture for the README.
+2. Official Spotify Like icons, or a decision recorded with Spotify's guidance in hand.
+3. Settle the open metadata questions above.
+4. `Nodejs.Debug` handled for release packages.
+5. Public author name and version.
+6. A real hardware capture for the README.
 
 **Before submitting to the Marketplace:**
 
