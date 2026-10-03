@@ -29,6 +29,7 @@
 			"UUID": "com.marting.deckify.status",
 			"Icon": "imgs/actions/status/icon",
 			"Tooltip": "Proof-of-life key: toggles between Deckify and Ready on each press.",
+			"VisibleInActionsList": false,
 			"Controllers": [
 				"Keypad"
 			],
