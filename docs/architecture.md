@@ -39,7 +39,7 @@ flowchart LR
 | --- | --- | --- |
 | Entry point | `src/plugin.ts` | Creates the shared services, registers every action, restores the Spotify session on start. |
 | Actions | `src/actions/` | One class per action UUID. Each turns shared state into a key image and title and handles presses. |
-| Property Inspectors | `com.marting.deckify.sdPlugin/ui/` | Local HTML + JavaScript pages for the Spotify Account, Volume and playlist settings. No remote scripts, no browser storage; they talk only to the plugin. |
+| Property Inspectors | `com.marting.deckify.sdPlugin/ui/` | Local HTML + JavaScript pages for the Spotify Account (a guided setup), Volume and playlist settings. No remote scripts, no browser storage; they talk only to the plugin. |
 | Manifest | `com.marting.deckify.sdPlugin/manifest.json` | Plugin and action definitions. The plugin and action UUIDs are permanent. |
 
 The legacy **Deckify Status** action (`com.marting.deckify.status`) is still registered so existing keys keep working, but it is hidden from
@@ -90,6 +90,11 @@ the actions list (`VisibleInActionsList: false`).
   DPAPI (CurrentUser), through Windows PowerShell over stdin. The file is `%LOCALAPPDATA%\Deckify\spotify-session.json`.
 - **API client:** on a 401 it refreshes the token once and retries once. Scope changes need an explicit Reconnect; scopes are never added
   through a refresh.
+- **Guided setup (Property Inspector):** the plugin publishes the public account state plus a structured `issue` code
+  (`src/spotify/account-issues.ts`, classified by error type, never by message) and, while connecting, whether it is waiting for the
+  browser or restoring a session. `ui/spotify-account/onboarding.js` maps those to screens and guidance; `inspector.js` renders them. The
+  page can ask the plugin to connect, retry or cancel a sign-in, disconnect, save the Client ID, or open the Spotify Developer Dashboard
+  (a fixed address; the message carries no URL).
 
 ## Windows media bridge (`native/media-bridge/`)
 

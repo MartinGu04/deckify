@@ -52,11 +52,15 @@ The bundled helper (`deckify-media-bridge.exe`) receives only one of these comma
 The settings pages in the Stream Deck app talk only to the plugin.
 
 - **What they show:**
-  - Spotify Account: the connection status and your Spotify display name;
+  - Spotify Account: the setup guide, the connection status, your Spotify display name and plan, your Client ID and the Redirect URI;
   - Volume: the step;
   - the playlist picker: your playlists' names, owners and sizes.
+- **What the Spotify Account page receives:** only that public account state and a short problem code (for example
+  `authorization-denied`), which it turns into guidance. The guided setup's step and tour page live only in the open page and are
+  forgotten when it closes.
 - **What they never receive:** tokens or API URLs.
-- **What they never do:** call Spotify, store anything in browser storage, or load remote scripts.
+- **What they never do:** call Spotify, open links themselves, store anything in browser storage, or load remote scripts. **Open Spotify
+  Dashboard** asks the plugin, which opens only `https://developer.spotify.com/dashboard`.
 
 ## Logs
 

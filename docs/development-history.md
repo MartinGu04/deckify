@@ -167,3 +167,20 @@ state source and the fallback.
     the violet key artwork reads well on the device.
   - **Actions list:** Deckify Status is hidden.
   - **Regression:** functional testing passed, and the existing controls still work.
+
+## Phase 8: Guided Spotify setup
+
+- **Goal:** the Spotify Account settings became a guided first-run experience instead of a technical form. Same action UUID, same OAuth
+  (Authorization Code with PKCE), same plugin-side tokens.
+- **Flow:** Welcome → Open Spotify Dashboard → create the app (Web API, exact Redirect URI with a Copy button) → Client ID → Connect →
+  success → an optional four-card tour (Now Playing, Like, Playlists, Volume). Reopening while connected shows a compact account view;
+  Reconnect (new permissions) and expired sessions get a compact screen, not the wizard.
+- **Structured problems:** the plugin publishes an `issue` code with every problem (for example `authorization-denied`,
+  `authorization-timeout`, `spotify-access-refused`, `session-expired`), so the page never parses English. Every code has guidance with a
+  next step. A 403 is presented as a possible Users Management fix, never as a confirmed diagnosis.
+- **Sign-in controls:** after 45 seconds of waiting the page offers troubleshooting (exact Redirect URI, Open Dashboard, Retry Connect)
+  without declaring a failure. Retry cancels the waiting attempt and opens Spotify's page again; Cancel stops it.
+- **Links:** **Open Spotify Dashboard** asks the plugin, which opens only `https://developer.spotify.com/dashboard`.
+- **Spotify's Development Mode rules** (owner Premium, one Client ID per new developer, five authorized users) are explained as Spotify's
+  rules in a collapsed help section.
+- **Verification:** automated tests cover the setup's behaviour and security properties in a DOM. Hardware review on the MK.2 is pending.

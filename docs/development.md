@@ -11,7 +11,9 @@ This page is for building Deckify from source. **End users don't need any of it*
 - **Rust,** only to build the Windows media bridge:
   - install it via [rustup](https://rustup.rs) with the MSVC toolchain (Visual Studio Build Tools, "Desktop development with C++");
   - `native/media-bridge/rust-toolchain.toml` pins the Rust version, and rustup installs it on first use.
-- **A Spotify app with your own Client ID,** set up as in the [README](../README.md#2-create-your-spotify-client-id).
+- **A Spotify app with your own Client ID.** The Spotify Account Property Inspector guides you through it (see the
+  [README](../README.md#2-know-what-the-setup-will-ask)). For reference: create a **Web API** app in the Spotify Developer Dashboard, add
+  the Redirect URI `http://127.0.0.1:43821/callback` exactly, and paste its Client ID. Never use or commit the Client Secret.
 
 The plugin UUID `com.marting.deckify` and every action UUID in `src/identifiers.ts` are **permanent**. Never rename them: keys in users'
 profiles depend on them, and a test fails if they change.
@@ -156,6 +158,13 @@ listener because port 43821 … is already in use"*.
 - **Find the other program:** run `Get-NetTCPConnection -LocalPort 43821 | Select-Object OwningProcess` in PowerShell.
 - **Reserved by Windows** (for example by Hyper-V): the port then appears in `netsh interface ipv4 show excludedportrange protocol=tcp`.
 
+**Spotify Account setup states.** The setup screens follow the plugin's state. To see one without a real failure:
+
+- **First run:** remove the Client ID (clear it in step 3 of the setup and save), or start with a fresh Stream Deck profile.
+- **Reconnect:** shown when the stored session lacks a scope Deckify requires (for example a session from before a scope was added).
+- **Every screen and issue** is also exercised in `test/spotify-account-onboarding.test.ts`, which runs the page in a DOM against a fake
+  Stream Deck socket.
+
 ## Project layout
 
 ```text
@@ -172,7 +181,8 @@ src/
   spotify/
     config.ts               fixed redirect URI, endpoints, timeouts
     errors.ts, http.ts      typed user-facing errors (never contain tokens); fetch with timeout and 401/403/429 mapping
-    links.ts                open.spotify.com links for the item playing
+    links.ts                open.spotify.com links for the item playing; the fixed Spotify Developer Dashboard address
+    account-issues.ts       structured issue codes for the Spotify Account setup, classified by error type
     auth/                   scopes, PKCE, authorization URL, callback listener, token exchange/refresh, auth service
     api/                    authenticated Web API client (refresh + one retry on 401), current-user profile
     playback/, library/, playlists/
@@ -182,7 +192,8 @@ src/
 com.marting.deckify.sdPlugin/
   manifest.json             plugin + action definitions
   imgs/                     plugin icon, category icon, action/key images, Spotify attribution icon
-  ui/                       Property Inspectors: spotify-account/, volume/, playlist/ (shared picker), shared/ stylesheet
+  ui/                       Property Inspectors: spotify-account/ (guided setup: onboarding.js model, inspector.js view),
+                            volume/, playlist/ (shared picker), shared/ stylesheet
   bin/, logs/               build output (plugin.js, native/deckify-media-bridge.exe) and runtime logs (git-ignored)
 native/media-bridge/        Rust helper: GSMTC Spotify session selection and commands
 assets/brand/               Deckify brand masters (B1) and the Marketplace app icon; archive/ keeps the retired development-era mark
