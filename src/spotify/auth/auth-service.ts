@@ -1,4 +1,5 @@
 import { silentLogger, type Logger } from "../../shared/logger";
+import { issueForError, type SpotifyAccountIssue } from "../account-issues";
 import { SpotifyApiClient, type AccessTokenProvider } from "../api/client";
 import { fetchCurrentUserProfile, type SpotifyProfile } from "../api/profile";
 import { ACCESS_TOKEN_REFRESH_MARGIN_MS, AUTHORIZATION_TIMEOUT_MS, REFRESH_TOKEN_LIFETIME_MS } from "../config";
@@ -15,7 +16,7 @@ import {
 	SpotifyUnauthorizedError,
 } from "../errors";
 import type { HttpOptions } from "../http";
-import type { SpotifyAuthState, SpotifyAuthStatus } from "../state/auth-state";
+import type { SpotifyAuthActivity, SpotifyAuthState, SpotifyAuthStatus } from "../state/auth-state";
 import type { StoredSpotifySession, TokenStore } from "../storage/token-store";
 import { buildAuthorizationUrl } from "./authorize-url";
 import { startCallbackListener, type CallbackListener, type CallbackListenerOptions } from "./callback-server";
@@ -88,6 +89,9 @@ export class SpotifyAuthService implements AccessTokenProvider {
 	#connectInFlight: Promise<void> | undefined;
 	#listener: CallbackListener | undefined;
 
+	/** Set while {@link retryConnect} cancels the previous attempt, whose cancellation is then not published. */
+	#restarting = false;
+
 	/**
 	 * Initializes a new instance of the {@link SpotifyAuthService} class.
 	 * @param options Dependencies.
@@ -130,7 +134,10 @@ export class SpotifyAuthService implements AccessTokenProvider {
 		} catch (err) {
 			this.#logger.warn(`Stored Spotify session is unusable and will be removed: ${describeError(err)}`);
 			await this.#clearStorage();
-			this.#publish("disconnected", { message: "The saved Spotify session could not be read. Press Connect Spotify to sign in again." });
+			this.#publish("disconnected", {
+				message: "The saved Spotify session could not be read. Press Connect Spotify to sign in again.",
+				issue: "session-unreadable",
+			});
 			return;
 		}
 
@@ -141,7 +148,7 @@ export class SpotifyAuthService implements AccessTokenProvider {
 		if (stored.clientId !== clientId) {
 			this.#logger.info("Stored Spotify session belongs to a different Client ID; removing it.");
 			await this.#clearStorage();
-			this.#publish("disconnected", { message: "The Spotify Client ID changed. Press Connect Spotify to sign in again." });
+			this.#publish("disconnected", { message: "The Spotify Client ID changed. Press Connect Spotify to sign in again.", issue: "client-id-changed" });
 			return;
 		}
 
@@ -153,7 +160,7 @@ export class SpotifyAuthService implements AccessTokenProvider {
 		if (this.#clock() > stored.authorizedAt + REFRESH_TOKEN_LIFETIME_MS) {
 			this.#logger.info("Spotify session is about six months old; Spotify may require signing in again.");
 		}
-		this.#publish("connecting", { message: "Restoring Spotify session..." });
+		this.#publish("connecting", { message: "Restoring Spotify session...", activity: "restoring" });
 		await this.verify();
 	}
 
@@ -184,7 +191,7 @@ export class SpotifyAuthService implements AccessTokenProvider {
 		}
 		const clientId = this.#clientId;
 		if (clientId === undefined) {
-			this.#publish("not-configured", { message: new SpotifyClientIdError("Enter your Spotify Client ID first.").message });
+			this.#publish("not-configured", { message: new SpotifyClientIdError("Enter your Spotify Client ID first.").message, issue: "client-id-missing" });
 			return Promise.resolve();
 		}
 
@@ -192,6 +199,36 @@ export class SpotifyAuthService implements AccessTokenProvider {
 			this.#connectInFlight = undefined;
 		});
 		return this.#connectInFlight;
+	}
+
+	/**
+	 * Cancels a sign-in that is waiting for the browser. The attempt ends as cancelled; an existing session (e.g. one that needs
+	 * reauthorization) is kept. Does nothing when no sign-in is waiting.
+	 */
+	cancelConnect(): void {
+		if (this.#listener !== undefined) {
+			this.#logger.info("Cancelling the Spotify sign-in in progress.");
+			this.#listener.close();
+		}
+	}
+
+	/**
+	 * Starts the sign-in again: cancels an attempt that is still waiting for the browser, then connects, opening Spotify's authorization
+	 * page again. Unlike {@link connect}, a second request does not join the attempt in progress.
+	 * @returns Promise resolved when the new attempt has finished.
+	 */
+	async retryConnect(): Promise<void> {
+		const inFlight = this.#connectInFlight;
+		if (inFlight !== undefined) {
+			this.#restarting = true;
+			try {
+				this.cancelConnect();
+				await inFlight;
+			} finally {
+				this.#restarting = false;
+			}
+		}
+		await this.connect();
 	}
 
 	/**
@@ -203,6 +240,7 @@ export class SpotifyAuthService implements AccessTokenProvider {
 		const cleared = await this.#endSession();
 		this.#publish(this.#clientId === undefined ? "not-configured" : cleared ? "disconnected" : "error", {
 			message: cleared ? undefined : "Disconnected, but the saved Spotify session could not be deleted. See the Deckify log.",
+			issue: cleared ? undefined : "session-not-deleted",
 		});
 	}
 
@@ -292,7 +330,7 @@ export class SpotifyAuthService implements AccessTokenProvider {
 					this.#logger.warn(`Spotify refused the refresh token (${err.oauthError}); the session has been cleared.`);
 					if (generation === this.#generation) {
 						await this.#endSession();
-						this.#publish("disconnected", { message: new SpotifyReauthorizationRequiredError().message });
+						this.#publish("disconnected", { message: new SpotifyReauthorizationRequiredError().message, issue: "session-expired" });
 					}
 					throw new SpotifyReauthorizationRequiredError({ cause: err });
 				}
@@ -317,7 +355,7 @@ export class SpotifyAuthService implements AccessTokenProvider {
 	async #runConnect(clientId: string): Promise<void> {
 		const generation = this.#generation;
 		const pkce = this.#createPkce();
-		this.#publish("connecting", { message: "Waiting for you to sign in to Spotify in your browser..." });
+		this.#publish("connecting", { message: "Waiting for you to sign in to Spotify in your browser...", activity: "authorizing" });
 
 		try {
 			this.#listener = await this.#startListener({
@@ -353,28 +391,34 @@ export class SpotifyAuthService implements AccessTokenProvider {
 			this.#replaceSession(session);
 
 			let message: string | undefined;
+			let issue: SpotifyAccountIssue | undefined;
 			try {
 				await this.#store.save(session);
 			} catch (err) {
 				this.#logger.error(`Spotify session could not be saved securely: ${describeError(err)}`);
 				message = "Connected, but the session could not be saved securely; you will need to connect again after restarting.";
+				issue = "session-not-saved";
 			}
 
 			this.#logger.info("Spotify account connected.");
-			this.#publishConnected(profile, now, message);
+			this.#publishConnected(profile, now, message, issue);
 		} catch (err) {
 			if (generation !== this.#generation) {
 				// Superseded by Disconnect or a Client ID change, which already published the resulting state.
 				return;
 			}
+			if (this.#restarting && err instanceof AuthorizationCancelledError) {
+				// Cancelled by Retry, which starts the next attempt right away.
+				return;
+			}
 			this.#logger.warn(`Spotify connection failed: ${describeError(err)}`);
 			if (this.#session !== undefined && getMissingScopes(this.#session.scopes).length > 0) {
 				// A failed reconnect keeps the previous session, which still needs reauthorization.
-				this.#publish("reauthorization-required", { message: `${describeError(err)} ${SCOPE_UPGRADE_MESSAGE}` });
+				this.#publish("reauthorization-required", { message: `${describeError(err)} ${SCOPE_UPGRADE_MESSAGE}`, issue: issueForError(err) });
 			} else if (err instanceof AuthorizationDeniedError || err instanceof AuthorizationCancelledError) {
-				this.#publish("disconnected", { message: err.message });
+				this.#publish("disconnected", { message: err.message, issue: issueForError(err) });
 			} else {
-				this.#publish("error", { message: describeError(err) });
+				this.#publish("error", { message: describeError(err), issue: issueForError(err) });
 			}
 		} finally {
 			this.#listener?.close();
@@ -396,12 +440,12 @@ export class SpotifyAuthService implements AccessTokenProvider {
 		if (err instanceof SpotifyUnauthorizedError) {
 			// Rejected even after a refresh: the session cannot be used.
 			await this.#endSession();
-			this.#publish("disconnected", { message: new SpotifyReauthorizationRequiredError().message });
+			this.#publish("disconnected", { message: new SpotifyReauthorizationRequiredError().message, issue: "session-expired" });
 			return;
 		}
 
 		// Network problems, rate limits, 403 (e.g. Development Mode allowlist) and server errors keep the session so the user can retry.
-		this.#publish("error", { message: describeError(err) });
+		this.#publish("error", { message: describeError(err), issue: issueForError(err) });
 		if (err instanceof SpotifyForbiddenError) {
 			this.#logger.info("Spotify returned 403; check the app's User Management list in the Spotify Developer Dashboard.");
 		}
@@ -418,7 +462,7 @@ export class SpotifyAuthService implements AccessTokenProvider {
 			return false;
 		}
 		this.#logger.info(`Spotify session is missing required scopes (${missing.join(", ")}); reauthorization required.`);
-		this.#publish("reauthorization-required", { message: SCOPE_UPGRADE_MESSAGE });
+		this.#publish("reauthorization-required", { message: SCOPE_UPGRADE_MESSAGE, issue: "reauthorization-required" });
 		return true;
 	}
 
@@ -473,9 +517,10 @@ export class SpotifyAuthService implements AccessTokenProvider {
 	 * @param profile Profile.
 	 * @param authorizedAt Original authorization time.
 	 * @param message Optional message.
+	 * @param issue Reason for the message.
 	 */
-	#publishConnected(profile: SpotifyProfile, authorizedAt: number, message?: string): void {
-		this.#publish("connected", { profile, authorizedAt, message });
+	#publishConnected(profile: SpotifyProfile, authorizedAt: number, message?: string, issue?: SpotifyAccountIssue): void {
+		this.#publish("connected", { profile, authorizedAt, message, issue });
 	}
 
 	/**
@@ -485,8 +530,13 @@ export class SpotifyAuthService implements AccessTokenProvider {
 	 * @param extra.profile Profile (connected only).
 	 * @param extra.authorizedAt Authorization time (connected only).
 	 * @param extra.message Message.
+	 * @param extra.issue Machine-readable reason for the message.
+	 * @param extra.activity What a Connecting state is waiting for.
 	 */
-	#publish(status: SpotifyAuthStatus, extra: { profile?: SpotifyProfile; authorizedAt?: number; message?: string } = {}): void {
+	#publish(
+		status: SpotifyAuthStatus,
+		extra: { profile?: SpotifyProfile; authorizedAt?: number; message?: string; issue?: SpotifyAccountIssue; activity?: SpotifyAuthActivity } = {},
+	): void {
 		this.#state.update({ ...extra, status, clientId: this.#clientId });
 	}
 }

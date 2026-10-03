@@ -40,7 +40,8 @@ If you think a token was exposed, use **Disconnect** in the Spotify Account sett
 
 ## Scope
 
-- **In scope:** the plugin code, the Property Inspectors, the Windows media helper and the packaging scripts in this repository.
+- **In scope:** the plugin code, the Property Inspectors, the Deckify Setup page and its local server, the Windows media helper and the
+  packaging scripts in this repository.
 - **Out of scope** (report those to their owners): Spotify's services and apps, the Stream Deck app, and Windows itself.
 
 ## How Deckify limits risk
@@ -50,9 +51,12 @@ Deckify has had no formal security audit. Its design limits what can go wrong; [
 
 - **No Client Secret.** OAuth Authorization Code with PKCE, with a callback listener bound only to `127.0.0.1:43821`.
 - **Encrypted session.** Tokens are encrypted locally (AES-256-GCM), with the key protected by Windows DPAPI for the current user.
-- **Credentials stay in the plugin process.** The native helper, the Property Inspectors and the logs never receive tokens.
+- **Credentials stay in the plugin process.** The native helper, the Property Inspectors, Deckify Setup and the logs never receive tokens.
+- **Local setup server.** Deckify Setup is served only on `127.0.0.1` (dynamic port, never the OAuth callback port) while setup is open. It
+  requires a one-time launch code and a per-session token, checks the Host and Origin headers, and runs only a fixed list of account
+  actions. See [docs/architecture.md](docs/architecture.md#deckify-setup).
 - **Restricted helper.** The media helper accepts six fixed commands. It is started without a shell and only controls Spotify's media
   session.
-- **Validated links.** Only Spotify links that pass validation are opened (`open.spotify.com` playlist, track and episode links built from
-  validated IDs, and Spotify's authorization page).
+- **Validated links.** Only links that pass validation are opened: `open.spotify.com` playlist, track and episode links built from
+  validated IDs, Spotify's authorization page, the Spotify Developer Dashboard (a fixed address), and Deckify Setup's own `127.0.0.1` URL.
 - **Guarded by tests.** Static checks keep these rules from regressing.

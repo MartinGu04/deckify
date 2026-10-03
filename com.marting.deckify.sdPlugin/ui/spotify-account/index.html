@@ -5,63 +5,116 @@
 		<meta name="referrer" content="no-referrer" />
 		<title>Spotify Account</title>
 		<link rel="stylesheet" href="../shared/inspector.css" />
+		<link rel="stylesheet" href="account.css" />
 	</head>
 	<body>
 		<!--
-			Spotify Account Property Inspector. Shows and edits only non-sensitive state: the Client ID and the connection status.
-			Tokens never reach this page, and nothing is written to browser storage.
+			Spotify Account Property Inspector: a compact entry point. It shows the connection status and account summary, and opens Deckify
+			Setup (the guided setup, in the default browser) for everything else. It handles only non-sensitive state that the plugin sends
+			(Client ID, status, display name, plan, Redirect URI and a structured issue code). OAuth tokens never reach this page, it never
+			opens links itself, and nothing is written to browser storage.
 		-->
-		<div class="row">
-			<span class="label">Status</span>
-			<span class="value"><span id="status" class="badge" data-status="loading">Loading...</span></span>
-		</div>
+		<header class="app-header">
+			<svg class="brand-mark" viewBox="11 10 80 80" width="22" height="22" aria-hidden="true" focusable="false">
+				<path fill="currentColor" fill-rule="evenodd" d="M18 10H50C74 10 90 28 90 50C90 72 74 90 50 90H18A6 6 0 0 1 12 84V16A6 6 0 0 1 18 10Z M27 25H50C65 25 75 36 75 50C75 64 65 75 50 75H27Z" />
+				<rect x="30.5" y="32.55" width="15.75" height="15.75" rx="3.4" fill="currentColor" />
+				<rect x="49.65" y="32.55" width="15.75" height="15.75" rx="3.4" fill="currentColor" />
+				<rect x="30.5" y="51.7" width="15.75" height="15.75" rx="3.4" fill="currentColor" />
+				<rect x="49.65" y="51.7" width="15.75" height="15.75" rx="3.4" fill="currentColor" />
+			</svg>
+			<h1 class="app-title">Spotify Account</h1>
+			<p id="status" class="status-pill" data-status="loading" role="status"><span class="status-icon" aria-hidden="true"></span><span id="status-text">Loading…</span></p>
+		</header>
 
-		<div class="row" id="account-row" hidden>
-			<span class="label">Account</span>
-			<span class="value">
-				<span id="account-name"></span>
-				<span id="account-detail" class="muted"></span>
-			</span>
-		</div>
+		<p id="announcer" class="sr-only" aria-live="polite"></p>
 
-		<div class="row" id="premium-row" hidden>
-			<span class="label">Playback</span>
-			<span class="value"><span class="message warning">Playback control requires Spotify Premium.</span></span>
-		</div>
+		<main id="app">
+			<section class="view" data-view="loading" aria-labelledby="loading-title">
+				<h2 id="loading-title" class="sr-only" tabindex="-1">Loading</h2>
+				<p class="muted">Loading your Spotify connection…</p>
+			</section>
 
-		<div class="row" id="message-row" hidden>
-			<span class="label"></span>
-			<span class="value"><span id="message" class="message"></span></span>
-		</div>
+			<!-- Not connected (nothing set up yet, signed out, or a problem). -->
+			<section class="view" data-view="disconnected" aria-labelledby="disconnected-title" hidden>
+				<h2 id="disconnected-title" tabindex="-1">Not connected</h2>
+				<p>Connect Deckify to Spotify to get started.</p>
+				<div id="problem" class="problem" hidden>
+					<p class="problem-title"><span class="issue-icon" aria-hidden="true">!</span><span id="problem-title"></span></p>
+					<p class="muted">Deckify Setup explains what to try next.</p>
+				</div>
+				<div class="actions">
+					<button type="button" class="primary" data-action="open-setup" id="setup-button">Set up Deckify</button>
+				</div>
+				<button type="button" class="link" data-action="open-account-setup" id="account-setup-button">Already set up? Open account setup</button>
+			</section>
 
-		<div class="row">
-			<label class="label" for="client-id">Client ID</label>
-			<span class="value">
-				<span class="inline">
-					<input id="client-id" type="text" maxlength="64" autocomplete="off" spellcheck="false" placeholder="Spotify app Client ID" />
-					<button id="save-client-id" type="button">Save</button>
-				</span>
-				<span id="client-id-error" class="message error" hidden></span>
-				<span class="muted">From your app in the Spotify Developer Dashboard. Deckify never needs your Client Secret.</span>
-			</span>
-		</div>
+			<!-- Waiting for the browser sign-in. -->
+			<section class="view" data-view="waiting" aria-labelledby="waiting-title" hidden>
+				<div class="waiting">
+					<span class="spinner" aria-hidden="true"></span>
+					<h2 id="waiting-title" tabindex="-1">Waiting for Spotify…</h2>
+				</div>
+				<p>Complete the authorization in your browser. Deckify Setup can help if it takes long.</p>
+				<div class="actions">
+					<button type="button" data-action="open-setup">Open Deckify Setup</button>
+					<button type="button" class="link" data-action="cancel-connect">Cancel sign-in</button>
+				</div>
+			</section>
 
-		<div class="row">
-			<span class="label">Redirect URI</span>
-			<span class="value">
-				<code id="redirect-uri"></code>
-				<span class="muted">Add exactly this URI to your Spotify app.</span>
-			</span>
-		</div>
+			<section class="view" data-view="restoring" aria-labelledby="restoring-title" hidden>
+				<div class="waiting">
+					<span class="spinner" aria-hidden="true"></span>
+					<h2 id="restoring-title" tabindex="-1">Checking your Spotify connection…</h2>
+				</div>
+			</section>
 
-		<div class="row">
-			<span class="label"></span>
-			<span class="value inline">
-				<button id="connect" type="button" hidden>Connect Spotify</button>
-				<button id="disconnect" type="button" hidden>Disconnect</button>
-			</span>
-		</div>
+			<!-- Connected. -->
+			<section class="view" data-view="connected" aria-labelledby="connected-title" hidden>
+				<h2 id="connected-title" tabindex="-1">✓ Connected</h2>
+				<dl class="account">
+					<div><dt>Account</dt><dd id="account-name"></dd></div>
+					<div><dt>Premium</dt><dd id="account-premium"></dd></div>
+					<div><dt>Status</dt><dd id="account-status">Connected</dd></div>
+				</dl>
+				<p id="premium-note" class="note warning-note" hidden>Playback controls need Spotify Premium. Now Playing still works; the other keys show <strong>Premium</strong>.</p>
+				<p id="connected-problem" class="note warning-note" hidden></p>
+				<div class="actions">
+					<button type="button" data-action="open-setup">Open Deckify Setup</button>
+				</div>
+				<details class="help">
+					<summary>Account and setup help</summary>
+					<p class="muted">Client ID: <code id="saved-client-id"></code></p>
+					<p class="muted">Redirect URI in your Spotify app:</p>
+					<div class="copy-row">
+						<input type="text" class="copy-value" data-redirect-uri readonly aria-label="Redirect URI" />
+						<button type="button" class="copy-button" data-action="copy-redirect-uri">Copy</button>
+					</div>
+					<div class="actions">
+						<button type="button" data-action="open-account-setup">Change Client ID</button>
+						<button type="button" data-action="open-dashboard">Open Spotify Dashboard</button>
+					</div>
+				</details>
+				<div class="actions end">
+					<button type="button" class="danger" data-action="disconnect">Disconnect</button>
+				</div>
+			</section>
 
+			<!-- Reconnect: new permissions, or the session must be signed in again. No wizard; the Client ID stays. -->
+			<section class="view" data-view="reconnect" aria-labelledby="reconnect-title" hidden>
+				<h2 id="reconnect-title" tabindex="-1">Deckify needs updated Spotify permissions</h2>
+				<p id="reconnect-body">Deckify added features that need additional Spotify permissions.</p>
+				<p id="reconnect-problem" class="note warning-note" hidden></p>
+				<div class="actions">
+					<button type="button" class="primary" data-action="connect" id="reconnect-button">Reconnect Spotify</button>
+					<button type="button" data-action="open-setup">Open Deckify Setup</button>
+				</div>
+				<div class="actions end">
+					<button type="button" class="danger" data-action="disconnect">Disconnect</button>
+				</div>
+			</section>
+		</main>
+
+		<script src="../shared/onboarding.js"></script>
 		<script src="inspector.js"></script>
 	</body>
 </html>

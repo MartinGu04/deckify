@@ -1,4 +1,4 @@
-import type { SpotifyAuthSnapshot, SpotifyAuthStatus } from "../spotify/state/auth-state";
+import type { SpotifyAuthStatus } from "../spotify/state/auth-state";
 
 /**
  * How a Spotify Account key looks for a given status.
@@ -25,35 +25,4 @@ const VIEWS: Record<SpotifyAuthStatus, SpotifyAccountKeyView> = {
  */
 export function getSpotifyAccountKeyView(status: SpotifyAuthStatus): SpotifyAccountKeyView {
 	return VIEWS[status];
-}
-
-/**
- * State sent to the Spotify Account Property Inspector. Never contains tokens.
- */
-export type SpotifyAccountInspectorState = {
-	readonly status: SpotifyAuthStatus;
-	readonly clientId: string;
-	readonly redirectUri: string;
-	readonly displayName: string | undefined;
-	readonly product: string | undefined;
-	readonly authorizedAt: number | undefined;
-	readonly message: string | undefined;
-};
-
-/**
- * Projects the shared snapshot onto the Property Inspector payload.
- * @param snapshot Shared state.
- * @param redirectUri Redirect URI to display for setup.
- * @returns The payload.
- */
-export function toInspectorState(snapshot: SpotifyAuthSnapshot, redirectUri: string): SpotifyAccountInspectorState {
-	return {
-		status: snapshot.status,
-		clientId: snapshot.clientId ?? "",
-		redirectUri,
-		displayName: snapshot.profile?.displayName,
-		product: snapshot.profile?.product,
-		authorizedAt: snapshot.authorizedAt,
-		message: snapshot.message,
-	};
 }

@@ -1,10 +1,16 @@
 import { silentLogger, type Logger } from "../../shared/logger";
+import type { SpotifyAccountIssue } from "../account-issues";
 import type { SpotifyProfile } from "../api/profile";
 
 /**
  * Spotify connection status shared by every Deckify action.
  */
 export type SpotifyAuthStatus = "not-configured" | "disconnected" | "connecting" | "connected" | "reauthorization-required" | "error";
+
+/**
+ * What Deckify is doing while Connecting: waiting for the user to authorize in the browser, or checking a saved session.
+ */
+export type SpotifyAuthActivity = "authorizing" | "restoring";
 
 /**
  * Immutable snapshot of the Spotify account state. Contains no tokens.
@@ -23,6 +29,12 @@ export type SpotifyAuthSnapshot = {
 
 	/** User-facing explanation of the current state, e.g. the last error. */
 	readonly message: string | undefined;
+
+	/** Machine-readable reason behind {@link message}, so the Property Inspector never has to parse it. */
+	readonly issue: SpotifyAccountIssue | undefined;
+
+	/** What a Connecting state is waiting for; only present while connecting. */
+	readonly activity: SpotifyAuthActivity | undefined;
 };
 
 /**
@@ -36,6 +48,8 @@ const INITIAL: SpotifyAuthSnapshot = {
 	profile: undefined,
 	authorizedAt: undefined,
 	message: undefined,
+	issue: undefined,
+	activity: undefined,
 };
 
 /**
@@ -60,7 +74,7 @@ export class SpotifyAuthState {
 	}
 
 	/**
-	 * Replaces the snapshot and notifies subscribers. Fields not provided are reset (profile/message) or kept (clientId).
+	 * Replaces the snapshot and notifies subscribers. Fields not provided are reset (profile/message/issue/activity) or kept (clientId).
 	 * @param next The new state.
 	 */
 	update(next: Pick<SpotifyAuthSnapshot, "status"> & Partial<SpotifyAuthSnapshot>): void {
@@ -70,6 +84,8 @@ export class SpotifyAuthState {
 			profile: next.status === "connected" ? next.profile : undefined,
 			authorizedAt: next.status === "connected" ? next.authorizedAt : undefined,
 			message: next.message,
+			issue: next.issue,
+			activity: next.status === "connecting" ? next.activity : undefined,
 		});
 		this.#snapshot = snapshot;
 

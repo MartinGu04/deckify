@@ -89,7 +89,22 @@ describe("security regression checks", () => {
 	});
 
 	it("never uses localhost (only the 127.0.0.1 loopback literal)", async () => {
-		expect(matching(await sources(), /localhost/i)).toEqual([]);
+		// The only mentions allowed are the setup guide's warnings against it, in the Deckify Setup App's copy.
+		const warning = /\b(not localhost|Do not use localhost)\b/;
+		const mentions = matching(await sources(), /localhost/i);
+		const setupCopy = /^com\.marting\.deckify\.sdPlugin\/ui\/(setup\/index\.html|shared\/onboarding\.js):/;
+		const warnings = mentions.filter((line) => setupCopy.test(line) && warning.test(line));
+		expect(mentions.filter((line) => !warnings.includes(line))).toEqual([]);
+		expect(warnings.length).toBeLessThanOrEqual(3);
+		for (const line of warnings) {
+			// A warning is prose, never an address, a host or a URL.
+			expect(line).not.toMatch(/\/\/localhost|localhost:|["'`]localhost|localhost["'`]|=\s*["'`]?localhost/i);
+			expect(line.match(/localhost/gi)).toHaveLength(1);
+		}
+	});
+
+	it("never uses localhost as an address anywhere", async () => {
+		expect(matching(await sources(), /\/\/localhost|localhost:\d|host:\s*["'`]localhost/i)).toEqual([]);
 	});
 
 	it("only ever uses loopback port 43821 for HTTP", async () => {
@@ -207,14 +222,27 @@ describe("security regression checks", () => {
 		const src = (await sources()).filter((s) => s.file.startsWith("src/"));
 		const calls = codeOnly(matching(src, /openUrl\(/)).filter((line) => !/^\S+: (export type|readonly|openUrl\(url: string\))/.test(line.replace(/^(\S+:\d+): /, "$1: ")));
 		// The auth flow opens Spotify's authorize URL; the playlist picker opens only a link that passed toSpotifyPlaylistUrl; Now Playing opens
-		// only a link built by spotifyItemUrl.
+		// only a link built by spotifyItemUrl; the account commands (Property Inspector and Setup App) open only the fixed Spotify Developer
+		// Dashboard address; the Setup server opens only its own validated 127.0.0.1 Setup URL.
 		expect(calls.map((line) => line.split(":")[0]).sort()).toEqual([
 			"src/actions/now-playing.ts",
 			"src/actions/playlist-key-action.ts",
 			"src/plugin.ts",
 			"src/plugin.ts",
 			"src/plugin.ts",
+			"src/plugin.ts",
+			"src/plugin.ts",
+			"src/plugin.ts",
+			"src/setup/setup-server.ts",
+			"src/spotify/account-commands.ts",
 			"src/spotify/auth/auth-service.ts",
+		]);
+		expect(calls.find((line) => line.startsWith("src/spotify/account-commands.ts"))).toContain("this.#openUrl(SPOTIFY_DEVELOPER_DASHBOARD_URL)");
+		expect(calls.find((line) => line.startsWith("src/setup/setup-server.ts"))).toContain("this.#openUrl(url)");
+		const setupServer = (await readFile(path.join(ROOT, "src/setup/setup-server.ts"), "utf8")).replaceAll("\r\n", "\n");
+		expect(setupServer).toMatch(/if \(!isDeckifySetupUrl\(url\)\) \{\n\t\t\tthrow new Error\("Refusing to open an invalid Deckify Setup URL\."\);\n\t\t\}\n\t\tthis\.#logger\.info\("Opening Deckify Setup in the default browser\."\);\n\t\tawait this\.#openUrl\(url\);/);
+		expect(matching(src, /SPOTIFY_DEVELOPER_DASHBOARD_URL = /).map((line) => line.replace(/:\d+: /, ": "))).toEqual([
+			'src/spotify/links.ts: export const SPOTIFY_DEVELOPER_DASHBOARD_URL = "https://developer.spotify.com/dashboard";',
 		]);
 		const pickerOpen = calls.find((line) => line.startsWith("src/actions/playlist-key-action.ts"));
 		expect(pickerOpen).toContain("this.#inspector.openUrl(url)");
@@ -226,6 +254,53 @@ describe("security regression checks", () => {
 	it("never logs playlist or track identifiers or names", async () => {
 		const logCalls = matching(await sources(), /logger\.(debug|info|warn|error|trace)\(/);
 		expect(logCalls.filter((line) => /playlistId|playlistUri|trackUri|ownerDisplayName|ownerId|playlist\.name|metadata\.name|selection\b/.test(line))).toEqual([]);
+	});
+
+	it("keeps the Spotify Account Property Inspector away from Spotify, links, HTML injection and credentials", async () => {
+		const account = (await inspectorSources()).filter(
+			(s) => s.file.startsWith("com.marting.deckify.sdPlugin/ui/spotify-account/") || s.file === "com.marting.deckify.sdPlugin/ui/shared/onboarding.js",
+		);
+		expect(account.map((s) => s.file).sort()).toEqual([
+			"com.marting.deckify.sdPlugin/ui/shared/onboarding.js",
+			"com.marting.deckify.sdPlugin/ui/spotify-account/index.html",
+			"com.marting.deckify.sdPlugin/ui/spotify-account/inspector.js",
+		]);
+		// No Spotify endpoints, no network calls, no way to open or navigate to a URL, no HTML built from strings.
+		expect(
+			matching(account, /api\.spotify\.com|accounts\.spotify\.com|fetch\(|XMLHttpRequest|sendBeacon|window\.open|location\s*=|location\.(href|assign|replace)|innerHTML|outerHTML|insertAdjacentHTML|document\.write|"openUrl"|eval\(/),
+		).toEqual([]);
+		// The only absolute URL is Stream Deck's own WebSocket; the dashboard address lives in the plugin.
+		expect(codeOnly(matching(account, /[a-z]+:\/\//i)).map((line) => line.replace(/^\S+:\d+: /, ""))).toEqual(["socket = new WebSocket(`ws://127.0.0.1:${port}`);"]);
+		// Nothing token-shaped, and no input for anything but the Client ID.
+		expect(matching(account, /access_?token|refresh_?token|code_?verifier|Authorization:|Bearer |type="password"/i)).toEqual([]);
+	});
+
+	it("keeps the Deckify Setup App to its own server, away from Spotify, links, HTML injection, storage and credentials", async () => {
+		const setup = (await inspectorSources()).filter((s) => s.file.startsWith("com.marting.deckify.sdPlugin/ui/setup/"));
+		expect(setup.map((s) => s.file).sort()).toEqual(["com.marting.deckify.sdPlugin/ui/setup/index.html", "com.marting.deckify.sdPlugin/ui/setup/setup.js"]);
+		expect(
+			matching(setup, /api\.spotify\.com|accounts\.spotify\.com|XMLHttpRequest|sendBeacon|WebSocket|EventSource|window\.open|location\s*=|location\.(href|assign|replace)|innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\(|localStorage|sessionStorage|indexedDB|document\.cookie/),
+		).toEqual([]);
+		// One fetch call, to same-origin paths under /api/ only, without cookies.
+		const fetches = matching(setup, /fetch\(/).map((line) => line.replace(/^\S+:\d+: /, ""));
+		expect(fetches).toEqual(["const response = await fetch(path, {"]);
+		const paths = matching(setup, /request\("(GET|POST)", /).map((line) => /request\("(?:GET|POST)", [`"]([^`"]+)/.exec(line)?.[1] ?? "");
+		expect(paths.length).toBeGreaterThanOrEqual(4);
+		expect(paths.filter((target) => !target.startsWith("/api/"))).toEqual([]);
+		expect(matching(setup, /credentials: "omit"/)).toHaveLength(1);
+		// No absolute URLs at all: the dashboard address lives in the plugin.
+		expect(codeOnly(matching(setup, /[a-z]+:\/\//i))).toEqual([]);
+		expect(matching(setup, /access_?token|refresh_?token|code_?verifier|Authorization:|Bearer |type="password"/i)).toEqual([]);
+	});
+
+	it("serves Deckify Setup only on 127.0.0.1, never next to tokens", async () => {
+		const setup = (await sources()).filter((s) => s.file.startsWith("src/setup/"));
+		expect(setup.map((s) => s.file).sort()).toEqual(["src/setup/session.ts", "src/setup/setup-server.ts"]);
+		expect(matching(setup, /export const SETUP_HOST = /).map((line) => line.replace(/^\S+:\d+: /, ""))).toEqual(['export const SETUP_HOST = "127.0.0.1";']);
+		expect(matching(setup, /\.listen\(/).map((line) => line.replace(/^\S+:\d+: /, ""))).toEqual(["server.listen({ host: SETUP_HOST, port: requested, exclusive: true }, () => {"]);
+		expect(matching(await sources(), /0\.0\.0\.0|host: "::"|INADDR_ANY/)).toEqual([]);
+		expect(matching(setup, /from "\.\.\/spotify\/(auth|storage)|accessToken|refreshToken|codeVerifier|getAccessToken/)).toEqual([]);
+		expect(matching(setup, /logger\.(debug|info|warn|error)\([^)]*(launchCode|token|url\b)/i)).toEqual([]);
 	});
 
 	it("loads no remote scripts or styles in the Property Inspector", async () => {

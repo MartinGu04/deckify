@@ -167,3 +167,28 @@ state source and the fallback.
     the violet key artwork reads well on the device.
   - **Actions list:** Deckify Status is hidden.
   - **Regression:** functional testing passed, and the existing controls still work.
+
+## Phase 8: Guided Spotify setup
+
+- **Goal:** Spotify setup became a guided first-run experience instead of a technical form. The action UUID, OAuth (Authorization Code
+  with PKCE) and plugin-side tokens are unchanged.
+- **Deckify Setup:**
+  - **Why the browser:** the narrow Property Inspector was reviewed in the real Stream Deck app, and the full wizard then moved into
+    Deckify Setup, a local page in the default browser served by the plugin.
+  - **Hosting:** on `127.0.0.1` only, on a dynamic port (never 43821), and only while setup is open.
+  - **Access:** a one-time launch code in the URL fragment, a session token kept in page memory, and a fixed list of account commands.
+  - **The Property Inspector** is now a compact entry point: status, account summary, **Set up Deckify** / **Open Deckify Setup**,
+    Reconnect and Disconnect.
+- **Flow:** Welcome → Open Spotify Dashboard → create the app (Web API, exact Redirect URI with a Copy button) → Client ID
+  (**Save & Continue**) → Connect → **You're connected** → optional four-card tour (Now Playing, Like, Playlists, Volume) →
+  **Deckify is ready.** Reopening Deckify Setup while connected shows the account. Reconnect (new permissions) and expired sessions get a
+  compact screen, not the wizard.
+- **Structured problems:** the plugin publishes an `issue` code with every problem (for example `authorization-denied`,
+  `authorization-timeout`, `spotify-access-refused`, `session-expired`), so neither page parses English. Every code has guidance with a
+  next step. A 403 is presented as a possible Users Management fix, never as a confirmed diagnosis.
+- **Sign-in controls:** after 45 seconds of waiting, Deckify Setup offers troubleshooting (exact Redirect URI, Open Dashboard, Retry
+  Connect) without declaring a failure. Retry cancels the waiting attempt and opens Spotify's page again; Cancel stops it.
+- **Spotify's Development Mode rules** (owner Premium, one Client ID per new developer, five authorized users) are explained as Spotify's
+  rules in a collapsed help section.
+- **Verification:** automated tests cover the setup's behaviour, the setup server's security over real HTTP, and one end-to-end run.
+  Hardware review on the MK.2 is pending.

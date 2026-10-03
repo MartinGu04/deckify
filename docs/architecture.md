@@ -39,7 +39,8 @@ flowchart LR
 | --- | --- | --- |
 | Entry point | `src/plugin.ts` | Creates the shared services, registers every action, restores the Spotify session on start. |
 | Actions | `src/actions/` | One class per action UUID. Each turns shared state into a key image and title and handles presses. |
-| Property Inspectors | `com.marting.deckify.sdPlugin/ui/` | Local HTML + JavaScript pages for the Spotify Account, Volume and playlist settings. No remote scripts, no browser storage; they talk only to the plugin. |
+| Property Inspectors | `com.marting.deckify.sdPlugin/ui/` | Local HTML + JavaScript pages for the Spotify Account (a compact entry point to Deckify Setup), Volume and playlist settings. No remote scripts, no browser storage; they talk only to the plugin. |
+| Deckify Setup | `src/setup/`, `ui/setup/` | The guided Spotify setup in the default browser, served by the plugin on `127.0.0.1` while open. See [Deckify Setup](#deckify-setup). |
 | Manifest | `com.marting.deckify.sdPlugin/manifest.json` | Plugin and action definitions. The plugin and action UUIDs are permanent. |
 
 The legacy **Deckify Status** action (`com.marting.deckify.status`) is still registered so existing keys keep working, but it is hidden from
@@ -90,7 +91,48 @@ the actions list (`VisibleInActionsList: false`).
   DPAPI (CurrentUser), through Windows PowerShell over stdin. The file is `%LOCALAPPDATA%\Deckify\spotify-session.json`.
 - **API client:** on a 401 it refreshes the token once and retries once. Scope changes need an explicit Reconnect; scopes are never added
   through a refresh.
+- **Account state for the setup UIs:** the plugin publishes the public account state plus a structured `issue` code
+  (`src/spotify/account-issues.ts`, classified by error type, never by message) and, while connecting, whether it is waiting for the
+  browser or restoring a session. `src/spotify/account-commands.ts` holds the fixed account commands (save Client ID, connect, retry,
+  cancel, disconnect, open the Spotify Developer Dashboard) shared by the Property Inspector and Deckify Setup.
 
+## Deckify Setup
+
+Code: `src/setup/` (server and session) and `com.marting.deckify.sdPlugin/ui/setup/` (the page).
+
+The guided Spotify setup runs in the user's default browser, served by the plugin. The Spotify Account Property Inspector is only a compact
+entry point (status, account summary, **Set up Deckify** / **Open Deckify Setup**, Reconnect, Disconnect).
+
+- **Server:** `DeckifySetupServer` starts on demand, bound only to `127.0.0.1` on a port the operating system picks. It never uses port
+  43821; if that port is offered, it is released and another is chosen. Spotify's OAuth callback stays on its own one-shot listener at
+  `http://127.0.0.1:43821/callback`.
+- **Files:** it serves only a fixed list of files (`SETUP_ASSETS`: the page, its script and stylesheet, the shared onboarding model, the
+  favicon and four action icons). Request paths are never mapped onto the file system.
+- **Opening:** the plugin opens `http://127.0.0.1:<port>/setup#launch=<code>` through the same `openUrl` path as other links, after
+  checking it against a strict pattern.
+- **Session:**
+  - The launch code is 256 random bits, kept in memory, valid for two minutes and usable once. It travels in the URL fragment, which
+    browsers never send to a server, so it never appears in a request line or a log.
+  - The page removes it from the address bar immediately, then exchanges it (`POST /api/session`) for a session token, also 256 random
+    bits. The token lives only in the page's memory and is sent in the `X-Deckify-Setup-Session` header; it is never put in a URL, a
+    cookie or browser storage.
+  - A session ends when the user presses **Done**, when setup is opened again (the old token stops working), after ten idle minutes or
+    after two hours. The server then stops. Reloading the page needs a new link from Stream Deck.
+- **API:** `GET /api/state?after=<version>` returns the public account state, waiting up to 25 seconds for a change.
+  `POST /api/command` runs one of the fixed account commands, or `finish`. Nothing else is exposed: no URLs, files, shell or generic
+  plugin commands.
+- **Checks on every request:** the `Host` header must be exactly `127.0.0.1:<port>`. API requests must carry the session token; POSTs must
+  come from the page's own origin (`Origin`, `Sec-Fetch-Site`) as `application/json`, with bodies of at most 4 KB. There are no CORS
+  headers. Every response is `no-store` and carries a strict Content Security Policy (`'self'` only), `nosniff`, `no-referrer` and
+  `X-Frame-Options: DENY`.
+- **Threat model:**
+  - *Other websites in the user's browser* (CSRF, DNS rebinding) can't read or send anything: they can't set the custom header without a
+    CORS preflight, which the server refuses, and the Host and Origin checks reject rebinding.
+  - *Other machines* can't reach a loopback-only server.
+  - *Other local users and processes* would need the 256-bit token, which exists only in the plugin's memory and in the open page. A
+    process running as the same Windows user is out of scope: it could already read that user's files and DPAPI-protected data.
+  - The page is treated as untrusted presentation. It never receives tokens or the encryption key, so even a fully compromised page can
+    only do what the user could do with the setup buttons.
 ## Windows media bridge (`native/media-bridge/`)
 
 - **What it is:** a small Rust program (`bin/native/deckify-media-bridge.exe`), started once, hidden (no console window), with no shell.
