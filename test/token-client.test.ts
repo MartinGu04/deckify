@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { SPOTIFY_SCOPES } from "../src/spotify/auth/scopes";
 import { exchangeAuthorizationCode, refreshAccessToken } from "../src/spotify/auth/token-client";
 import { SpotifyApiError, SpotifyInvalidResponseError, SpotifyOAuthError, SpotifyRateLimitError } from "../src/spotify/errors";
 import { FAKE, fakeFetch, json, tokenResponse } from "./helpers";
@@ -10,7 +11,7 @@ describe("exchangeAuthorizationCode", () => {
 
 		const tokens = await exchangeAuthorizationCode({ clientId: FAKE.clientId, code: FAKE.code, codeVerifier: "test-verifier" }, { fetch });
 
-		expect(tokens).toEqual({ accessToken: FAKE.accessToken, refreshToken: FAKE.refreshToken, expiresInSeconds: 3600, scopes: ["user-read-private", "user-read-playback-state", "user-modify-playback-state", "user-library-read", "user-library-modify"] });
+		expect(tokens).toEqual({ accessToken: FAKE.accessToken, refreshToken: FAKE.refreshToken, expiresInSeconds: 3600, scopes: [...SPOTIFY_SCOPES] });
 		expect(requests).toHaveLength(1);
 		const [req] = requests;
 		expect(req?.url.toString()).toBe("https://accounts.spotify.com/api/token");
