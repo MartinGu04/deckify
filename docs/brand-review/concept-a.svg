@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1200" height="600" viewBox="0 0 1200 600">
+<title>Deckify brand review: Concept A · Keycap D (review concept, not production artwork)</title>
+<defs>
+<symbol id="mark" viewBox="0 0 100 100"><rect x="8" y="14" width="84" height="80" rx="20" fill="#3B2A99"/><rect x="8" y="6" width="84" height="80" rx="20" fill="#7C5CFF"/><path fill="#FFFFFF" fill-rule="evenodd" d="M30 24H52C65.3 24 73 33.5 73 46C73 58.5 65.3 68 52 68H30Z M43 36V56H51C57 56 60 51.5 60 46C60 40.5 57 36 51 36Z"/></symbol>
+<symbol id="mono" viewBox="0 0 100 100"><path fill="currentColor" fill-rule="evenodd" d="M28 6H72A20 20 0 0 1 92 26V74A20 20 0 0 1 72 94H28A20 20 0 0 1 8 74V26A20 20 0 0 1 28 6Z M30 24H52C65.3 24 73 33.5 73 46C73 58.5 65.3 68 52 68H30Z M43 36V56H51C57 56 60 51.5 60 46C60 40.5 57 36 51 36Z M22 82H78V86H22Z"/></symbol>
+<symbol id="glyph" viewBox="0 0 100 100"><path fill="currentColor" fill-rule="evenodd" d="M28 8H72A20 20 0 0 1 92 28V72A20 20 0 0 1 72 92H28A20 20 0 0 1 8 72V28A20 20 0 0 1 28 8Z M30 26H52C65.3 26 73 35.5 73 50C73 64.5 65.3 74 52 74H30Z M44 39V61H51C57.5 61 60 56 60 50C60 44 57.5 39 51 39Z"/></symbol>
+</defs>
+<text x="40" y="44" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700" fill="#8B949E" text-anchor="start">CONCEPT A · KEYCAP D</text>
+<text x="1160" y="44" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700" fill="#8B949E" text-anchor="end">REVIEW CONCEPT — NOT PRODUCTION ARTWORK</text>
+<use href="#mark" xlink:href="#mark" x="40" y="76" width="210" height="210"/>
+<text x="280" y="212" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="86" font-weight="800" letter-spacing="6" fill="#7C5CFF">DECKIFY</text>
+<text x="284" y="248" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#8B949E" text-anchor="start">Hero lockup on a transparent background (GitHub light and dark)</text>
+<rect x="40" y="330" width="180" height="180" rx="36" fill="#15171C"/>
+<use href="#mark" xlink:href="#mark" x="66" y="356" width="128" height="128"/>
+<text x="40" y="536" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#8B949E" text-anchor="start">288×288 Marketplace icon</text>
+<text x="40" y="554" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#8B949E" text-anchor="start">(template, shown at 62%)</text>
+<rect x="260" y="348" width="144" height="144" rx="18" fill="#15171C"/>
+<use href="#mark" xlink:href="#mark" x="290" y="372" width="84" height="84"/>
+<text x="260" y="536" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#8B949E" text-anchor="start">Key image 144×144</text>
+<text x="260" y="554" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#8B949E" text-anchor="start">(72×72 at 2×)</text>
+<rect x="436" y="384" width="72" height="72" rx="9" fill="#15171C"/>
+<use href="#mark" xlink:href="#mark" x="451" y="396" width="42" height="42"/>
+<text x="436" y="536" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#8B949E" text-anchor="start">72×72</text>
+<text x="436" y="554" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#8B949E" text-anchor="start">(actual size)</text>
+<rect x="548" y="372" width="96" height="96" rx="12" fill="#15171C"/>
+<use href="#glyph" xlink:href="#glyph" x="556" y="380" width="40" height="40" style="color:#FFFFFF"/>
+<use href="#glyph" xlink:href="#glyph" x="610" y="380" width="20" height="20" style="color:#FFFFFF"/>
+<use href="#glyph" xlink:href="#glyph" x="556" y="428" width="40" height="40" style="color:#FFFFFF"/>
+<rect x="660" y="372" width="96" height="96" rx="12" fill="#F2F3F5"/>
+<use href="#glyph" xlink:href="#glyph" x="668" y="380" width="40" height="40" style="color:#15171C"/>
+<use href="#glyph" xlink:href="#glyph" x="722" y="380" width="20" height="20" style="color:#15171C"/>
+<text x="548" y="536" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#8B949E" text-anchor="start">Action list / category glyph</text>
+<text x="548" y="554" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#8B949E" text-anchor="start">monochrome, 40×40 and 20×20 on dark and light</text>
+<rect x="900" y="330" width="120" height="120" rx="20" fill="#15171C"/>
+<use href="#mono" xlink:href="#mono" x="916" y="346" width="88" height="88" style="color:#FFFFFF"/>
+<rect x="1040" y="330" width="120" height="120" rx="20" fill="#F2F3F5"/>
+<use href="#mono" xlink:href="#mono" x="1056" y="346" width="88" height="88" style="color:#15171C"/>
+<text x="900" y="480" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#8B949E" text-anchor="start">Monochrome mark</text>
+<text x="900" y="498" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#8B949E" text-anchor="start">single colour, white and black</text>
+<text x="900" y="536" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#8B949E" text-anchor="start">Accent #7C5CFF · base #15171C · white</text>
+</svg>

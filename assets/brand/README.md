@@ -1,5 +1,14 @@
 # Deckify brand assets
 
+> [!IMPORTANT]
+> **The files in this folder are development-era artwork, not Deckify's public brand.**
+> The green "D" with three curved sound lines leans on Spotify's brand elements (Spotify Green and the Spotify icon's waves), which a
+> third-party app's logo must not include or resemble. Don't use these files for the GitHub hero, a release, Marketplace listings or any
+> other public material. A compliant replacement is being chosen in [`docs/brand-review/`](../../docs/brand-review/README.md); these files
+> stay here, unchanged, until an approved replacement lands.
+>
+> Until then they still feed the development plugin icon (`imgs/plugin/marketplace*.png`) and the hidden Deckify Status key image.
+
 Original, unmodified Deckify brand files live here. They are the single source for every Stream Deck image derived from them and must never be edited by tooling.
 
 | File | Contents |
