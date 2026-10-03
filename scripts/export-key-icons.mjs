@@ -1,5 +1,5 @@
 /**
- * Generates Deckify's vector key images for the volume and Liked Songs actions from simple geometry (no third-party icon sets or Spotify
+ * Generates Deckify's vector key images for the volume, Liked Songs and playlist actions from simple geometry (no third-party icon sets or Spotify
  * artwork). Run with `npm run assets`; `test/key-icons.test.ts` fails when the committed files differ from this output.
  *
  * Key images are 144×144 drawings shown at 72×72 on the Stream Deck MK.2, in the Deckify style of the playback keys: a dark key, a green
@@ -26,6 +26,14 @@ const waves = (color) =>
 	`<path d="M82 50a20 20 0 0 1 0 28" fill="none" stroke="${color}" stroke-width="8" stroke-linecap="round"/>\n` +
 	`\t<path d="M95 39a36 36 0 0 1 0 50" fill="none" stroke="${color}" stroke-width="8" stroke-linecap="round"/>`;
 const cross = (color) => `<path d="M86 51l26 26M112 51l-26 26" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round"/>`;
+const listLines = (color) =>
+	`<rect x="26" y="36" width="56" height="10" rx="4" fill="${color}"/>\n` +
+	`\t<rect x="26" y="54" width="56" height="10" rx="4" fill="${color}"/>\n` +
+	`\t<rect x="26" y="72" width="38" height="10" rx="4" fill="${color}"/>`;
+const listPlus = (color) =>
+	`<rect x="78" y="73" width="34" height="11" rx="4" fill="${color}"/>\n\t<rect x="89.5" y="61.5" width="11" height="34" rx="4" fill="${color}"/>`;
+const listCheck = (color) => `<path d="M78 78l10 10 21-22" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>`;
+const listPlay = (color) => `<path d="M86 62l26 16-26 16z" fill="${color}" stroke="${color}" stroke-width="6" stroke-linejoin="round"/>`;
 const heart = (color, filled) =>
 	filled
 		? `<path d="${HEART}" fill="${color}" stroke="${color}" stroke-width="4" stroke-linejoin="round"/>`
@@ -81,10 +89,17 @@ export function keyIconFiles() {
 		"library/heart-filled.svg": key("Like / Unlike key: current track is in Liked Songs (press to unlike)", heart(GREEN, true)),
 		"library/heart-unknown.svg": key("Like / Unlike key: checking whether the current track is liked", heart(CHECKING, false)),
 		"library/heart-disabled.svg": key("Like / Unlike key: unavailable (not connected, no device, or not a song)", heart(UNAVAILABLE, false)),
+		"playlist/add.svg": key("Add to Playlist key: adds the current song to the key's playlist", listLines(GREEN), listPlus(GREEN)),
+		"playlist/add-done.svg": key("Add to Playlist key: the song was added (or already in the playlist)", listLines(GREEN), listCheck(GREEN)),
+		"playlist/add-disabled.svg": key("Add to Playlist key: unavailable (no playlist chosen, not a song, not connected, ...)", listLines(UNAVAILABLE), listPlus(UNAVAILABLE)),
+		"playlist/play.svg": key("Play Playlist key: starts the key's playlist on the active device", listLines(GREEN), listPlay(GREEN)),
+		"playlist/play-disabled.svg": key("Play Playlist key: unavailable (no playlist chosen, no device, not connected, ...)", listLines(UNAVAILABLE), listPlay(UNAVAILABLE)),
 		"volume/volume-up-icon.svg": icon("Volume Up action icon", speaker(WHITE), plus(WHITE)),
 		"volume/volume-down-icon.svg": icon("Volume Down action icon", speaker(WHITE), minus(WHITE)),
 		"volume/mute-icon.svg": icon("Mute / Unmute action icon", speaker(WHITE), cross(WHITE)),
 		"library/like-icon.svg": icon("Like / Unlike action icon", heart(WHITE, true)),
+		"playlist/add-icon.svg": icon("Add to Playlist action icon", listLines(WHITE), listPlus(WHITE)),
+		"playlist/play-icon.svg": icon("Play Playlist action icon", listLines(WHITE), listPlay(WHITE)),
 	};
 }
 

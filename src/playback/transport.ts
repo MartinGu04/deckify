@@ -30,4 +30,10 @@ export interface PlaybackTransport {
 	 * @param volumePercent Whole percent, 0–100.
 	 */
 	setVolume(volumePercent: number): Promise<void>;
+
+	/**
+	 * Starts playing a context (a playlist) from its beginning on the active device.
+	 * @param contextUri `spotify:playlist:<id>`.
+	 */
+	playContext(contextUri: string): Promise<void>;
 }

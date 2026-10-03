@@ -55,6 +55,7 @@ function fakeSpotify(initial: PlaybackObservation = observation()) {
 	};
 	const transport: PlaybackTransport = {
 		id: "fake",
+		playContext: vi.fn(() => Promise.resolve()),
 		getState: vi.fn(async () => {
 			control.calls.push("get");
 			const reported = control.player;

@@ -110,6 +110,24 @@ Phase 5 adds the everyday controls:
 - **Like / Unlike** works on songs only. It uses Spotify's current library API (`GET /v1/me/library/contains`, `PUT` and `DELETE /v1/me/library`, with the track URI); the older `/me/tracks` endpoints are not used. Episodes, ads, local files and unknown items are never sent; the key shows **Track Only**. The heart is checked once per song while a Like key is visible (also after reconnecting and when a Like key appears), never polled, so a song liked or unliked in another Spotify app updates when the song changes or the Like key reappears. A press always applies to the song that was playing when you pressed, even if the next song starts before Spotify answers, and a second press while the first is still being sent is ignored.
 - **Spotify Premium** stays required for all Deckify controls, including volume and Like / Unlike.
 
+## Phase 6 — Playlists
+
+Phase 6 adds two playlist keys, each configured with a real playlist picker in its Property Inspector (you never type IDs, URIs or links):
+
+| Action | UUID (permanent) | What it does |
+| --- | --- | --- |
+| Add to Playlist | `com.marting.deckify.spotify.add-to-playlist` | Adds the current Spotify song to the key's playlist, unless it is already there. |
+| Play Playlist | `com.marting.deckify.spotify.play-playlist` | Starts the key's playlist on the active Spotify device. |
+
+- **Scopes:** Deckify now also requests `playlist-read-private`, `playlist-read-collaborative`, `playlist-modify-public` and `playlist-modify-private`. A Phase 5 session lacks them, so after upgrading the Spotify Account key shows **Reconnect** once (same flow as before; the Client ID and session are kept until you reconnect).
+- **Spotify's February 2026 playlist API:** `GET /v1/me/playlists` (50 per page, every page), `GET /v1/playlists/{id}` (the playlist's current snapshot and owner, before adding), `GET /v1/playlists/{id}/items` (item URIs only, 50 per page) and `POST /v1/playlists/{id}/items` with `{"uris": ["spotify:track:…"]}`. The deprecated `/playlists/{id}/tracks` endpoints are not used. Play Playlist uses `PUT /v1/me/player/play` with `{"context_uri": "spotify:playlist:…"}` on the active device (never the Windows media session).
+- **The picker** shows your playlists (loaded when the Property Inspector opens, cached for five minutes, **Refresh** to reload) with a local search by name, at most 20 at a time (**Previous** / **Next** page through longer lists and longer search results; paging and search never contact Spotify). Same-named playlists are told apart by owner, Private / Collaborative, item count and, if still identical, the end of their ID. A key stores the playlist's **ID and URI**, never its name, so a renamed playlist stays selected (its new name appears after the next refresh) and a deleted one shows **Unavailable** instead of silently switching.
+- **Add to Playlist** offers only playlists you can change: ones you own and collaborative ones. A public playlist someone else owns is never offered. It works on songs only (episodes, ads and local files show **Track Only**) and adds the song that was playing at the moment of the press, even if the next one starts before Spotify answers.
+- **No duplicates:** before adding, Deckify checks whether the song is already in the playlist. The playlist's items are read once per playlist version (`snapshot_id`) and remembered, so later presses only cost one small request until the playlist changes. Already there → **Already Added** (no second copy); a quick double press is ignored while the first add runs.
+- **Play Playlist** offers every playlist in your library, including followed ones, and behaves like the other playback keys: **No Device**, **Restricted**, **Premium**, **Limited**, **Connect** / **Reconnect**.
+- **Spotify attribution:** playlist names are shown exactly as Spotify returns them, the picker shows Spotify's official full logo (the unmodified white version from Spotify's brand assets, at 90 px wide, `ui/playlist/Spotify_Full_Logo_RGB_White.png`) with *Playlist information provided by Spotify*, and **Open in Spotify** opens the selected playlist with the link Spotify provides (only `https://open.spotify.com/playlist/<id>` links are accepted). No artwork is downloaded and the Spotify logo appears only in the picker, never in Deckify's keys or action icons; `npm run pack` fails if the logo is missing from the package.
+- **Privacy:** the picker never sees tokens or the Client ID and never calls Spotify itself; logs never contain playlist names, IDs or track URIs.
+
 ## Spotify Developer setup
 
 Deckify only needs a **Client ID**. It never needs, accepts or stores a Client Secret.
@@ -155,8 +173,8 @@ npm run check      # typecheck + lint + tests + build + manifest validation + sm
 Individual steps: `npm run typecheck`, `npm run lint`, `npm test`, `npm run validate` and `npm run smoke`.
 
 - `npm test` runs the Vitest suite. Every Spotify HTTP request is mocked, so tests never contact Spotify and use only obviously fake credentials.
-- The smoke test runs the built plugin against a simulated Stream Deck connection, presses the Deckify Status key, and checks that a Spotify Account key renders *Not Configured* and that Play / Pause, Volume Up, Mute / Unmute and Like / Unlike keys render *Connect*. It needs no hardware.
-- `npm run assets` regenerates the image exports: the brand PNGs from `assets/brand/` and the volume / Like key images (`scripts/export-key-icons.mjs`, simple vector geometry). A test fails if the committed key images differ from the generator.
+- The smoke test runs the built plugin against a simulated Stream Deck connection, presses the Deckify Status key, and checks that a Spotify Account key renders *Not Configured* and that Play / Pause, Volume Up, Mute / Unmute, Like / Unlike, Add to Playlist and Play Playlist keys render *Connect*. It needs no hardware.
+- `npm run assets` regenerates the image exports: the brand PNGs from `assets/brand/` and the volume / Like / playlist key images (`scripts/export-key-icons.mjs`, simple vector geometry). A test fails if the committed key images differ from the generator.
 
 CI (`.github/workflows/ci.yml`) runs on every pull request to `main` and every push to `main`:
 
@@ -218,6 +236,8 @@ To see the fallback, quit the Spotify desktop app and play on another Spotify de
 
 Volume and Like / Unlike always use the Web API; they log only failures (for example `Volume change failed: ...`) and, for Like / Unlike, `Library item saved.` / `Library item removed.` without any track details.
 
+Playlist keys log `Playlist list refreshed.`, `Playlist item added.`, `Playlist item already present.` and `Playlist playback started.`, and failures only as error codes; never playlist names, IDs or track URIs.
+
 The plugin logs at `debug` level while `Nodejs.Debug` is enabled and at `info` otherwise. Raise it with `streamDeck.logger.setLevel("trace")` in `src/plugin.ts` to record every message exchanged with Stream Deck.
 
 ### Spotify token storage
@@ -256,9 +276,12 @@ src/
     play-pause.ts, skip-track.ts, now-playing.ts
                             playback keys (shared base: playback-key-action.ts; views and Now Playing SVG renderer)
     volume.ts, like.ts      Volume Up / Volume Down / Mute and Like / Unlike keys (views: playback-views.ts, like-view.ts; volume-settings.ts)
+    playlist-*.ts           Add to Playlist / Play Playlist keys, their views, and the picker protocol
   playback/                 transport-independent playback: model, PlaybackTransport interface, shared state, PlaybackService (polling, commands,
                             local-first routing, coalescing volume controller, mute memory)
   library/                  LibraryService: the current track's Liked Songs state (checks, like / unlike, race guards), LibraryTransport interface
+  playlists/                PlaylistService (shared cache, writable filter, duplicate cache by snapshot, add, play), playlist model and
+                            validation, key settings (ID + URI), PlaylistTransport interface
     local-commands.ts       LocalPlaybackCommandTransport contract (handled / unavailable / uncertain)
   windows/                  Windows media bridge client: spawns the bundled helper, JSON-lines IPC, timeouts, restarts
   settings/                 Stream Deck global settings (Client ID only)
@@ -271,6 +294,7 @@ src/
     api/                    authenticated Web API client (GET/PUT/POST/DELETE, refresh + one retry on 401), current-user profile
     playback/               Spotify Web API playback transport (incl. volume) and response parsing
     library/                Spotify Web API library transport (/me/library)
+    playlists/              Spotify Web API playlist transport (/me/playlists, /playlists/{id}, /playlists/{id}/items) and parsing
     storage/                TokenStore interface, encrypted file store, Windows DPAPI key protector
     state/                  shared Spotify account state + subscriptions
 com.marting.deckify.sdPlugin/
@@ -278,11 +302,12 @@ com.marting.deckify.sdPlugin/
   imgs/                     Stream Deck images (plugin icon, category icon, action/key images)
   ui/spotify-account/       Spotify Account Property Inspector (no remote scripts, no browser storage)
   ui/volume/                Volume Up / Volume Down Property Inspector (Volume step)
+  ui/playlist/              shared playlist picker for Add to Playlist and Play Playlist
   ui/shared/                Property Inspector stylesheet
   bin/, logs/               build output (bin/plugin.js, bin/native/deckify-media-bridge.exe) and runtime logs (git-ignored)
 native/media-bridge/        Rust helper: GSMTC Spotify session selection and commands (protocol.rs, selection.rs, dispatch.rs, gsmtc.rs)
 assets/brand/               original Deckify brand files (see assets/brand/README.md)
-scripts/                    brand-asset export, key-image generator (volume / Like icons), smoke test, dev-only token expiry helper,
+scripts/                    brand-asset export, key-image generator (volume / Like / playlist icons), smoke test, dev-only token expiry helper,
                             native build, pack + package verification
 test/                       Vitest suite (Spotify HTTP fully mocked)
 ```

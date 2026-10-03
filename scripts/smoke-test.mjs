@@ -7,7 +7,8 @@
  *   2. answers the plugin's global-settings request with no Spotify Client ID and places a Spotify Account key, expecting it to render the
  *      "Set Up" (not configured) state;
  *   3. places a Play / Pause key, expecting the unavailable icon with the title "Connect" (playback never contacts Spotify while signed out);
- *   4. places Volume Up, Mute / Unmute and Like / Unlike keys, expecting their unavailable icons with the title "Connect".
+ *   4. places Volume Up, Mute / Unmute, Like / Unlike, Add to Playlist and Play Playlist keys, expecting their unavailable icons with the
+ *      title "Connect".
  *
  * No Spotify request is made (no Client ID is configured). This only exercises the plugin <-> Stream Deck protocol; it does not replace
  * testing in the Stream Deck app on real hardware. Run `npm run build` first. Log output is written to `com.marting.deckify.sdPlugin/logs/`.
@@ -25,6 +26,8 @@ const SIGNED_OUT_KEYS = [
 	{ uuid: "com.marting.deckify.spotify.volume-up", context: "smoke-volume-up-key", image: "imgs/actions/volume/volume-up-disabled.svg" },
 	{ uuid: "com.marting.deckify.spotify.mute", context: "smoke-mute-key", image: "imgs/actions/volume/speaker-disabled.svg" },
 	{ uuid: "com.marting.deckify.spotify.like", context: "smoke-like-key", image: "imgs/actions/library/heart-disabled.svg" },
+	{ uuid: "com.marting.deckify.spotify.add-to-playlist", context: "smoke-add-to-playlist-key", image: "imgs/actions/playlist/add-disabled.svg" },
+	{ uuid: "com.marting.deckify.spotify.play-playlist", context: "smoke-play-playlist-key", image: "imgs/actions/playlist/play-disabled.svg" },
 ];
 const EXPECTED_STATES = [1, 0, 1];
 const TIMEOUT_MS = 10_000;
@@ -141,7 +144,7 @@ function finish(error) {
 	console.log(`Deckify Status setState sequence: ${JSON.stringify(states())} (expected ${JSON.stringify(EXPECTED_STATES)})`);
 	console.log(`Spotify Account rendered "Set Up" (not configured): ${spotifyOk}`);
 	console.log(`Play / Pause rendered "Connect" (signed out): ${playPauseOk}`);
-	console.log(`Volume Up, Mute / Unmute and Like / Unlike rendered "Connect" (signed out): ${phase5Ok}`);
+	console.log(`Volume Up, Mute / Unmute, Like / Unlike, Add to Playlist and Play Playlist rendered "Connect" (signed out): ${phase5Ok}`);
 	console.log(passed ? "Smoke test passed." : `Smoke test FAILED${error ? `: ${error}` : ""}.`);
 	process.exit(passed ? 0 : 1);
 }

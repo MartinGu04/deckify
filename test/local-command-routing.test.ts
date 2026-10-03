@@ -41,6 +41,7 @@ function setup(options: { product?: string; connected?: boolean; local?: boolean
 
 	const transport: PlaybackTransport = {
 		id: "web-api",
+		playContext: vi.fn(() => Promise.resolve()),
 		getState: vi.fn(async () => {
 			calls.push("api:getState");
 			if (control.stateGate) {

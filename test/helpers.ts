@@ -9,6 +9,9 @@ export const PHASE2_SCOPES = ["user-read-private"] as const;
 /** The scope set Phase 3 and Phase 4 sessions were authorized with (before library scopes were added). */
 export const PHASE4_SCOPES = ["user-read-private", "user-read-playback-state", "user-modify-playback-state"] as const;
 
+/** The scope set Phase 5 sessions were authorized with (before playlist scopes were added). */
+export const PHASE5_SCOPES = [...PHASE4_SCOPES, "user-library-read", "user-library-modify"] as const;
+
 /** The scope set Deckify currently requires. */
 export const CURRENT_SCOPES: readonly string[] = SPOTIFY_SCOPES;
 

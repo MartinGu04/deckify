@@ -159,7 +159,8 @@ describe("security regression checks", () => {
 				async (file) => ({ file, text: await readFile(path.join(ROOT, file), "utf8") }),
 			),
 		);
-		expect(matching(native, /volume|library|Media_Audio|ISimpleAudioVolume/i)).toEqual([]);
+		expect(matching(native, /volume|library|playlist|Media_Audio|ISimpleAudioVolume/i)).toEqual([]);
+		expect(matching(bridge, /playlist/i)).toEqual([]);
 	});
 
 	it("keeps the volume Property Inspector to its one bounded setting", async () => {
@@ -171,6 +172,49 @@ describe("security regression checks", () => {
 		expect(sends).toHaveLength(1);
 		expect(sends[0]).toContain("payload: { volumeStep: step }");
 		expect(matching(volume, /fetch\(|XMLHttpRequest|https?:\/\/(?!127\.0\.0\.1)/)).toEqual([]);
+	});
+
+	it("never uses the deprecated /playlists/{id}/tracks endpoints (source and, when built, the bundle)", async () => {
+		const src = (await sources()).filter((s) => s.file.startsWith("src/"));
+		expect(codeOnly(matching(src, /playlists\/[^\n]*\/tracks|\/tracks["'`?]/))).toEqual([]);
+		expect(codeOnly(matching(src, /\/playlists\/\$\{[^}]+\}\/items/)).length).toBeGreaterThanOrEqual(2);
+		const bundle = await readFile(path.join(ROOT, "com.marting.deckify.sdPlugin/bin/plugin.js"), "utf8").catch(() => undefined);
+		if (bundle !== undefined) {
+			expect(bundle).not.toMatch(/playlists\/\$\{[^}]+\}\/tracks|\/me\/tracks/);
+		}
+	});
+
+	it("validates every playlist ID before it reaches a request path", async () => {
+		const src = (await sources()).filter((s) => s.file.startsWith("src/"));
+		const paths = codeOnly(matching(src, /`\/playlists\/\$\{/));
+		expect(paths.length).toBeGreaterThanOrEqual(3);
+		expect(paths.filter((line) => !line.includes("/playlists/${checkedId(playlistId)}"))).toEqual([]);
+	});
+
+	it("keeps the playlist picker away from Spotify and credentials", async () => {
+		const picker = (await inspectorSources()).filter((s) => s.file.startsWith("com.marting.deckify.sdPlugin/ui/playlist/"));
+		expect(picker.map((s) => s.file)).toEqual(
+			expect.arrayContaining(["com.marting.deckify.sdPlugin/ui/playlist/index.html", "com.marting.deckify.sdPlugin/ui/playlist/inspector.js"]),
+		);
+		expect(matching(picker, /api\.spotify\.com|accounts\.spotify\.com|fetch\(|XMLHttpRequest|innerHTML|outerHTML|insertAdjacentHTML|"openUrl"|access_?token|refresh_?token|client_?id|Authorization:|Bearer /i)).toEqual([]);
+		// The plugin side of the picker never touches the session or tokens.
+		const pluginSide = (await sources()).filter((s) => /^src\/actions\/playlist-/.test(s.file) || s.file.startsWith("src/playlists/"));
+		expect(pluginSide.length).toBeGreaterThanOrEqual(6);
+		expect(matching(pluginSide, /from "\.\.\/spotify\/(auth|storage)|accessToken|refreshToken|clientId/)).toEqual([]);
+	});
+
+	it("opens only validated links", async () => {
+		const src = (await sources()).filter((s) => s.file.startsWith("src/"));
+		const calls = codeOnly(matching(src, /openUrl\(/)).filter((line) => !/^\S+: (export type|readonly|openUrl\(url: string\))/.test(line.replace(/^(\S+:\d+): /, "$1: ")));
+		// The auth flow opens Spotify's authorize URL; the playlist picker opens only a link that passed toSpotifyPlaylistUrl.
+		expect(calls.map((line) => line.split(":")[0]).sort()).toEqual(["src/actions/playlist-key-action.ts", "src/plugin.ts", "src/plugin.ts", "src/spotify/auth/auth-service.ts"]);
+		const pickerOpen = calls.find((line) => line.startsWith("src/actions/playlist-key-action.ts"));
+		expect(pickerOpen).toContain("this.#inspector.openUrl(url)");
+	});
+
+	it("never logs playlist or track identifiers or names", async () => {
+		const logCalls = matching(await sources(), /logger\.(debug|info|warn|error|trace)\(/);
+		expect(logCalls.filter((line) => /playlistId|playlistUri|trackUri|ownerDisplayName|ownerId|playlist\.name|metadata\.name|selection\b/.test(line))).toEqual([]);
 	});
 
 	it("loads no remote scripts or styles in the Property Inspector", async () => {

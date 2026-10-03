@@ -6,6 +6,10 @@
  * - `user-modify-playback-state`: play, pause, next, previous and volume.
  * - `user-library-read`: whether the current track is in the user's library (`GET /v1/me/library/contains`).
  * - `user-library-modify`: like / unlike the current track (`PUT` / `DELETE /v1/me/library`).
+ * - `playlist-read-private`, `playlist-read-collaborative`: the user's private and collaborative playlists in the playlist pickers
+ *   (`GET /v1/me/playlists`) and their items for duplicate checks (`GET /v1/playlists/{id}/items`).
+ * - `playlist-modify-public`, `playlist-modify-private`: add the current track to the user's public or private / collaborative playlists
+ *   (`POST /v1/playlists/{id}/items`).
  *
  * Sessions authorized before a scope was added do not have it. Scopes can only be added by authorizing again; a refresh-token exchange never
  * grants new scopes.
@@ -16,6 +20,10 @@ export const SPOTIFY_SCOPES: readonly string[] = [
 	"user-modify-playback-state",
 	"user-library-read",
 	"user-library-modify",
+	"playlist-read-private",
+	"playlist-read-collaborative",
+	"playlist-modify-public",
+	"playlist-modify-private",
 ];
 
 /**

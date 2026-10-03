@@ -7,7 +7,7 @@ import { getMissingScopes, SPOTIFY_SCOPES } from "../src/spotify/auth/scopes";
 import { AuthorizationDeniedError } from "../src/spotify/errors";
 import { SpotifyAuthState, type SpotifyAuthSnapshot } from "../src/spotify/state/auth-state";
 import { MemoryTokenStore, type StoredSpotifySession } from "../src/spotify/storage/token-store";
-import { FAKE, fakeClock, fakeFetch, json, PHASE2_SCOPES, PHASE4_SCOPES, profileResponse, storedSession, type RecordedRequest } from "./helpers";
+import { FAKE, fakeClock, fakeFetch, json, PHASE2_SCOPES, PHASE4_SCOPES, PHASE5_SCOPES, profileResponse, storedSession, type RecordedRequest } from "./helpers";
 
 const NEW_ACCESS = "fake-access-token-reauthorized";
 const NEW_REFRESH = "fake-refresh-token-reauthorized";
@@ -64,6 +64,10 @@ describe("getMissingScopes", () => {
 			"user-modify-playback-state",
 			"user-library-read",
 			"user-library-modify",
+			"playlist-read-private",
+			"playlist-read-collaborative",
+			"playlist-modify-public",
+			"playlist-modify-private",
 		]);
 	});
 
@@ -103,7 +107,7 @@ describe("scope migration from Phase 2", () => {
 		await ctx.auth.connect();
 
 		expect(ctx.opened[0]?.searchParams.get("scope")).toBe(
-			"user-read-private user-read-playback-state user-modify-playback-state user-library-read user-library-modify",
+			"user-read-private user-read-playback-state user-modify-playback-state user-library-read user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private",
 		);
 		expect(ctx.state.snapshot.status).toBe("connected");
 		await expect(ctx.store.load()).resolves.toMatchObject({ accessToken: NEW_ACCESS, refreshToken: NEW_REFRESH, scopes: [...SPOTIFY_SCOPES] });
@@ -126,7 +130,9 @@ describe("scope migration from Phase 2", () => {
 		await ctx.auth.connect();
 
 		expect(ctx.state.snapshot.status).toBe("error");
-		expect(ctx.state.snapshot.message).toMatch(/missing: user-read-playback-state, user-modify-playback-state, user-library-read, user-library-modify/);
+		expect(ctx.state.snapshot.message).toMatch(
+			/missing: user-read-playback-state, user-modify-playback-state, user-library-read, user-library-modify, playlist-read-private, playlist-read-collaborative, playlist-modify-public, playlist-modify-private/,
+		);
 		await expect(ctx.store.load()).resolves.toBeUndefined();
 	});
 
@@ -169,9 +175,8 @@ describe("scope migration from Phase 2", () => {
 });
 
 describe("scope migration from Phase 4 (library scopes added)", () => {
-	it("requires exactly the two library scopes from a Phase 4 session", () => {
-		expect(getMissingScopes(PHASE4_SCOPES)).toEqual(["user-library-read", "user-library-modify"]);
-		expect(SPOTIFY_SCOPES).toEqual([...PHASE4_SCOPES, "user-library-read", "user-library-modify"]);
+	it("requires the library and playlist scopes from a Phase 4 session", () => {
+		expect(getMissingScopes(PHASE4_SCOPES)).toEqual(["user-library-read", "user-library-modify", "playlist-read-private", "playlist-read-collaborative", "playlist-modify-public", "playlist-modify-private"]);
 	});
 
 	it("shows Reconnect for a stored Phase 4 session, keeps the Client ID and the session, and never uses it", async () => {
@@ -210,7 +215,67 @@ describe("scope migration from Phase 4 (library scopes added)", () => {
 		await ctx.auth.connect();
 
 		expect(ctx.state.snapshot.status).toBe("error");
-		expect(ctx.state.snapshot.message).toMatch(/missing: user-library-read, user-library-modify/);
+		expect(ctx.state.snapshot.message).toMatch(/missing: user-library-read, user-library-modify, playlist-read-private/);
+		await expect(ctx.store.load()).resolves.toBeUndefined();
+	});
+});
+
+describe("scope migration from Phase 5 (playlist scopes added)", () => {
+	const PLAYLIST_SCOPES = ["playlist-read-private", "playlist-read-collaborative", "playlist-modify-public", "playlist-modify-private"];
+
+	it("requires exactly the four playlist scopes from a Phase 5 session", () => {
+		expect(getMissingScopes(PHASE5_SCOPES)).toEqual(PLAYLIST_SCOPES);
+		expect(SPOTIFY_SCOPES).toEqual([...PHASE5_SCOPES, ...PLAYLIST_SCOPES]);
+	});
+
+	it.each(PLAYLIST_SCOPES)("requires reconnecting when only %s is missing", (scope) => {
+		expect(getMissingScopes(SPOTIFY_SCOPES.filter((s) => s !== scope))).toEqual([scope]);
+	});
+
+	it("shows Reconnect for a stored Phase 5 session, keeps the Client ID and the session, and never uses it", async () => {
+		const stored = storedSession({ scopes: [...PHASE5_SCOPES] });
+		const ctx = setup({ stored });
+		await ctx.auth.initialize(FAKE.clientId);
+
+		expect(ctx.state.snapshot).toMatchObject({ status: "reauthorization-required", clientId: FAKE.clientId, message: SCOPE_UPGRADE_MESSAGE });
+		expect(ctx.requests).toHaveLength(0);
+		expect(ctx.openUrl).not.toHaveBeenCalled();
+		await expect(ctx.store.load()).resolves.toEqual(stored);
+	});
+
+	it("shows Reconnect for a session missing only playlist-read-collaborative", async () => {
+		const ctx = setup({ stored: storedSession({ scopes: SPOTIFY_SCOPES.filter((s) => s !== "playlist-read-collaborative") }) });
+		await ctx.auth.initialize(FAKE.clientId);
+		expect(ctx.state.snapshot.status).toBe("reauthorization-required");
+		expect(ctx.requests).toHaveLength(0);
+	});
+
+	it("never refreshes an expired Phase 5 session to gain the playlist scopes", async () => {
+		const ctx = setup({ stored: storedSession({ scopes: [...PHASE5_SCOPES], accessTokenExpiresAt: 0 }) });
+		await ctx.auth.initialize(FAKE.clientId);
+		await ctx.auth.verify();
+		expect(ctx.state.snapshot.status).toBe("reauthorization-required");
+		expect(ctx.requests.filter((r) => r.url.pathname === "/api/token")).toHaveLength(0);
+	});
+
+	it("requests all nine scopes on one Reconnect and replaces the Phase 5 session", async () => {
+		const ctx = setup({ stored: storedSession({ scopes: [...PHASE5_SCOPES] }) });
+		await ctx.auth.initialize(FAKE.clientId);
+		await ctx.auth.connect();
+
+		expect(ctx.opened).toHaveLength(1);
+		expect(ctx.opened[0]?.searchParams.get("scope")?.split(" ")).toEqual([...SPOTIFY_SCOPES]);
+		expect(ctx.state.snapshot.status).toBe("connected");
+		await expect(ctx.store.load()).resolves.toMatchObject({ accessToken: NEW_ACCESS, refreshToken: NEW_REFRESH, scopes: [...SPOTIFY_SCOPES] });
+	});
+
+	it("refuses a Reconnect that grants only the Phase 5 scopes", async () => {
+		const ctx = setup({ grantedScopes: PHASE5_SCOPES });
+		await ctx.auth.initialize(FAKE.clientId);
+		await ctx.auth.connect();
+
+		expect(ctx.state.snapshot.status).toBe("error");
+		expect(ctx.state.snapshot.message).toMatch(/missing: playlist-read-private, playlist-read-collaborative, playlist-modify-public, playlist-modify-private/);
 		await expect(ctx.store.load()).resolves.toBeUndefined();
 	});
 });

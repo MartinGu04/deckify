@@ -20,4 +20,6 @@ export const ActionUUID = {
 	VolumeDown: `${PLUGIN_UUID}.spotify.volume-down`,
 	Mute: `${PLUGIN_UUID}.spotify.mute`,
 	Like: `${PLUGIN_UUID}.spotify.like`,
+	AddToPlaylist: `${PLUGIN_UUID}.spotify.add-to-playlist`,
+	PlayPlaylist: `${PLUGIN_UUID}.spotify.play-playlist`,
 } as const;
