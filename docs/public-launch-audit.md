@@ -26,7 +26,7 @@ Status key: ✅ compliant · 🟡 open question or minor follow-up · ⛔ blocks
 | Item | Status | Notes |
 | --- | --- | --- |
 | Product name | ✅ | "Deckify" doesn't contain or imitate "Spotify". |
-| Deckify logo / plugin icon | ⛔ | The development-era mark (green D with three curved sound lines) resembles Spotify Green and the Spotify icon's waves. It is marked development-only in [`assets/brand/README.md`](../assets/brand/README.md). Concept B (Key-grid D, in Deckify violet) is selected for refinement, with variants B1–B3 in [`brand-review/`](brand-review/README.md). One must be approved before any public material. |
+| Deckify logo / plugin icon | ⛔ | The development-era mark (green D with three curved sound lines) resembles Spotify Green and the Spotify icon's waves. It is marked development-only in [`assets/brand/README.md`](../assets/brand/README.md). **B1 · Frame D** (violet `#7C5CFF`) is the selected brand; its final geometry is in [`brand-review/`](brand-review/README.md#final-b1-geometry). The production files still use the development-era mark until they are replaced. |
 | Key-image accent colour | ⛔ | Deckify's key images use `#22D46E`, close to Spotify Green. Change it to the approved Deckify accent when the brand is chosen (`scripts/export-key-icons.mjs` and the playback / account key SVGs). |
 | README hero | ✅ | A text-only `DECKIFY` hero, with no Spotify logo and no co-branding. The overview illustration uses Deckify's own key images only. |
 | Endorsement wording | ✅ | README, manifest and docs describe compatibility ("Spotify Premium required", "for Stream Deck"), never endorsement. The README footer states Deckify isn't affiliated with or endorsed by Spotify or Elgato. |
@@ -116,7 +116,7 @@ back to the content on Spotify.
 
 **Before making the repository public:**
 
-1. Approve one brand variant ([brand review](brand-review/README.md): B1, B2 or B3).
+1. Replace the production brand files with the approved B1 mark ([brand review](brand-review/README.md#final-b1-geometry)).
 2. Choose a licence, or deliberately decide to publish without one.
 3. Review the rendered README.
 4. Enable private vulnerability reporting.

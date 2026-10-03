@@ -1,8 +1,48 @@
 # Deckify brand review
 
-> **Status: Concept B (Key-grid D) is selected for refinement, in Deckify violet. Concepts A and C are set aside as primary directions.**
-> Three refined variants, B1–B3, are below; none is chosen yet. Nothing here is used by the plugin, the package or the README hero.
-> Production artwork changes only after one variant is approved.
+> **Status: B1 · Frame D is the selected Deckify brand direction.** B2 and B3 are rejected; Concepts A and C were set aside earlier.
+> B1 has had its final refinement (a larger key grid), shown below. The production files (plugin icon, key images, README hero) are
+> **not replaced yet**; that is the next step, after the final geometry and the export list are confirmed.
+
+## Final B1 geometry
+
+![Final B1: violet round-bowl D frame around an enlarged 2×2 key grid, with lockups, Marketplace tile, key, glyphs and one-colour mark](concept-b1-final.svg)
+
+### Symbol
+
+Coordinates are in a 100×100 grid, the same as the B1 sheet.
+
+| Part | Geometry | Change from B1 |
+| --- | --- | --- |
+| Outer D | `M18 10H50C74 10 90 28 90 50C90 72 74 90 50 90H18A6 6 0 0 1 12 84V16A6 6 0 0 1 18 10Z` (78×80, stem corners r 6) | unchanged |
+| Counter | `M27 25H50C65 25 75 36 75 50C75 64 65 75 50 75H27Z` (frame 15 at the stem, 15 at top and bottom) | unchanged |
+| Keys | four 15.75 × 15.75 squares, corner radius 3.4, gap 3.4, at (30.5, 32.55), (49.65, 32.55), (30.5, 51.7), (49.65, 51.7) | keys 14 → 15.75, gap 3 → 3.4, radius 3 → 3.4 |
+| Grid | 34.9 × 34.9, **+12.6%** (was 31 × 31), centred vertically in the counter | |
+| Grid clearance | 3.5 to the stem and 3.5 to the bowl (balanced, about one key gap), 7.55 above and below | was 5 / 5.1 / 8 / 11 |
+| Colour | `#7C5CFF` Deckify violet, solid | unchanged |
+
+- **Size candidates checked:** +10.6%, +12.6% and +14.2%, each rendered at symbol size and at 42 px (its size on a 72×72 key).
+- **Why +12.6%:** at +14.2% the grid gets closer to the bowl than the keys are to each other, and the 72×72 key starts to look crowded.
+  At +12.6% the clearance to the frame still matches the gap between keys.
+
+### Small glyphs
+
+The 20×20 and 28×28 glyphs are drawn on their own pixel grids, so every edge lands on a whole pixel. They keep the full 2×2 grid and the
+same D proportions.
+
+| Glyph | Geometry (own pixel grid) |
+| --- | --- |
+| Action icon, 20×20 (40×40 at 2×) | D 16×16, frame 2 px, four 3 px keys with a 1 px gap. Clearance: 2 px to the stem, about 1.5 px to the bowl, 2 px above, 3 px below. The 1 px offset keeps the keys crisp; centring them would land on half pixels and blur them at 20 px. |
+| Category icon, 28×28 (56×56 at 2×) | D 22×22, frame 3 px, four 4 px keys with a 2 px gap. Clearance: 2 px to the stem, about 2.2 px to the bowl, 3 px above and below. |
+
+![Final B1 at true pixel size, enlarged 5×: the colour symbol on a 72×72 key, the 20 and 40 px action glyph, the 28 and 56 px category glyph](concept-b1-final-pixel-check.png)
+
+### Wordmark and lockup
+
+- **Wordmark:** "DECKIFY" set in **Inter ExtraBold** (SIL Open Font License, which allows use in logos), letter-spacing 6% of the font
+  size. It is converted to outlines, so it doesn't depend on installed fonts.
+- **Proportions:** the cap height is half the D's height, the gap after the D is 22 units, and the wordmark is vertically centred on the D.
+- **Colour:** white on dark, `#15171C` on light.
 
 ## Why a new mark
 
@@ -25,9 +65,9 @@ The new identity has to say **Deckify = Stream Deck + control surface**, not "a 
 The `DECKIFY` wordmark on the sheets uses a generic geometric sans (Inter / Segoe UI) as a placeholder; the final wordmark should be set in
 a licensed typeface and outlined.
 
-## Refined Concept B variants
+## Round 2: refined Concept B variants (B1 selected)
 
-Round 2 keeps B's idea, **a D framing a 2×2 Stream Deck-style key grid**, and fixes its main risk: the angled outline could read as a
+Round 2 kept B's idea, **a D framing a 2×2 Stream Deck-style key grid**, and fixes its main risk: the angled outline could read as a
 tag or an arrow.
 
 **Shared choices:**

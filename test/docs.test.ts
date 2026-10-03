@@ -177,7 +177,7 @@ describe("brand-review concepts", () => {
 		return [(hue * 60 + 360) % 360, saturation];
 	}
 
-	it.each(["a", "b", "c", "b1", "b2", "b3"])("concept %s avoids Spotify Green, circles and waves", async (concept) => {
+	it.each(["a", "b", "c", "b1", "b2", "b3", "b1-final"])("concept %s avoids Spotify Green, circles and waves", async (concept) => {
 		const svg = await read(`docs/brand-review/concept-${concept}.svg`);
 		const colours = [...svg.matchAll(/#[0-9A-Fa-f]{6}\b/g)].map((m) => m[0]);
 		expect(colours.length).toBeGreaterThan(3);
@@ -187,7 +187,20 @@ describe("brand-review concepts", () => {
 			expect(saturation < 0.25 || hue < 75 || hue > 175, colour).toBe(true);
 		}
 		expect(svg).not.toMatch(/<circle|<ellipse/);
-		expect(svg).toContain("REVIEW CONCEPT");
+		expect(svg).toMatch(/REVIEW (CONCEPT|SHEET)/);
+	});
+
+	it("final B1 sheet shows the approved geometry in every required context", async () => {
+		const svg = await read("docs/brand-review/concept-b1-final.svg");
+		expect(svg).toContain("#7C5CFF");
+		// The enlarged key grid: four 15.75 keys with a 3.4 gap inside the unchanged B1 frame.
+		expect(svg).toContain("M18 10H50C74 10 90 28 90 50C90 72 74 90 50 90H18A6 6 0 0 1 12 84V16A6 6 0 0 1 18 10Z M27 25H50C65 25 75 36 75 50C75 64 65 75 50 75H27Z");
+		for (const [x, y] of [["30.5", "32.55"], ["49.65", "32.55"], ["30.5", "51.7"], ["49.65", "51.7"]]) {
+			expect(svg).toContain(`<rect x="${x}" y="${y}" width="15.75" height="15.75" rx="3.4"`);
+		}
+		for (const part of ["Symbol", "lockup on dark", "lockup on light", "288×288", "Key 144×144", "72×72", "Action glyph 40/20", "category 56/28", "One-colour"]) {
+			expect(svg, part).toContain(part);
+		}
 	});
 
 	it.each(["b1", "b2", "b3"])("refined concept %s uses the Deckify violet and shows every required size", async (concept) => {
