@@ -29,17 +29,17 @@ Status key: ✅ ready · 🟡 decision or small change needed · ⛔ missing.
 
 | Requirement | Deckify today | Status |
 | --- | --- | --- |
-| Plugin icon 256×256 and 512×512 PNG | `imgs/plugin/marketplace.png` / `@2x`, correct sizes | ⛔ rendered from the development-era mark; replace after brand approval |
-| Category icon 28×28 (56×56 when raster), monochrome white, transparent | SVG 28×28, `#FFFFFF`, transparent | ✅ format · 🟡 placeholder shape until brand approval |
+| Plugin icon 256×256 and 512×512 PNG | `imgs/plugin/marketplace.png` / `@2x`: the B1 symbol on the charcoal tile | ✅ |
+| Category icon 28×28 (56×56 when raster), monochrome white, transparent | The B1 28×28 pixel-grid glyph, SVG, `#FFFFFF`, transparent | ✅ |
 | Action icons 20×20 (40×40 when raster), monochrome white, transparent | 12 SVGs, 20×20, `#FFFFFF`, transparent | ✅ (Like's heart may change with official Spotify Like icons) |
-| Key images 72×72 with 144×144 high-DPI | SVG drawn at 144×144, shown at 72×72; Status PNGs at 72×72 and 144×144 | ✅ · 🟡 accent colour to change with the brand |
+| Key images 72×72 with 144×144 high-DPI | SVG drawn at 144×144, shown at 72×72, in Deckify violet; Status PNGs (B1 symbol) at 72×72 and 144×144 | ✅ |
 
-## Marketplace listing assets (not created yet)
+## Marketplace listing assets
 
 | Requirement | Plan | Status |
 | --- | --- | --- |
-| App icon 288×288 PNG, product name or logo as the focus, bold readable type, static | Export from the approved mark (dark tile with the mark). The brand-review sheets show a 288 template for each concept. | ⛔ waits for brand approval |
-| Thumbnail 1920×960 PNG | The approved mark, the "DECKIFY" wordmark and one line: "The Spotify control center your Stream Deck deserves." No Spotify logo. | ⛔ |
+| App icon 288×288 PNG, product name or logo as the focus, bold readable type, static | `assets/brand/marketplace/deckify-app-icon-288.png`: the B1 symbol on the charcoal tile | ✅ |
+| Thumbnail 1920×960 PNG | Must show the product and its functionality. It waits for real media (an MK.2 capture, the Stream Deck app, the playlist picker); a brand-only image won't do. See [media](media/README.md#5-marketplace-thumbnail-and-gallery-1920960). | ⛔ |
 | Gallery images 1920×960 PNG | See the shot list below | ⛔ |
 | Accurate depiction of the product and its functionality | Real captures only; any illustration labelled as such | 🟡 |
 | All text clear, legible and in English | English captions only | 🟡 |
@@ -61,7 +61,7 @@ Each image: 1920×960 PNG, English text, no Spotify logo used as decoration, and
 
 ## Before submitting
 
-1. Approve the brand, then produce the plugin icon, category icon, key accent, the 288×288 app icon and the 1920×960 images.
+1. Capture the real product media, then compose the 1920×960 thumbnail and gallery from it with the B1 logo. The brand, plugin icon, category icon, key accent and 288×288 app icon are done.
 2. Resolve the Spotify items in the [public-launch audit](public-launch-audit.md): Like icons, playlist-key attribution and the Development
    Mode / Client ID model for public users.
 3. Set the release version and author, and handle `Nodejs.Debug` for the package.

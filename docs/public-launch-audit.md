@@ -26,9 +26,9 @@ Status key: ✅ compliant · 🟡 open question or minor follow-up · ⛔ blocks
 | Item | Status | Notes |
 | --- | --- | --- |
 | Product name | ✅ | "Deckify" doesn't contain or imitate "Spotify". |
-| Deckify logo / plugin icon | ⛔ | The development-era mark (green D with three curved sound lines) resembles Spotify Green and the Spotify icon's waves. It is marked development-only in [`assets/brand/README.md`](../assets/brand/README.md). **B1 · Frame D** (violet `#7C5CFF`) is the selected brand; its final geometry is in [`brand-review/`](brand-review/README.md#final-b1-geometry). The production files still use the development-era mark until they are replaced. |
-| Key-image accent colour | ⛔ | Deckify's key images use `#22D46E`, close to Spotify Green. Change it to the approved Deckify accent when the brand is chosen (`scripts/export-key-icons.mjs` and the playback / account key SVGs). |
-| README hero | ✅ | A text-only `DECKIFY` hero, with no Spotify logo and no co-branding. The overview illustration uses Deckify's own key images only. |
+| Deckify logo / plugin icon | ✅ (Phase 7) | **B1 · Frame D** (violet `#7C5CFF`) is the approved brand ([final geometry](brand-review/README.md#final-b1-geometry)). The masters are in [`assets/brand/`](../assets/brand/README.md), and the plugin icon, category icon, Status key and README hero use it. The development-era mark (a green D with sound lines that resembled Spotify Green and the Spotify waves) is archived in `assets/brand/archive/development-era/`, used nowhere, and tests keep it that way. |
+| Key-image accent colour | ✅ (Phase 7) | Deckify's key images, Now Playing accents, Property Inspector controls and the sign-in result page use Deckify violet instead of the former `#22D46E`, which was close to Spotify Green. A test keeps the old green out of Deckify-owned files. Spotify's own attribution assets are exempt and unchanged. |
+| README hero | ✅ | The B1 logo, with light and dark variants. No Spotify logo and no co-branding. The overview illustration uses Deckify's own key images only. |
 | Endorsement wording | ✅ | README, manifest and docs describe compatibility ("Spotify Premium required", "for Stream Deck"), never endorsement. The README footer states Deckify isn't affiliated with or endorsed by Spotify or Elgato. |
 | Manifest description | 🟡 | "A dynamic Spotify control center for Elgato Stream Deck." describes function. Revisit with the final Marketplace copy. |
 | "Spotify" in action names | 🟡 | "Spotify Account" names what the key connects to. It is descriptive, not branding. **Verify** against Spotify's naming rules for the final listing. |
@@ -94,9 +94,9 @@ back to the content on Spotify.
 | Tooltips | ✅ | Every action has one. |
 | Legacy Deckify Status | ✅ (Phase 7) | Hidden with `VisibleInActionsList: false`, still registered for existing profiles. Covered by a test and the smoke test. |
 | Action-list icons | ✅ | SVG, 20×20, monochrome white `#FFFFFF`, transparent background (checked by a test). |
-| Category icon | 🟡 | SVG, 28×28, monochrome white, transparent. The shape is a placeholder "D" until the brand is approved. |
+| Category icon | ✅ (Phase 7) | The B1 28×28 pixel-grid glyph: SVG, monochrome white, transparent. |
 | Key images | ✅ | SVG at 72×72 with a 144×144 drawing; the Status key PNGs are 72×72 and 144×144. Dark key backgrounds are intended (key images, not action-list icons). |
-| Plugin icon | ⛔ | `imgs/plugin/marketplace.png` 256×256 and `@2x` 512×512 PNG have the right sizes, but are rendered from the development-era mark. Replace after brand approval. |
+| Plugin icon | ✅ (Phase 7) | `imgs/plugin/marketplace.png` 256×256 and `@2x` 512×512 PNG: the B1 symbol on the charcoal tile. |
 | Author | 🟡 | `MARTIN.G`. It is shown on the Marketplace and in Stream Deck; confirm the public author name before release. |
 | `Nodejs.Debug: "enabled"` | 🟡 **verify** | The manifest asks Stream Deck to run the plugin with the Node.js inspector in debug mode (`--inspect=127.0.0.1:{port}`). Confirm whether that applies to installed packages outside Stream Deck's developer mode. Either way, release packages should not request it; have `npm run pack` write `"disabled"` into the packaged manifest. |
 | Version | 🟡 | `0.1.0.0`. Choose the first public version when a release is planned. |
@@ -116,15 +116,14 @@ back to the content on Spotify.
 
 **Before making the repository public:**
 
-1. Replace the production brand files with the approved B1 mark ([brand review](brand-review/README.md#final-b1-geometry)).
-2. Choose a licence, or deliberately decide to publish without one.
-3. Review the rendered README.
-4. Enable private vulnerability reporting.
+1. Choose a licence, or deliberately decide to publish without one.
+2. Review the rendered README (now with the B1 logo).
+3. Enable private vulnerability reporting.
 
 **Before publishing a release:**
 
 1. Everything above.
-2. Production brand assets: plugin icon, category icon, key accent.
+2. Review the violet key artwork, the B1 plugin icon and the Status key on the physical MK.2.
 3. Official Spotify Like icons, or a decision recorded with Spotify's guidance in hand.
 4. Settle the open metadata questions above.
 5. `Nodejs.Debug` handled for release packages.
@@ -134,5 +133,5 @@ back to the content on Spotify.
 **Before submitting to the Marketplace:**
 
 1. Everything above.
-2. The Marketplace assets in [marketplace-readiness.md](marketplace-readiness.md): 288×288 app icon, 1920×960 thumbnail and gallery.
+2. The Marketplace thumbnail and gallery (1920×960) from real product media; see [marketplace-readiness.md](marketplace-readiness.md). The 288×288 app icon is done.
 3. Re-check Spotify's developer terms for distributing an app that each user connects with their own Client ID.

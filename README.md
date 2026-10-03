@@ -1,12 +1,17 @@
 <div align="center">
 
-# DECKIFY
+<h1>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/brand/deckify-logo-on-dark.svg">
+  <img src="assets/brand/deckify-logo.svg" width="380" alt="Deckify">
+</picture>
+</h1>
 
 ### The Spotify control center your Stream Deck deserves.
 
 Fast local controls. Live Spotify state. Volume, library and playlists — directly from your keys.
 
-**Windows · Stream Deck · Spotify Premium required**
+**Windows · Stream Deck · Spotify Premium required · Your own Spotify Client ID ([why?](#your-spotify-client-id-explained))**
 
 [![CI](https://github.com/MartinGu04/deckify/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MartinGu04/deckify/actions/workflows/ci.yml)
 ![Windows 10+](https://img.shields.io/badge/Windows-10%2B-0F6CBD)
@@ -317,7 +322,7 @@ No. Deckify is an independent project. It isn't made, endorsed or supported by S
 | [Development history](docs/development-history.md) | Phases 1–7 and the decisions behind them. |
 | [Public-launch audit](docs/public-launch-audit.md) | Spotify and Elgato compliance status and launch blockers. |
 | [Marketplace readiness](docs/marketplace-readiness.md) | The Elgato Marketplace checklist. |
-| [Brand review](docs/brand-review/README.md) | Concepts for Deckify's public brand (awaiting approval). |
+| [Brand](assets/brand/README.md) · [brand review](docs/brand-review/README.md) | The Deckify brand masters, and how the B1 mark was chosen. |
 | [Media](docs/media/README.md) | Capture requirements for screenshots and the hardware demo. |
 
 ## Contributing

@@ -155,5 +155,9 @@ state source and the fallback.
   refreshes.
 - **Like / Unlike:** its states are named explicitly (add, added, checking, unavailable). The Phase 5 artwork stays until official Spotify
   Like icons are supplied.
-- **Launch audits:** brand-review concepts for a compliant Deckify mark ([brand review](brand-review/README.md)), plus the
-  [public-launch audit](public-launch-audit.md) and [Marketplace readiness](marketplace-readiness.md).
+- **Launch audits:** the [public-launch audit](public-launch-audit.md) and [Marketplace readiness](marketplace-readiness.md).
+- **Brand:** the development-era mark, which looked too much like Spotify's, was replaced by the approved **B1 · Frame D**
+  ([brand review](brand-review/README.md)).
+  - **Where it is used:** the B1 masters live in `assets/brand/`; the plugin icon, category and Status icons, the Status key, the README
+    hero and the 288×288 Marketplace icon use it.
+  - **Key colour:** Deckify's key accent changed from green to violet `#7C5CFF`.

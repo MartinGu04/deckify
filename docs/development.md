@@ -33,7 +33,8 @@ Individual steps: `npm run typecheck`, `npm run lint`, `npm test`, `npm run vali
   - a Spotify Account key renders *Not Configured*;
   - Play / Pause, Volume Up, Mute / Unmute, Like / Unlike, Add to Playlist and Play Playlist keys render *Connect*.
 - **`npm run assets`** regenerates image exports:
-  - the development plugin icon PNGs from `assets/brand/`;
+  - the brand masters in `assets/brand/` and every brand export (plugin icon, category and Status icons, Status key images, Marketplace
+    app icon), all generated from `scripts/brand.mjs` (`scripts/export-brand-assets.mjs`);
   - the volume / Like / playlist key images (`scripts/export-key-icons.mjs`);
   - the README overview illustration (`scripts/export-deck-overview.mjs`).
 
@@ -184,7 +185,7 @@ com.marting.deckify.sdPlugin/
   ui/                       Property Inspectors: spotify-account/, volume/, playlist/ (shared picker), shared/ stylesheet
   bin/, logs/               build output (plugin.js, native/deckify-media-bridge.exe) and runtime logs (git-ignored)
 native/media-bridge/        Rust helper: GSMTC Spotify session selection and commands
-assets/brand/               development-era Deckify brand files (see its README)
+assets/brand/               Deckify brand masters (B1) and the Marketplace app icon; archive/ keeps the retired development-era mark
 docs/                       architecture, privacy, history, launch audits, brand review, media capture guide
 scripts/                    asset generators, smoke test, dev-only token expiry helper, native build, pack + package verification
 test/                       Vitest suite (Spotify HTTP fully mocked)

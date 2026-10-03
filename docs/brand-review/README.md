@@ -1,8 +1,8 @@
 # Deckify brand review
 
-> **Status: B1 · Frame D is the selected Deckify brand direction.** B2 and B3 are rejected; Concepts A and C were set aside earlier.
-> B1 has had its final refinement (a larger key grid), shown below. The production files (plugin icon, key images, README hero) are
-> **not replaced yet**; that is the next step, after the final geometry and the export list are confirmed.
+> **Status: B1 · Frame D is the approved Deckify brand and is in production.** B2 and B3 were rejected; Concepts A and C were set aside
+> earlier. The production masters live in [`assets/brand/`](../../assets/brand/README.md), generated from `scripts/brand.mjs`. This
+> folder keeps the review history.
 
 ## Final B1 geometry
 
@@ -46,7 +46,7 @@ same D proportions.
 
 ## Why a new mark
 
-The development-era Deckify mark (`assets/brand/deckify-icon.png`, `deckify-logo.png`) is a green "D" with three curved sound lines. That
+The development-era Deckify mark (now archived in `assets/brand/archive/development-era/`) is a green "D" with three curved sound lines. That
 leans on Spotify's own brand elements: Spotify Green and the three "waves" of the Spotify icon. Spotify's Design & Branding Guidelines don't
 allow a third-party app's logo to include or look similar to Spotify brand elements, so that mark can't be Deckify's public identity.
 
@@ -179,14 +179,15 @@ Concepts A and C are no longer primary directions. Concept B below is the round-
 
 The accent colours are suggestions; any concept can take another accent as long as it stays clearly away from Spotify Green.
 
-## After a variant is approved
+## Production rollout (done)
 
-1. Final vector master of the mark and wordmark (outlined type) in `assets/brand/`. The development-era files stay there, labelled.
-2. Production exports:
-   - plugin icon 256×256 / 512×512;
-   - Marketplace icon 288×288;
-   - category icon 28×28 / 56×56 and the Deckify Status action icon 20×20 / 40×40 (monochrome white, transparent);
-   - the Status key image.
-3. The key-image accent (today `#22D46E`, close to Spotify Green) changes to the approved accent in `scripts/export-key-icons.mjs` and the
-   playback / account key SVGs. The tests that keep generated images in sync cover that step.
-4. A README hero and Marketplace gallery images built from the approved mark. Spotify's logo is never part of them.
+1. **Masters:** the vector masters of the symbol, lockups (outlined wordmark) and pixel-grid glyphs are in `assets/brand/`. The
+   development-era files are archived in `assets/brand/archive/development-era/`.
+2. **Production exports:**
+   - plugin icon 256×256 / 512×512 and Marketplace app icon 288×288 (the symbol on the charcoal tile);
+   - category icon 28×28 and Deckify Status action icon 20×20 (the pixel-grid glyphs, white on transparent);
+   - the Status key images.
+3. **Key accent:** the former green `#22D46E` became Deckify violet in the key artwork, Now Playing, the Property Inspectors and the sign-in
+   page.
+4. **README hero:** uses the light and dark lockups.
+5. **Still waiting for real product media:** the Marketplace thumbnail and gallery. Spotify's logo is never part of them.

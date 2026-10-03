@@ -30,7 +30,7 @@ function prose(markdown: string): string {
 /** Local link and image targets in a Markdown file. */
 function localTargets(markdown: string): string[] {
 	const text = prose(markdown);
-	const targets = [...text.matchAll(/\]\(([^)\s]+)\)/g), ...text.matchAll(/\b(?:src|href)="([^"]+)"/g)].map((m) => m[1] ?? "");
+	const targets = [...text.matchAll(/\]\(([^)\s]+)\)/g), ...text.matchAll(/\b(?:src|srcset|href)="([^"]+)"/g)].map((m) => m[1] ?? "");
 	return targets.filter((target) => !/^(https?:|mailto:)/.test(target));
 }
 
@@ -72,7 +72,8 @@ describe("documentation links and images", () => {
 	it("reference only local images that exist (no placeholders)", async () => {
 		const readme = await read("README.md");
 		const images = localTargets(readme).filter((target) => /\.(svg|png|gif|jpe?g|webp|mp4)$/i.test(target));
-		expect(images).toEqual(["docs/media/deck-layout-overview.svg"]);
+		// The B1 logo (light and dark variants) and the layout illustration.
+		expect(images.sort()).toEqual(["assets/brand/deckify-logo-on-dark.svg", "assets/brand/deckify-logo.svg", "docs/media/deck-layout-overview.svg"]);
 		for (const image of images) {
 			expect(existsSync(path.join(ROOT, image)), image).toBe(true);
 		}

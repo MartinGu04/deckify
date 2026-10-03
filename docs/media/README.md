@@ -9,7 +9,7 @@ Images and captures for the README, releases and (later) the Marketplace listing
 - **Artwork.** No album artwork or Spotify logo used as decoration. Spotify's icon appears only where Deckify really shows it (Now
   Playing) or in the playlist picker's attribution.
 - **No placeholders.** The README links a file only once it exists, so it never has broken images.
-- **Brand.** The development-era Deckify mark must not appear in public media (see [brand review](../brand-review/README.md)).
+- **Brand.** Use the approved B1 logo from [`assets/brand/`](../../assets/brand/README.md). The archived development-era mark must never appear.
 
 ## What exists
 
@@ -63,6 +63,19 @@ Output: `docs/media/playlist-picker.png`.
 
 A short clip of Deckify controlling Spotify on a phone or speaker (Play Playlist, volume) with the desktop app closed. Hide the phone's
 notifications. Output: `docs/media/remote-connect.gif` or `.mp4`.
+
+### 5. Marketplace thumbnail and gallery (1920×960)
+
+- **Rule:** Elgato's Marketplace thumbnail must show the product and its functionality, so it waits for the captures above. A brand-only
+  image is not a thumbnail.
+- **Format:** each image is a 1920×960 PNG with English text.
+- **Content:**
+  - real media only: the MK.2 capture (1), the Stream Deck app (2) and the playlist picker (3);
+  - the B1 logo from `assets/brand/`, with no Spotify logo used as decoration and no claim of endorsement;
+  - no fabricated device or screenshot.
+- **Output:** `assets/brand/marketplace/deckify-thumbnail-1920x960.png` and `deckify-gallery-<n>-1920x960.png`.
+
+The 288×288 Marketplace app icon already exists (`assets/brand/marketplace/deckify-app-icon-288.png`).
 
 ## Adding media to the README
 
