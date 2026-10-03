@@ -166,8 +166,9 @@ Code: `src/experiences/experiences.ts` (plugin side), `com.marting.deckify.sdPlu
 
 - **Now Playing:** shows Spotify's official icon next to Spotify metadata. A press opens the current song or episode on
   `open.spotify.com`; the link is built only from a valid item URI.
-- **Playlist picker:** shows Spotify's official full logo. **Open in Spotify** accepts only `https://open.spotify.com/playlist/<same id>`
-  links.
+- **Playlist picker:** shows Spotify's official full logo. The selected playlist and every playlist row have **Open in Spotify**; the
+  plugin opens only `https://open.spotify.com/playlist/<same id>` links, and only for the selected playlist or a playlist the picker offers.
+- **Playlist keys:** show Deckify's own labels (**Add to Playlist**, **Play Playlist**), never playlist names or other Spotify metadata.
 - **Deckify's own artwork:** key images and action icons never include Spotify branding.
 
 ## Tests

@@ -319,7 +319,7 @@ describe("Like / Unlike presses", () => {
 	it("likes a track that is not saved (PUT) and fills the heart", async () => {
 		const ctx = setup();
 		await tick();
-		await expect(ctx.library.toggle()).resolves.toBe("done");
+		await expect(ctx.library.toggle()).resolves.toBe("added");
 		expect(ctx.control.calls).toEqual(["contains:spotify:track:songA", "save:spotify:track:songA"]);
 		expect(ctx.control.saved.has(URI_A)).toBe(true);
 		expect(ctx.library.state.value).toMatchObject({ saved: true, pending: false });
@@ -328,7 +328,7 @@ describe("Like / Unlike presses", () => {
 	it("unlikes a saved track (DELETE) and empties the heart", async () => {
 		const ctx = setup({ saved: [URI_A] });
 		await tick();
-		await ctx.library.toggle();
+		await expect(ctx.library.toggle()).resolves.toBe("removed");
 		expect(ctx.control.calls).toEqual(["contains:spotify:track:songA", "remove:spotify:track:songA"]);
 		expect(ctx.library.state.value.saved).toBe(false);
 	});
@@ -350,7 +350,7 @@ describe("Like / Unlike presses", () => {
 		expect(ctx.library.state.value.pending).toBe(true);
 		await expect(ctx.library.toggle()).resolves.toBe("busy");
 		ctx.control.release();
-		await expect(first).resolves.toBe("done");
+		await expect(first).resolves.toBe("added");
 		expect(ctx.control.calls.filter((c) => !c.startsWith("contains:"))).toEqual(["save:spotify:track:songA"]);
 		expect(ctx.library.state.value.saved).toBe(true);
 

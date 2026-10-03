@@ -1,4 +1,4 @@
-import { isPlaylistId, playlistIdFromUri, type Playlist } from "../playlists/model";
+import { isPlaylistId, playlistIdFromUri, toSpotifyPlaylistUrl, type Playlist } from "../playlists/model";
 import type { PlaylistLookup, PlaylistSnapshot } from "../playlists/service";
 import type { PlaylistSelection } from "../playlists/selection";
 
@@ -17,7 +17,7 @@ export type PlaylistInspectorRequest =
 	| { readonly type: "deckify:playlist:list"; readonly requestId: string }
 	| { readonly type: "deckify:playlist:refresh"; readonly requestId: string }
 	| { readonly type: "deckify:playlist:select"; readonly requestId: string; readonly playlistId: string; readonly playlistUri: string }
-	| { readonly type: "deckify:playlist:open"; readonly requestId: string };
+	| { readonly type: "deckify:playlist:open"; readonly requestId: string; readonly playlistId?: string };
 
 const REQUEST_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
@@ -26,7 +26,7 @@ const ALLOWED_KEYS: Record<PlaylistInspectorRequest["type"], readonly string[]> 
 	"deckify:playlist:list": ["type", "requestId"],
 	"deckify:playlist:refresh": ["type", "requestId"],
 	"deckify:playlist:select": ["type", "requestId", "playlistId", "playlistUri"],
-	"deckify:playlist:open": ["type", "requestId"],
+	"deckify:playlist:open": ["type", "requestId", "playlistId"],
 };
 
 /**
@@ -54,8 +54,15 @@ export function parsePlaylistInspectorRequest(payload: unknown): PlaylistInspect
 	switch (type) {
 		case "deckify:playlist:list":
 		case "deckify:playlist:refresh":
-		case "deckify:playlist:open":
 			return { type, requestId };
+		case "deckify:playlist:open": {
+			// Without a playlist ID: the key's selected playlist. With one: a row of the list (validated against the list by the plugin).
+			const { playlistId } = message;
+			if (playlistId === undefined) {
+				return { type, requestId };
+			}
+			return isPlaylistId(playlistId) ? { type, requestId, playlistId } : undefined;
+		}
 		case "deckify:playlist:select": {
 			const { playlistId, playlistUri } = message;
 			if (!isPlaylistId(playlistId) || playlistIdFromUri(playlistUri) !== playlistId) {
@@ -68,7 +75,10 @@ export function parsePlaylistInspectorRequest(payload: unknown): PlaylistInspect
 	}
 }
 
-/** A playlist as the Property Inspector sees it: display data only (no links, no snapshot, no raw Spotify data). */
+/**
+ * A playlist as the Property Inspector sees it: display data only (no links, no snapshot, no raw Spotify data). `canOpen` says whether the
+ * plugin has a validated Spotify link for it, so the row can offer Open in Spotify (the plugin opens the link, never the page).
+ */
 export type InspectorPlaylist = {
 	readonly id: string;
 	readonly uri: string;
@@ -78,6 +88,7 @@ export type InspectorPlaylist = {
 	readonly collaborative: boolean;
 	readonly public: boolean | null;
 	readonly itemCount: number | null;
+	readonly canOpen: boolean;
 };
 
 /** State of the selected playlist shown in the picker. */
@@ -139,7 +150,7 @@ export function buildInspectorState(options: {
 			name: playlist?.name ?? selection.playlistName ?? "",
 			owner: playlist === undefined ? null : ownerLabel(playlist, userId),
 			state,
-			canOpen: playlist?.spotifyUrl !== undefined && state !== "unavailable",
+			canOpen: playlist !== undefined && toSpotifyPlaylistUrl(playlist.spotifyUrl, playlist.id) !== undefined && state !== "unavailable",
 		};
 	}
 	return {
@@ -170,6 +181,7 @@ function toInspectorPlaylist(playlist: Playlist, userId: string | undefined): In
 		collaborative: playlist.collaborative,
 		public: playlist.public ?? null,
 		itemCount: playlist.itemCount ?? null,
+		canOpen: toSpotifyPlaylistUrl(playlist.spotifyUrl, playlist.id) !== undefined,
 	};
 }
 

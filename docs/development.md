@@ -67,8 +67,8 @@ npm run watch         # optional: rebuild and restart automatically on every cha
 ```
 
 - **To undo the link:** `npx streamdeck unlink com.marting.deckify`.
-- **Debugging:** the manifest enables Node.js debugging (`Nodejs.Debug`). Use the **Attach to Plugin** VS Code launch configuration to
-  attach a debugger.
+- **Debugging:** the committed manifest enables Node.js debugging (`Nodejs.Debug: "enabled"`) for development. Use the **Attach to Plugin**
+  VS Code launch configuration to attach a debugger. Release packages never include it (see [Package](#package)).
 
 ## Package
 
@@ -78,16 +78,19 @@ npm run pack          # builds the native helper (Windows), bundles, packs and v
 
 1. **On Windows,** `npm run pack` builds the release helper and stages it at
    `com.marting.deckify.sdPlugin/bin/native/deckify-media-bridge.exe`.
-2. It runs the Stream Deck CLI pack, which validates the manifest.
+2. It runs the Stream Deck CLI pack, which validates the manifest, on a temporary copy of the plugin folder whose manifest has no
+   `Nodejs.Debug`: the released plugin never starts with a Node.js inspector. The committed manifest is not modified.
 3. It checks that the package contains:
    - `bin/plugin.js` and the manifest;
    - every file the manifest references;
    - every generated key image;
    - the Spotify attribution images;
    - the Property Inspector scripts and styles;
-   - on Windows, the helper.
+   - on Windows, the helper;
+   - a manifest that does not enable Node.js debugging and otherwise matches the committed one (read back from the package).
 
-   It fails if anything is missing.
+   It fails if anything is missing or wrong. `test/release-package.test.ts` packs the plugin folder the same way and checks the packaged
+   manifest.
 4. **On other systems** it packs without the helper (Web API only).
 
 - **Not in the package:** only `com.marting.deckify.sdPlugin/` is packed, so `docs/` (including the brand-review concepts and media) and

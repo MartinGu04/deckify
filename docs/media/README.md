@@ -51,7 +51,7 @@ A screenshot of the Stream Deck app's actions list with the **Deckify** category
 
 A screenshot of an Add to Playlist or Play Playlist Property Inspector showing:
 
-- a selected playlist and **Open in Spotify**;
+- a selected playlist and **Open in Spotify** (the selected playlist and each row);
 - search in use;
 - paging ("1–20 of N") with Previous / Next;
 - the Spotify logo and *Playlist information provided by Spotify*;

@@ -16,43 +16,14 @@ export type PlaylistKeyContext = {
 	readonly feedback: string | undefined;
 };
 
-/** Characters per title line that stay legible on a 72×72 MK.2 key. */
-const TITLE_LINE = 10;
-
 /**
- * Shortens a playlist name for a key title (display only; the stored name is never changed): up to two lines, wrapped at spaces, with an
- * ellipsis when it does not fit.
- * @param name Playlist name.
- * @returns The title.
+ * Deckify's own titles for the playlist keys. A key never shows the playlist's name or any other Spotify metadata: the chosen playlist is
+ * shown, with Spotify's attribution and a link back to Spotify, only in the Property Inspector.
  */
-export function playlistKeyTitle(name: string): string {
-	const text = name.replace(/\s+/g, " ").trim();
-	if (text.length === 0) {
-		return "Playlist";
-	}
-	if (text.length <= TITLE_LINE) {
-		return text;
-	}
-	const lines: string[] = [];
-	let rest = text;
-	while (rest.length > 0 && lines.length < 2) {
-		if (rest.length <= TITLE_LINE) {
-			lines.push(rest);
-			rest = "";
-			break;
-		}
-		const space = rest.lastIndexOf(" ", TITLE_LINE);
-		const cut = space > 0 ? space : TITLE_LINE;
-		lines.push(rest.slice(0, cut).trim());
-		rest = rest.slice(cut).trim();
-	}
-	if (rest.length > 0) {
-		// Fill the last line with as much of the remaining text as fits, then the ellipsis.
-		const last = `${lines.pop() ?? ""} ${rest}`;
-		lines.push(`${last.slice(0, TITLE_LINE - 1).trimEnd()}…`);
-	}
-	return lines.join("\n");
-}
+export const PLAYLIST_KEY_TITLES = {
+	add: "Add to\nPlaylist",
+	play: "Play\nPlaylist",
+} as const;
 
 /**
  * The status shared by both playlist keys before anything playlist-specific: account, Premium, selection and availability.
@@ -74,16 +45,6 @@ function commonStatus(ctx: PlaylistKeyContext, mode: "add" | "play"): string | u
 		return "Unavailable";
 	}
 	return undefined;
-}
-
-/**
- * The name shown on a key: the current name from Spotify when known, otherwise the cached one.
- * @param ctx Context.
- * @returns The title.
- */
-function nameTitle(ctx: PlaylistKeyContext): string {
-	const name = ctx.lookup?.status === "found" ? ctx.lookup.playlist.name : (ctx.selection?.playlistName ?? "");
-	return playlistKeyTitle(name);
 }
 
 /**
@@ -110,9 +71,9 @@ export function addToPlaylistView(ctx: PlaylistKeyContext): KeyView {
 		return { image: `${IMG}/add-disabled.svg`, title: "Track Only" };
 	}
 	if (kind === "none") {
-		return { image: `${IMG}/add-disabled.svg`, title: ctx.playback.availability === "inactive" ? "No Track" : nameTitle(ctx) };
+		return { image: `${IMG}/add-disabled.svg`, title: ctx.playback.availability === "inactive" ? "No Track" : PLAYLIST_KEY_TITLES.add };
 	}
-	return { image: `${IMG}/add.svg`, title: nameTitle(ctx) };
+	return { image: `${IMG}/add.svg`, title: PLAYLIST_KEY_TITLES.add };
 }
 
 /**
@@ -140,5 +101,5 @@ export function playPlaylistView(ctx: PlaylistKeyContext): KeyView {
 	if (ctx.playback.availability === "inactive") {
 		return { image: `${IMG}/play-disabled.svg`, title: "No Device" };
 	}
-	return { image: `${IMG}/play.svg`, title: nameTitle(ctx) };
+	return { image: `${IMG}/play.svg`, title: PLAYLIST_KEY_TITLES.play };
 }

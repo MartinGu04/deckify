@@ -41,7 +41,7 @@ const info = {
 	colors: {},
 	devicePixelRatio: 2,
 	devices: [{ id: device, name: "Stream Deck MK.2 (simulated)", size: { columns: 5, rows: 3 }, type: 7 }],
-	plugin: { uuid: "com.marting.deckify", version: "0.1.0.0" },
+	plugin: { uuid: "com.marting.deckify", version: "1.0.0.0" },
 };
 
 const received = [];

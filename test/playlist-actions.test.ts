@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { buildInspectorState, parsePlaylistInspectorRequest, type PlaylistInspectorState } from "../src/actions/playlist-inspector";
-import { playlistKeyTitle } from "../src/actions/playlist-views";
+import { PLAYLIST_KEY_TITLES } from "../src/actions/playlist-views";
 import { FAKE, json } from "./helpers";
 import { episodeItem, playerState, trackItem } from "./playback-fixtures";
 import { ME, pid, playlist, playlistSetup, tid } from "./playlist-fixtures";
@@ -95,7 +95,12 @@ describe("playlist picker protocol", () => {
 	it("accepts the four known requests", () => {
 		expect(parsePlaylistInspectorRequest({ type: "deckify:playlist:list", requestId: "pi-1" })).toEqual({ type: "deckify:playlist:list", requestId: "pi-1" });
 		expect(parsePlaylistInspectorRequest({ type: "deckify:playlist:refresh", requestId: "pi-2" })).toBeDefined();
-		expect(parsePlaylistInspectorRequest({ type: "deckify:playlist:open", requestId: "pi-3" })).toBeDefined();
+		expect(parsePlaylistInspectorRequest({ type: "deckify:playlist:open", requestId: "pi-3" })).toEqual({ type: "deckify:playlist:open", requestId: "pi-3" });
+		expect(parsePlaylistInspectorRequest({ type: "deckify:playlist:open", requestId: "pi-3", playlistId: GYM })).toEqual({
+			type: "deckify:playlist:open",
+			requestId: "pi-3",
+			playlistId: GYM,
+		});
 		expect(parsePlaylistInspectorRequest({ type: "deckify:playlist:select", requestId: "pi-4", playlistId: GYM, playlistUri: `spotify:playlist:${GYM}` })).toEqual({
 			type: "deckify:playlist:select",
 			requestId: "pi-4",
@@ -114,6 +119,10 @@ describe("playlist picker protocol", () => {
 		["a URL instead of a URI", { type: "deckify:playlist:select", requestId: "x", playlistId: GYM, playlistUri: `https://open.spotify.com/playlist/${GYM}` }],
 		["an ID and URI that do not match", { type: "deckify:playlist:select", requestId: "x", playlistId: GYM, playlistUri: `spotify:playlist:${GYM_TWO}` }],
 		["a name instead of an ID", { type: "deckify:playlist:select", requestId: "x", playlistId: "Gym", playlistUri: "spotify:playlist:Gym" }],
+		["a malicious playlist ID to open", { type: "deckify:playlist:open", requestId: "x", playlistId: "../../me/player" }],
+		["a link to open", { type: "deckify:playlist:open", requestId: "x", playlistId: `https://open.spotify.com/playlist/${GYM}` }],
+		["a URI to open", { type: "deckify:playlist:open", requestId: "x", playlistId: `spotify:playlist:${GYM}` }],
+		["a URL key on open", { type: "deckify:playlist:open", requestId: "x", url: "https://evil.example" }],
 		["not an object", "deckify:playlist:list"],
 		["an array", [{ type: "deckify:playlist:list", requestId: "x" }]],
 	])("rejects %s", (_name, payload) => {
@@ -128,7 +137,30 @@ describe("playlist picker protocol", () => {
 		for (const secret of [FAKE.accessToken, FAKE.refreshToken, FAKE.clientId, "snap-", "https://", "Authorization"]) {
 			expect(text).not.toContain(secret);
 		}
-		expect(Object.keys(state.playlists[0] ?? {}).sort()).toEqual(["collaborative", "id", "itemCount", "mine", "name", "owner", "public", "uri"]);
+		expect(Object.keys(state.playlists[0] ?? {}).sort()).toEqual(["canOpen", "collaborative", "id", "itemCount", "mine", "name", "owner", "public", "uri"]);
+	});
+
+	it("marks every row with a validated Spotify link as openable, and no other row", async () => {
+		const ctx = setup();
+		ctx.server.respondOnce(
+			(r) => r.url.pathname === "/v1/me/playlists",
+			() =>
+				json(200, {
+					items: [
+						{ id: GYM, name: "Gym", owner: { id: ME }, collaborative: false, external_urls: { spotify: `https://open.spotify.com/playlist/${GYM}` } },
+						{ id: GYM_TWO, name: "Gym", owner: { id: ME }, collaborative: false, external_urls: { spotify: "https://evil.example/playlist/x" } },
+						{ id: FOLLOWED, name: "Top Hits", owner: { id: "spotify" }, collaborative: false },
+					],
+					total: 3,
+				}),
+		);
+		await ctx.playlists.getPlaylists();
+		const state = buildInspectorState({ requestId: null, mode: "play", snapshot: ctx.playlists.state.value, userId: ME, selection: undefined, lookup: undefined });
+		expect(state.playlists.map((p) => [p.id, p.canOpen])).toEqual([
+			[GYM, true],
+			[GYM_TWO, false],
+			[FOLLOWED, false],
+		]);
 	});
 
 	it("offers only writable playlists for Add and all playlists for Play", async () => {
@@ -233,6 +265,30 @@ describe("playlist picker", () => {
 		expect(ctx.inspector.openUrl).toHaveBeenCalledWith(`https://open.spotify.com/playlist/${GYM}`);
 	});
 
+	it("opens a row's validated Spotify link, only for playlists the picker offers", async () => {
+		const ctx = setup();
+		const key = fakeKey("k");
+		await place(ctx.add, key);
+		ctx.inspector.openKey = "k";
+		await message(ctx.add, key, { type: "deckify:playlist:list", requestId: "pi-1" });
+		await message(ctx.add, key, { type: "deckify:playlist:open", requestId: "pi-2", playlistId: GYM_TWO });
+		expect(ctx.inspector.openUrl).toHaveBeenLastCalledWith(`https://open.spotify.com/playlist/${GYM_TWO}`);
+		// Add to Playlist offers no followed playlists, and nothing outside the list is ever opened.
+		for (const playlistId of [FOLLOWED, pid("Unknown")]) {
+			await message(ctx.add, key, { type: "deckify:playlist:open", requestId: "pi-3", playlistId });
+			expect(ctx.last()?.message).toBe("This playlist has no Spotify link.");
+		}
+		expect(ctx.inspector.openUrl).toHaveBeenCalledTimes(1);
+		expect(key.setSettings).not.toHaveBeenCalled();
+
+		const playKey = fakeKey("p");
+		await place(ctx.play, playKey);
+		ctx.inspector.openKey = "p";
+		await message(ctx.play, playKey, { type: "deckify:playlist:open", requestId: "pi-4", playlistId: FOLLOWED });
+		expect(ctx.inspector.openUrl).toHaveBeenLastCalledWith(`https://open.spotify.com/playlist/${FOLLOWED}`);
+		expect(playKey.setSettings).not.toHaveBeenCalled();
+	});
+
 	it("never opens a link Spotify sent for another site", async () => {
 		const ctx = setup();
 		ctx.server.respondOnce(
@@ -248,7 +304,9 @@ describe("playlist picker", () => {
 		ctx.inspector.openKey = "k";
 		await message(ctx.play, key, { type: "deckify:playlist:list", requestId: "pi-1" });
 		expect(ctx.last()?.selected?.canOpen).toBe(false);
+		expect(ctx.last()?.playlists[0]?.canOpen).toBe(false);
 		await message(ctx.play, key, { type: "deckify:playlist:open", requestId: "pi-2" });
+		await message(ctx.play, key, { type: "deckify:playlist:open", requestId: "pi-3", playlistId: GYM });
 		expect(ctx.inspector.openUrl).not.toHaveBeenCalled();
 	});
 
@@ -316,19 +374,19 @@ describe("Add to Playlist key", () => {
 		expect(ctx.calls("POST", /items$/)).toHaveLength(0);
 	});
 
-	it("shows the playlist name, adds the song with brief Added feedback, then Already Added", async () => {
+	it("shows Deckify's own title, adds the song with brief Added feedback, then Already Added", async () => {
 		const ctx = setup();
 		const key = fakeKey("k", settingsFor(GYM));
 		await place(ctx.add, key);
 		await tick();
-		expect(key.setTitle).toHaveBeenLastCalledWith("Gym");
+		expect(key.setTitle).toHaveBeenLastCalledWith("Add to\nPlaylist");
 		expect(key.setImage).toHaveBeenLastCalledWith("imgs/actions/playlist/add.svg");
 
 		await press(ctx.add, key);
 		expect(key.setTitle).toHaveBeenLastCalledWith("Added");
 		expect(key.showOk).toHaveBeenCalledTimes(1);
 		await tick(1_600);
-		expect(key.setTitle).toHaveBeenLastCalledWith("Gym");
+		expect(key.setTitle).toHaveBeenLastCalledWith("Add to\nPlaylist");
 
 		await press(ctx.add, key);
 		expect(key.setTitle).toHaveBeenLastCalledWith("Already\nAdded");
@@ -377,7 +435,7 @@ describe("Add to Playlist key", () => {
 		expect(ctx.calls("POST", /items$/)).toHaveLength(0);
 	});
 
-	it("updates the cached name when the playlist is renamed, keeping the same ID", async () => {
+	it("updates the cached name when the playlist is renamed, keeping the same ID and the key title", async () => {
 		const ctx = setup();
 		const key = fakeKey("k", settingsFor(GYM));
 		await place(ctx.add, key);
@@ -389,7 +447,8 @@ describe("Add to Playlist key", () => {
 		await ctx.playlists.getPlaylists({ force: true });
 		await tick();
 		expect(key.setSettings).toHaveBeenLastCalledWith({ playlistId: GYM, playlistUri: `spotify:playlist:${GYM}`, playlistName: "Gym 2026" });
-		expect(key.setTitle).toHaveBeenLastCalledWith("Gym 2026");
+		expect(key.setTitle).toHaveBeenLastCalledWith("Add to\nPlaylist");
+		expect(key.setTitle.mock.calls.flat()).not.toContain("Gym 2026");
 	});
 
 	it("shows Connect, Reconnect and Premium like the other keys", async () => {
@@ -416,8 +475,8 @@ describe("Play Playlist key", () => {
 		const second = fakeKey("b", settingsFor(FOLLOWED, "Top Hits"));
 		await place(ctx.play, first, second);
 		await tick();
-		expect(first.setTitle).toHaveBeenLastCalledWith("Gym");
-		expect(second.setTitle).toHaveBeenLastCalledWith("Top Hits");
+		expect(first.setTitle).toHaveBeenLastCalledWith("Play\nPlaylist");
+		expect(second.setTitle).toHaveBeenLastCalledWith("Play\nPlaylist");
 
 		await press(ctx.play, first);
 		expect(first.setTitle).toHaveBeenLastCalledWith("Started");
@@ -448,10 +507,23 @@ describe("Play Playlist key", () => {
 });
 
 describe("key titles", () => {
-	it("keeps short names, wraps longer ones to two lines and never alters the stored name", () => {
-		expect(playlistKeyTitle("Gym")).toBe("Gym");
-		expect(playlistKeyTitle("Road Trip Mix")).toBe("Road Trip\nMix");
-		expect(playlistKeyTitle("A very long playlist name indeed")).toBe("A very\nlong play…");
-		expect(playlistKeyTitle("   ")).toBe("Playlist");
+	it("are Deckify's own labels, never the playlist name or other Spotify metadata", async () => {
+		expect(PLAYLIST_KEY_TITLES).toEqual({ add: "Add to\nPlaylist", play: "Play\nPlaylist" });
+		const ctx = setup();
+		const keys = [fakeKey("a", settingsFor(GYM)), fakeKey("b", settingsFor(pid("Collab"), "Road Trip")), fakeKey("c", settingsFor(FOLLOWED, "Top Hits"))];
+		await place(ctx.add, ...keys.slice(0, 2));
+		await place(ctx.play, ...keys);
+		await tick();
+		for (const key of keys) {
+			await press(ctx.play, key);
+			await tick(1_600);
+			const titles = key.setTitle.mock.calls.flat().join("\n");
+			for (const metadata of ["Gym", "Road Trip", "Top Hits", "Friend", "Spotify", ME]) {
+				expect(titles, key.id).not.toContain(metadata);
+			}
+		}
+		// The selection itself is stored exactly as before (ID, URI and the display-only name cache).
+		expect(keys[2]?.settings).toEqual(settingsFor(FOLLOWED, "Top Hits"));
+		expect(ctx.server.played).toHaveLength(3);
 	});
 });

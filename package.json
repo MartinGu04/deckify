@@ -1,6 +1,6 @@
 {
 	"name": "deckify",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"private": true,
 	"description": "A dynamic Spotify control center for Elgato Stream Deck.",
 	"author": "MARTIN.G",

@@ -49,9 +49,10 @@ export abstract class PlaybackKeyAction extends SingletonAction {
 	/**
 	 * Builds the key content for a state.
 	 * @param snapshot Playback state.
+	 * @param keyId The key being rendered (for per-key content such as press feedback).
 	 * @returns The content.
 	 */
-	protected abstract view(snapshot: PlaybackSnapshot): RenderedKey;
+	protected abstract view(snapshot: PlaybackSnapshot, keyId: string): RenderedKey;
 
 	/**
 	 * Registers the key as a viewer (starting shared polling if needed) and renders it.
@@ -120,7 +121,7 @@ export abstract class PlaybackKeyAction extends SingletonAction {
 	 * @param snapshot Playback state.
 	 */
 	async #render(key: KeyAction<JsonObject>, snapshot: PlaybackSnapshot): Promise<void> {
-		const { image, title } = this.view(snapshot);
+		const { image, title } = this.view(snapshot, key.id);
 		const signature = `${image}\u0000${title}`;
 		if (this.#lastRender.get(key.id) === signature) {
 			return;

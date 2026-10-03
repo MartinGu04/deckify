@@ -22,7 +22,14 @@ input[type="search"] {
 	display: none;
 }
 
-.playlist-list li button {
+.playlist-list li {
+	display: flex;
+	align-items: center;
+}
+
+.playlist-list li button[role="option"] {
+	flex: 1;
+	min-width: 0;
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
@@ -33,12 +40,19 @@ input[type="search"] {
 	text-align: left;
 }
 
-.playlist-list li button:hover {
+.playlist-list li button[role="option"]:hover {
 	background: #4a4a4a;
 }
 
 .playlist-list li button[aria-selected="true"] {
 	box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.playlist-list li .open-row {
+	flex: none;
+	margin: 0 6px;
+	padding: 2px 6px;
+	font-size: 8pt;
 }
 
 .playlist-name {

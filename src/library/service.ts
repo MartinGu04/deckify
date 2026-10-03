@@ -1,5 +1,4 @@
 import { PlaybackUnavailableError } from "../playback/errors";
-import type { CommandOutcome } from "../playback/service";
 import type { PlaybackSnapshot } from "../playback/state";
 import { Observable } from "../shared/observable";
 import { silentLogger, type Logger } from "../shared/logger";
@@ -33,6 +32,9 @@ export const LibraryTiming = {
 } as const;
 
 export type LibraryTimingOptions = { readonly [K in keyof typeof LibraryTiming]: number };
+
+/** What a Like / Unlike press did: added the track to Liked Songs, removed it, or nothing (`"busy"`: another press is in flight). */
+export type LikeOutcome = "added" | "removed" | "busy";
 
 /**
  * Dependencies of {@link LibraryService}.
@@ -90,7 +92,7 @@ export class LibraryService {
 	#generation = 0;
 	#checking: { readonly uri: string; readonly generation: number } | undefined;
 
-	#mutation: Promise<void> | undefined;
+	#mutation: Promise<boolean> | undefined;
 	#mutationUri: string | undefined;
 
 	#blockedUntil = 0;
@@ -153,10 +155,10 @@ export class LibraryService {
 	 * Likes the current track when it is not in Liked Songs, otherwise unlikes it. An unknown saved state is checked first; nothing is guessed.
 	 *
 	 * While a like / unlike is in flight, further presses are ignored (`"busy"`), so a quick double press never undoes itself.
-	 * @returns `"done"` on success; `"busy"` when ignored.
+	 * @returns `"added"` when the track was added to Liked Songs, `"removed"` when it was removed; `"busy"` when ignored.
 	 * @throws {SpotifyError} When the current item cannot be liked or the request fails.
 	 */
-	async toggle(): Promise<CommandOutcome> {
+	async toggle(): Promise<LikeOutcome> {
 		if (!this.#signedIn) {
 			throw new PlaybackUnavailableError("Connect Spotify in the Spotify Account key first.");
 		}
@@ -182,8 +184,7 @@ export class LibraryService {
 		this.#mutationUri = uri;
 		this.#publish();
 		try {
-			await run;
-			return "done";
+			return (await run) ? "added" : "removed";
 		} finally {
 			this.#mutation = undefined;
 			this.#mutationUri = undefined;
@@ -204,8 +205,9 @@ export class LibraryService {
 	/**
 	 * Likes or unlikes one track (see {@link toggle}).
 	 * @param uri The track playing when the key was pressed.
+	 * @returns `true` when the track was added to Liked Songs; `false` when it was removed.
 	 */
-	async #runToggle(uri: string): Promise<void> {
+	async #runToggle(uri: string): Promise<boolean> {
 		// Answers to checks that started before this request must not overwrite its result.
 		this.#generation++;
 		try {
@@ -223,6 +225,7 @@ export class LibraryService {
 				this.#needsCheck = false;
 			}
 			// Otherwise another track started meanwhile: its own state is shown and checked separately.
+			return !saved;
 		} catch (err) {
 			this.#handleError(err, "Liking or unliking the current track failed");
 			if (uri === this.#currentUri) {

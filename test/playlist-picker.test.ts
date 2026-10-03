@@ -33,6 +33,7 @@ type Playlist = {
 	collaborative: boolean;
 	public: boolean | null;
 	itemCount: number | null;
+	canOpen: boolean;
 };
 
 type State = {
@@ -49,7 +50,7 @@ type State = {
 const id = (n: number) => `P${String(n)}`.padEnd(22, "q");
 
 function playlist(n: number, name = `Playlist ${String(n)}`): Playlist {
-	return { id: id(n), uri: `spotify:playlist:${id(n)}`, name, owner: "You", mine: true, collaborative: false, public: true, itemCount: n };
+	return { id: id(n), uri: `spotify:playlist:${id(n)}`, name, owner: "You", mine: true, collaborative: false, public: true, itemCount: n, canOpen: true };
 }
 
 function playlists(count: number, name?: (n: number) => string): Playlist[] {
@@ -197,6 +198,7 @@ async function openPicker() {
 					meta: button.children[1]?.textContent,
 					selected: button.getAttribute("aria-selected") === "true",
 					button,
+					open: item.children[1],
 				};
 			});
 		},
@@ -363,6 +365,27 @@ describe("playlist picker paging", () => {
 });
 
 describe("Spotify attribution in the playlist picker", () => {
+	it("links every playlist row back to Spotify through the plugin, and the selected playlist too", async () => {
+		const picker = await openPicker();
+		const all = playlists(3);
+		all[1] = { ...playlist(2), canOpen: false };
+		picker.receive({ playlists: all, selected: { id: id(1), name: "Playlist 1", owner: "You", state: "ok", canOpen: true } });
+		const rows = picker.rows();
+		expect(rows.map((row) => row.open?.textContent)).toEqual(["Open in Spotify", undefined, "Open in Spotify"]);
+		expect(rows[0]?.open?.getAttribute("aria-label")).toBe("Open Playlist 1 in Spotify");
+
+		rows[2]?.open?.click();
+		expect(picker.requests().at(-1)).toEqual({ type: "deckify:playlist:open", requestId: expect.any(String) as string, playlistId: id(3) });
+		// Opening a row never changes the key's playlist.
+		expect(picker.requests().some((request) => request.type === "deckify:playlist:select")).toBe(false);
+
+		expect(picker.el("open").hidden).toBe(false);
+		picker.el("open").click();
+		expect(picker.requests().at(-1)).toEqual({ type: "deckify:playlist:open", requestId: expect.any(String) as string });
+		const html = await readFile(path.join(PICKER, "index.html"), "utf8");
+		expect(html).toContain('<button id="open" type="button" hidden>Open in Spotify</button>');
+	});
+
 	it("ships Spotify's official full logo, unmodified", async () => {
 		expect(SPOTIFY_LOGO).toBe("ui/playlist/Spotify_Full_Logo_RGB_White.png");
 		const logo = await readFile(path.join(PLUGIN, SPOTIFY_LOGO));

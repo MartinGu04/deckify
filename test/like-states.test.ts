@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { LIKE_KEY_IMAGES, likeKeyState, likeView } from "../src/actions/like-view";
+import { LIKE_FEEDBACK, LIKE_KEY_IMAGES, likeKeyState, likeView } from "../src/actions/like-view";
+import { ActionUUID } from "../src/identifiers";
 import { EMPTY_LIBRARY_SNAPSHOT, type LibrarySnapshot } from "../src/library/state";
 import { SIGNED_OUT_SNAPSHOT, type PlaybackSnapshot } from "../src/playback/state";
 
@@ -46,5 +47,15 @@ describe("Like / Unlike key states", () => {
 			checking: "imgs/actions/library/heart-unknown.svg",
 			unavailable: "imgs/actions/library/heart-disabled.svg",
 		});
+	});
+
+	it("keeps the image of the current state while Added / Removed is shown after a press", () => {
+		expect(LIKE_FEEDBACK).toEqual({ added: "Added", removed: "Removed" });
+		expect(likeView(playing, track({ saved: true }), "added")).toEqual({ image: LIKE_KEY_IMAGES.added, title: "Added" });
+		expect(likeView(playing, track({ saved: false }), "removed")).toEqual({ image: LIKE_KEY_IMAGES.add, title: "Removed" });
+	});
+
+	it("keeps the permanent Like / Unlike action UUID", () => {
+		expect(ActionUUID.Like).toBe("com.marting.deckify.spotify.like");
 	});
 });

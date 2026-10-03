@@ -218,3 +218,15 @@ state source and the fallback.
     keys, no images or personal data. `npm run pack` refuses to build without them.
 - **Verification:** automated tests cover the switcher, the server command, the page, the layouts, the real exports, the checker and
   packaging. The physical MK.2 review is pending.
+
+## v1.0 release cleanup
+
+- **Goal:** remove the remaining public-launch and Marketplace blockers, without new features.
+- **Release metadata:** version `1.0.0.0` (`1.0.0` for npm), author `MARTIN.G`. Plugin UUID, action UUIDs, product name, category,
+  Windows-only support and the Stream Deck 7.1 minimum are unchanged.
+- **Release packages:** `npm run pack` packs a staged copy without `Nodejs.Debug` and checks the manifest inside the package; development
+  keeps the debugger.
+- **Playlist metadata:** playlist keys show Deckify's own labels instead of playlist names. The picker adds Open in Spotify on every
+  row, validated by the plugin. Playlist selection, storage, duplicate protection and playback are unchanged.
+- **Like / Unlike:** a successful press briefly shows **Added** or **Removed**. The official Spotify + icon is still to be added (the
+  download wasn't reachable from the build environment); see the [public-launch audit](public-launch-audit.md#spotify-like--unlike).

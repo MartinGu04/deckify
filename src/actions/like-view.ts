@@ -53,15 +53,25 @@ export function likeKeyState(playback: PlaybackSnapshot, library: LibrarySnapsho
 	}
 }
 
+/** Brief title after a successful press, following Spotify's "Added to Liked Songs" / "Removed from Liked Songs" messages. */
+export const LIKE_FEEDBACK = {
+	added: "Added",
+	removed: "Removed",
+} as const;
+
+/** Feedback shown after a press. */
+export type LikeFeedback = keyof typeof LIKE_FEEDBACK;
+
 /**
  * View of the Like / Unlike key.
  * @param playback Playback state (account, device, current item).
  * @param library Saved state of the current track.
+ * @param feedback Feedback after a press, shown as the title for a moment (the image keeps showing the current state).
  * @returns The view.
  */
-export function likeView(playback: PlaybackSnapshot, library: LibrarySnapshot): KeyView {
+export function likeView(playback: PlaybackSnapshot, library: LibrarySnapshot, feedback?: LikeFeedback): KeyView {
 	const { state, title } = likeKeyState(playback, library);
-	return { image: LIKE_KEY_IMAGES[state], title };
+	return { image: LIKE_KEY_IMAGES[state], title: feedback === undefined ? title : LIKE_FEEDBACK[feedback] };
 }
 
 /**
