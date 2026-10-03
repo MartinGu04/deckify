@@ -11,6 +11,8 @@ import { loadSpotifyIcon } from "./actions/spotify-attribution";
 import { StatusAction } from "./actions/status";
 import { MuteAction, VolumeDownAction, VolumeUpAction } from "./actions/volume";
 import { LibraryService } from "./library/service";
+import { DeckifySetupServer } from "./setup/setup-server";
+import { SpotifyAccountCommands } from "./spotify/account-commands";
 import { PlaylistService } from "./playlists/service";
 import { PlaybackService } from "./playback/service";
 import { loadGlobalSettings, saveSpotifyClientId } from "./settings/global-settings";
@@ -81,6 +83,25 @@ const playlistInspector: PlaylistInspectorBridge = {
 	openUrl: (url) => streamDeck.system.openUrl(url),
 };
 
+// Deckify Setup: the guided Spotify setup, served on demand to the default browser from 127.0.0.1 on a dynamic port (never Spotify's callback
+// port). The page only sees public account state and can only request the fixed account commands; tokens stay in the auth service.
+const setupLogger = logger.createScope("Setup");
+const setup = new DeckifySetupServer({
+	commands: new SpotifyAccountCommands({
+		auth: spotifyAuth,
+		state: spotifyState,
+		saveClientId: saveSpotifyClientId,
+		// Only ever asked to open the Spotify Developer Dashboard (a fixed URL; the Setup App cannot pass one).
+		openUrl: (url) => streamDeck.system.openUrl(url),
+		logger: setupLogger,
+	}),
+	state: spotifyState,
+	// Only ever asked to open a validated Setup App URL on 127.0.0.1.
+	openUrl: (url) => streamDeck.system.openUrl(url),
+	logger: setupLogger,
+});
+process.once("exit", () => void setup.close());
+
 streamDeck.actions.registerAction(new StatusAction());
 streamDeck.actions.registerAction(
 	new SpotifyAccountAction({
@@ -89,6 +110,7 @@ streamDeck.actions.registerAction(
 		saveClientId: saveSpotifyClientId,
 		// Only ever asked to open the Spotify Developer Dashboard (a fixed URL; the Property Inspector cannot pass one).
 		openUrl: (url) => streamDeck.system.openUrl(url),
+		openSetup: (entry) => setup.open(entry),
 		logger: logger.createScope("Spotify Account"),
 	}),
 );
