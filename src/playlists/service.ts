@@ -128,8 +128,10 @@ export class PlaylistService {
 
 	#list: { readonly playlists: readonly Playlist[]; readonly fetchedAt: number } | undefined;
 	#listInFlight: { readonly promise: Promise<readonly Playlist[]>; readonly seq: number } | undefined;
-	/** Incremented for every list fetch; only the newest one may publish. */
+	/** Incremented for every list fetch. */
 	#listSeq = 0;
+	/** The fetch whose result is currently published; an older fetch never replaces it. */
+	#appliedSeq = 0;
 	#listError = false;
 
 	/** Duplicate detection: the item URIs of a playlist at a snapshot. */
@@ -366,7 +368,7 @@ export class PlaylistService {
 	}
 
 	/**
-	 * Starts a list fetch; only the newest fetch for the current account may publish its result.
+	 * Starts a list fetch. A result is published only for the current account and only if no newer fetch has published already.
 	 * @returns The playlists.
 	 */
 	#startListFetch(): Promise<readonly Playlist[]> {
@@ -375,7 +377,8 @@ export class PlaylistService {
 		const promise = (async (): Promise<readonly Playlist[]> => {
 			try {
 				const playlists = await this.#fetchAllPlaylists(generation);
-				if (generation === this.#generation && seq === this.#listSeq) {
+				if (generation === this.#generation && seq > this.#appliedSeq) {
+					this.#appliedSeq = seq;
 					this.#list = { playlists, fetchedAt: this.#clock() };
 					this.#listError = false;
 					// Freshly listed playlists are available again.
@@ -385,7 +388,7 @@ export class PlaylistService {
 					this.#logger.info("Playlist list refreshed.");
 				}
 				// An older fetch never replaces newer data; its caller gets the newest list available.
-				return seq === this.#listSeq || this.#list === undefined ? playlists : this.#list.playlists;
+				return seq >= this.#appliedSeq || this.#list === undefined ? playlists : this.#list.playlists;
 			} catch (err) {
 				if (generation === this.#generation && seq === this.#listSeq) {
 					this.#listError = !(err instanceof SpotifyRateLimitError);
