@@ -55,11 +55,14 @@ export class SetupSession {
 	 * @param entry Where the Setup App starts.
 	 * @param now Current time (Unix epoch, milliseconds).
 	 * @param secret Creates secrets; replaced in tests.
+	 * @param originDeviceId The Stream Deck whose Spotify Account key opened setup. Kept plugin-side only: it is never sent to the page, and the
+	 * page cannot choose another device.
 	 */
 	constructor(
 		readonly entry: "start" | "account",
 		now: number,
 		secret: () => string = createSecret,
+		readonly originDeviceId?: string,
 	) {
 		this.#createdAt = now;
 		this.#lastSeen = now;

@@ -11,6 +11,7 @@ import { loadSpotifyIcon } from "./actions/spotify-attribution";
 import { StatusAction } from "./actions/status";
 import { MuteAction, VolumeDownAction, VolumeUpAction } from "./actions/volume";
 import { LibraryService } from "./library/service";
+import { ExperienceSwitcher } from "./experiences/experiences";
 import { DeckifySetupServer } from "./setup/setup-server";
 import { SpotifyAccountCommands } from "./spotify/account-commands";
 import { PlaylistService } from "./playlists/service";
@@ -95,6 +96,12 @@ const setup = new DeckifySetupServer({
 		openUrl: (url) => streamDeck.system.openUrl(url),
 		logger: setupLogger,
 	}),
+	// Deckify's ready-made layouts: only the profiles bundled with Deckify (manifest "Profiles"), only on the Stream Deck that opened setup.
+	experiences: new ExperienceSwitcher({
+		getDevice: (deviceId) => streamDeck.devices.getDeviceById(deviceId),
+		switchToProfile: (deviceId, profile) => streamDeck.profiles.switchToProfile(deviceId, profile),
+		logger: setupLogger,
+	}),
 	state: spotifyState,
 	// Only ever asked to open a validated Setup App URL on 127.0.0.1.
 	openUrl: (url) => streamDeck.system.openUrl(url),
@@ -110,7 +117,7 @@ streamDeck.actions.registerAction(
 		saveClientId: saveSpotifyClientId,
 		// Only ever asked to open the Spotify Developer Dashboard (a fixed URL; the Property Inspector cannot pass one).
 		openUrl: (url) => streamDeck.system.openUrl(url),
-		openSetup: (entry) => setup.open(entry),
+		openSetup: (entry, originDeviceId) => setup.open(entry, originDeviceId),
 		logger: logger.createScope("Spotify Account"),
 	}),
 );

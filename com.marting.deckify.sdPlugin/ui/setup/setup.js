@@ -3,13 +3,16 @@
 // Served by the Deckify plugin from 127.0.0.1 while setup is open. The page is untrusted presentation: it opens with a one-time launch code
 // in the URL fragment (never sent to a server), exchanges it once for a session token that lives only in this page's memory, and sends that
 // token in a header with every request. It only ever receives non-sensitive state (Client ID, connection status, display name, plan and a
-// structured issue code) and can only ask for the plugin's fixed account operations; OAuth tokens never reach it. The plugin is
-// authoritative for the account state and decides every issue code; onboarding.js turns those into screens and guidance. This page never
-// opens links itself and uses no browser storage or cookies: the setup step and tour page are forgotten when it closes.
+// structured issue code) and can only ask for the plugin's fixed account operations, or for one of Deckify's fixed experiences by ID; OAuth
+// tokens never reach it, and it never names a profile, a file or a Stream Deck device (the plugin maps the ID to its bundled profile and
+// uses the Stream Deck that opened setup). The plugin is authoritative for the account state and decides every issue code; onboarding.js
+// turns those into screens and guidance, and experiences.js describes the layouts. This page never opens links itself and uses no browser
+// storage or cookies: the setup step, tour page and chosen experience are forgotten when it closes.
 "use strict";
 
 (() => {
 	const model = globalThis.DeckifyOnboarding;
+	const catalog = globalThis.DeckifyExperiences;
 
 	/** How long "Copied" stays on a copy button. */
 	const COPY_FEEDBACK_MS = 2000;
@@ -36,8 +39,24 @@
 		"copy-redirect-uri": "Copy Redirect URI",
 	};
 
-	/** Requests that change the Spotify session; disabled after a press so it cannot be sent twice. */
-	const SESSION_ACTIONS = ["connect", "retry-connect", "cancel-connect", "disconnect", "finish"];
+	/** Requests that change the Spotify session or the Stream Deck; disabled after a press so they cannot be sent twice. */
+	const SESSION_ACTIONS = ["connect", "retry-connect", "cancel-connect", "disconnect", "finish", "experience-use"];
+
+	/** What to say when Stream Deck could not be asked to switch to an experience. */
+	const EXPERIENCE_ISSUES = {
+		"device-unavailable": {
+			tone: "warning",
+			title: "Deckify can't reach your Stream Deck",
+			body: "Make sure your Stream Deck is plugged in and the Stream Deck app is running, then try again.",
+			actions: [],
+		},
+		failed: {
+			tone: "error",
+			title: "Stream Deck didn't accept the request",
+			body: "Try again. If it keeps happening, restart the Stream Deck app and check the Deckify log.",
+			actions: [],
+		},
+	};
 
 	const $ = (id) => document.getElementById(id);
 	const el = {
@@ -67,7 +86,6 @@
 		connectedIssue: $("connected-issue"),
 		tourStart: $("tour-start"),
 		successBadge: $("success-badge"),
-		successLater: $("success-later"),
 		accountDone: $("account-done"),
 		clientIdSaved: $("client-id-saved"),
 		tourActions: $("tour-actions"),
@@ -85,6 +103,20 @@
 		reconnectIssue: $("reconnect-issue"),
 		reconnectButton: $("reconnect-button"),
 		reconnectWhy: $("reconnect-why"),
+		experienceStart: $("experience-start"),
+		experienceList: $("experience-list"),
+		experienceUnsupported: $("experience-unsupported"),
+		experienceIssue: $("experience-issue"),
+		experienceChoose: $("experience-choose"),
+		experienceUse: $("experience-use"),
+		experienceNote: $("experience-note"),
+		experienceFinishName: $("experience-finish-name"),
+		readyExperience: $("ready-experience"),
+		readyExperienceName: $("ready-experience-name"),
+		readyExperienceBadge: $("ready-experience-badge"),
+		readyChosen: $("ready-chosen"),
+		readyManual: $("ready-manual"),
+		readyChange: $("ready-change"),
 	};
 
 	/** Session token for this page; kept in memory only. */
@@ -115,6 +147,15 @@
 	let slow = false;
 	let slowTimer;
 
+	/** Whether the Stream Deck that opened setup can use Deckify's experiences, as the plugin reported it. */
+	let experienceSupport = "supported";
+	/** The experience selected on the chooser (not yet requested). */
+	let selectedExperience = catalog.DEFAULT_EXPERIENCE;
+	/** Why the last experience request did not reach Stream Deck: a key of EXPERIENCE_ISSUES, or `null`. */
+	let experienceProblem = null;
+	/** The chooser cards, by experience ID; built once. */
+	const experienceCards = new Map();
+
 	/**
 	 * Starts the session: takes the launch code out of the URL, exchanges it, then follows the account state.
 	 */
@@ -138,6 +179,7 @@
 		}
 		sessionToken = session.sessionToken;
 		ui = model.initialUi(session.entry);
+		experienceSupport = typeof session.experiences === "string" ? session.experiences : "device-unavailable";
 		void follow();
 	}
 
@@ -225,6 +267,46 @@
 	}
 
 	/**
+	 * Asks the plugin to switch the Stream Deck that opened setup to an experience. Sends only the experience ID.
+	 * @param {string} id Experience ID.
+	 */
+	async function chooseExperience(id) {
+		let answer;
+		try {
+			answer = await request("POST", "/api/command", { type: "choose-experience", experience: id });
+		} catch (err) {
+			if (err && err.sessionEnded) {
+				end("expired");
+				return;
+			}
+			answer = undefined;
+		}
+		const outcome = answer && answer.experience && answer.experience.id === id ? answer.experience.outcome : "failed";
+		experienceProblem = null;
+		switch (outcome) {
+			case "requested":
+				ui = { ...ui, route: "experience-finish", experience: id };
+				break;
+			case "unsupported-device":
+				experienceSupport = "unsupported-device";
+				break;
+			case "busy":
+				// Another request is still on its way to Stream Deck; its answer decides.
+				break;
+			case "device-unavailable":
+				experienceProblem = "device-unavailable";
+				break;
+			default:
+				experienceProblem = "failed";
+		}
+		setBusy(false);
+		if (answer && answer.state) {
+			receive(answer);
+		}
+		render();
+	}
+
+	/**
 	 * Stops following the account state and shows why.
 	 * @param {"expired" | "finished"} reason Why setup ended.
 	 */
@@ -295,6 +377,15 @@
 				break;
 			case "reconnect":
 				renderReconnect(screen.variant);
+				break;
+			case "experiences":
+				renderExperiences();
+				break;
+			case "experience-finish":
+				renderExperienceFinish();
+				break;
+			case "ready":
+				renderReady();
 				break;
 		}
 		for (const input of document.querySelectorAll("[data-redirect-uri]")) {
@@ -404,13 +495,11 @@
 		}
 		el.successBadge.hidden = !success;
 		el.successText.hidden = !success;
-		// Right after connecting, the tour is the suggested (but optional) next step; later, Done is.
-		el.tourStart.classList.toggle("primary", success);
-		el.tourStart.classList.toggle("large", success);
-		el.successLater.hidden = !success;
+		// Choosing an experience is always the suggested next step (primary); the tour stays optional (secondary). Reopened later, Done is
+		// offered as a low-emphasis text action, so setup can still be left without choosing.
+		el.experienceStart.textContent = success ? "Choose my Deckify experience" : "Choose a Deckify experience";
+		el.tourStart.textContent = success ? "Show me around first" : "Show me around";
 		el.accountDone.hidden = success;
-		el.accountDone.classList.toggle("primary", !success);
-		el.accountDone.classList.toggle("large", !success);
 
 		el.accountName.textContent = state.displayName || "Spotify account";
 		const product = state.product;
@@ -446,6 +535,129 @@
 		el.tourPrev.disabled = index === 0;
 		el.tourNext.hidden = index === pages.length - 1;
 		el.tourDone.hidden = index !== pages.length - 1;
+	}
+
+	/** Renders the experience chooser. */
+	function renderExperiences() {
+		buildExperienceCards();
+		const unsupported = experienceSupport === "unsupported-device";
+		for (const [id, card] of experienceCards) {
+			const selected = id === selectedExperience;
+			card.setAttribute("aria-checked", String(selected));
+			card.dataset.selected = String(selected);
+			card.disabled = unsupported;
+		}
+		el.experienceList.classList.toggle("is-unavailable", unsupported);
+		el.experienceUnsupported.hidden = !unsupported;
+		el.experienceChoose.hidden = unsupported;
+		el.experienceNote.hidden = unsupported;
+		renderIssue(el.experienceIssue, unsupported || !experienceProblem ? undefined : EXPERIENCE_ISSUES[experienceProblem]);
+	}
+
+	/** Builds the chooser cards from experiences.js (once). Text is set as text; nothing is parsed as HTML. */
+	function buildExperienceCards() {
+		if (experienceCards.size > 0) {
+			return;
+		}
+		for (const experience of catalog.EXPERIENCES) {
+			const card = document.createElement("button");
+			card.type = "button";
+			card.className = "experience-card";
+			card.setAttribute("role", "radio");
+			card.dataset.action = "experience-select";
+			card.dataset.experience = experience.id;
+			card.dataset.recommended = String(experience.recommended);
+
+			const header = document.createElement("span");
+			header.className = "experience-header";
+			const name = document.createElement("span");
+			name.className = "experience-name";
+			name.textContent = experience.label;
+			header.append(name);
+			if (experience.recommended) {
+				const badge = document.createElement("span");
+				badge.className = "experience-badge";
+				badge.textContent = "Recommended";
+				header.append(badge);
+			}
+			const check = document.createElement("span");
+			check.className = "experience-check";
+			check.setAttribute("aria-hidden", "true");
+			header.append(check);
+
+			const description = document.createElement("span");
+			description.className = "experience-description";
+			description.textContent = experience.description;
+
+			const layout = document.createElement("span");
+			layout.className = "sr-only";
+			layout.textContent = catalog.describeLayout(experience);
+
+			card.append(header, description, layoutPreview(experience), layout);
+			experienceCards.set(experience.id, card);
+			el.experienceList.append(card);
+		}
+	}
+
+	/**
+	 * Draws an experience's 5 × 3 key layout with Deckify's own action icons (empty keys stay empty).
+	 * @param {object} experience Experience from experiences.js.
+	 * @returns {HTMLElement} The preview.
+	 */
+	function layoutPreview(experience) {
+		const deck = document.createElement("span");
+		deck.className = "deck-preview";
+		deck.setAttribute("aria-hidden", "true");
+		experience.layout.forEach((keys, rowIndex) => {
+			keys.forEach((key, column) => {
+				const tile = document.createElement("span");
+				tile.className = key === null ? "deck-key empty" : "deck-key";
+				tile.dataset.position = `${column},${rowIndex}`;
+				if (key !== null) {
+					tile.dataset.key = key;
+					const icon = document.createElement("img");
+					icon.src = catalog.ACTIONS[key].icon;
+					icon.alt = "";
+					icon.width = 20;
+					icon.height = 20;
+					tile.append(icon);
+				}
+				deck.append(tile);
+			});
+		});
+		return deck;
+	}
+
+	/** Renders the "Finish in Stream Deck" screen. */
+	function renderExperienceFinish() {
+		const experience = catalog.find(ui.experience);
+		el.experienceFinishName.textContent = experience ? experience.label : "";
+	}
+
+	/** Renders the ready screen, naming the experience chosen in this session, if any. */
+	function renderReady() {
+		const experience = catalog.find(ui.experience);
+		el.readyExperience.hidden = !experience;
+		el.readyExperienceName.textContent = experience ? experience.label : "";
+		el.readyExperienceBadge.textContent = experience && experience.recommended ? " · Recommended" : "";
+		el.readyChosen.hidden = !experience;
+		el.readyManual.hidden = Boolean(experience);
+		el.readyChange.textContent = experience ? "Choose a different experience" : "Choose a Deckify experience";
+		el.readyChange.hidden = experienceSupport === "unsupported-device";
+	}
+
+	/**
+	 * Selects an experience on the chooser.
+	 * @param {string} id Experience ID.
+	 * @param {boolean} [focus] Whether to move focus to its card.
+	 */
+	function selectExperience(id, focus = false) {
+		if (!catalog.find(id)) {
+			return;
+		}
+		selectedExperience = id;
+		experienceProblem = null;
+		render(focus ? experienceCards.get(id) : undefined);
 	}
 
 	/**
@@ -770,8 +982,32 @@
 				render();
 				break;
 			case "tour-done":
-			case "show-ready":
-				ui = { ...ui, route: "ready", celebrate: false, tourPage: 0 };
+			case "experience-start":
+				// The tour ends at the chooser; the ready screen's "Choose a different experience" comes back to it.
+				selectedExperience = ui.experience || catalog.DEFAULT_EXPERIENCE;
+				experienceProblem = null;
+				ui = { ...ui, route: "experiences", celebrate: false, tourPage: 0 };
+				render();
+				break;
+			case "experience-select":
+				if (!busy) {
+					selectExperience(button.dataset.experience, true);
+				}
+				break;
+			case "experience-use":
+				if (busy || experienceSupport === "unsupported-device") {
+					return;
+				}
+				setBusy(true);
+				render();
+				void chooseExperience(selectedExperience);
+				break;
+			case "experience-skip":
+				ui = { ...ui, route: "ready", celebrate: false, experience: null };
+				render();
+				break;
+			case "experience-done":
+				ui = { ...ui, route: "ready", celebrate: false };
 				render();
 				break;
 		}
@@ -782,6 +1018,17 @@
 		if (button && !button.disabled) {
 			onAction(button.dataset.action, button);
 		}
+	});
+	// The chooser is a radio group: arrow keys move the selection between the cards.
+	el.experienceList.addEventListener("keydown", (event) => {
+		const steps = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+		if (!(event.key in steps) || busy || experienceSupport === "unsupported-device") {
+			return;
+		}
+		event.preventDefault();
+		const ids = catalog.EXPERIENCES.map((experience) => experience.id);
+		const index = ids.indexOf(selectedExperience);
+		selectExperience(ids[(index + steps[event.key] + ids.length) % ids.length], true);
 	});
 	el.clientId.addEventListener("input", () => {
 		clientIdDirty = true;

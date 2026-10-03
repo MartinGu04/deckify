@@ -23,7 +23,7 @@ profiles depend on them, and a test fails if they change.
 ```powershell
 npm ci             # install exact dependency versions from package-lock.json
 npm run build      # bundle src/ into com.marting.deckify.sdPlugin/bin/plugin.js
-npm run check      # typecheck + lint + tests + build + manifest validation + smoke test
+npm run check      # typecheck + lint + build + smoke test + tests + manifest validation
 ```
 
 Individual steps: `npm run typecheck`, `npm run lint`, `npm test`, `npm run validate` and `npm run smoke`.
@@ -103,7 +103,7 @@ npm run pack          # builds the native helper (Windows), bundles, packs and v
 - **Windows:**
   1. builds the release media bridge;
   2. runs its Rust tests, `cargo fmt --check` and `cargo clippy -D warnings`;
-  3. runs `npm run pack` (package verification included);
+  3. runs `npm run pack` (bundled profile checks and package verification included);
   4. runs `npm run check`, including the test that drives the real helper;
   5. uploads the `.streamDeckPlugin` as a build artifact.
 
@@ -158,6 +158,14 @@ listener because port 43821 … is already in use"*.
 - **Find the other program:** run `Get-NetTCPConnection -LocalPort 43821 | Select-Object OwningProcess` in PowerShell.
 - **Reserved by Windows** (for example by Hyper-V): the port then appears in `netsh interface ipv4 show excludedportrange protocol=tcp`.
 
+**Bundled profiles (experiences).** See [profiles.md](profiles.md) for the layouts and the manual export steps.
+
+- `npm run profiles:layouts` prints the two layouts.
+- `npm run profiles:import -- <deckify|simple> <file>` checks an export and copies it to the manifest path.
+- `npm run profiles:check` checks every bundled profile against the real export structure. It runs in `npm run pack` and in the tests.
+- *"Stream Deck may ask you to install…" appears every time:* the profile was deleted in Stream Deck, so it is offered again. Deckify
+  only asks Stream Deck to switch; it never installs or replaces profiles itself.
+
 **Deckify Setup.** The guided setup runs in the browser, served by the plugin on `127.0.0.1` and a random port.
 
 - **Opening it:** press **Set up Deckify** or **Open Deckify Setup** in the Spotify Account settings. The log shows
@@ -184,6 +192,7 @@ src/
   playlists/                PlaylistService: shared cache, writable filter, duplicate cache by snapshot, add, play; model and validation
   windows/                  Windows media bridge client: spawns the bundled helper, JSON-lines IPC, timeouts, restarts
   setup/                    Deckify Setup server: 127.0.0.1-only, dynamic port, one-time launch code, session token, fixed commands
+  experiences/              the two experiences: fixed ID → bundled profile, device checks, race-safe switchToProfile
   settings/                 Stream Deck global settings (Client ID only)
   shared/                   logger contract, SDK type helpers
   spotify/
@@ -199,14 +208,16 @@ src/
     storage/                TokenStore interface, encrypted file store, Windows DPAPI key protector
     state/                  shared Spotify account state + subscriptions
 com.marting.deckify.sdPlugin/
-  manifest.json             plugin + action definitions
+  manifest.json             plugin + action definitions, bundled profiles
+  profiles/                 bundled experience profiles: real Stream Deck exports SIMPLE and DECKIFY ⭐ Recommended (docs/profiles.md)
   imgs/                     plugin icon, category icon, action/key images, Spotify attribution icon
   ui/                       Property Inspectors: spotify-account/ (compact entry point), volume/, playlist/ (shared picker);
-                            setup/ (Deckify Setup page); shared/ (stylesheet, onboarding model used by both)
+                            setup/ (Deckify Setup page, experience layouts); shared/ (stylesheet, onboarding model used by both)
   bin/, logs/               build output (plugin.js, native/deckify-media-bridge.exe) and runtime logs (git-ignored)
 native/media-bridge/        Rust helper: GSMTC Spotify session selection and commands
 assets/brand/               Deckify brand masters (B1) and the Marketplace app icon; archive/ keeps the retired development-era mark
 docs/                       architecture, privacy, history, launch audits, brand review, media capture guide
-scripts/                    asset generators, smoke test, dev-only token expiry helper, native build, pack + package verification
+scripts/                    asset generators, smoke test, dev-only token expiry helper, native build, pack + package verification,
+                            bundled profile checks and import (profiles.mjs)
 test/                       Vitest suite (Spotify HTTP fully mocked)
 ```

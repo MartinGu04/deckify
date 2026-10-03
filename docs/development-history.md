@@ -192,3 +192,29 @@ state source and the fallback.
   rules in a collapsed help section.
 - **Verification:** automated tests cover the setup's behaviour, the setup server's security over real HTTP, and one end-to-end run.
   Hardware review on the MK.2 is pending.
+
+## Phase 9: Ready-made experiences
+
+- **Goal:** Deckify should feel ready-made, not like a box of separate actions. The product flow became **Install → Connect → Choose →
+  Play**; Phase 8 had covered Install → Connect.
+- **Experiences:** two editable starting layouts for the 15-key Stream Deck / MK.2, built from the existing actions only
+  ([profiles.md](profiles.md)):
+  - **DECKIFY ⭐ Recommended:** every action once, with Now Playing in the centre.
+  - **SIMPLE:** a centred 3 × 3 block of the essentials.
+- **Official profile support:** the layouts are Stream Deck profiles bundled in `profiles/` and registered in the manifest's `Profiles`
+  (`DeviceType 0`, editable, installed only when chosen, shown once installed). The plugin switches to them with the SDK's
+  `switchToProfile`, and only to those.
+- **Deckify Setup:** after connecting, **Choose my Deckify experience** comes first and **Show me around first** is optional; the tour
+  ends at the chooser. Two cards with schematic 5 × 3 previews drawn from the same data the profiles are checked against. Nothing is
+  installed until **Use this experience**. Then **Finish in Stream Deck** (Stream Deck may ask to install the profile once) and
+  **Deckify is ready.**, which names the experience.
+- **Security:** one new command, `choose-experience`, accepting only `deckify` or `simple` and no other field. The target device
+  is the one whose Spotify Account key opened setup, from the SDK event, and it is never exposed to the page. Unsupported devices get a
+  message instead of a switch. Requests are collapsed, so a double-click can't trigger two switches.
+- **Profiles are real exports:** Deckify doesn't write the `.streamDeckProfile` format.
+  - `SIMPLE` and `DECKIFY ⭐ Recommended` were made and exported in Stream Deck 7.6 on the MK.2.
+  - They are bundled unchanged under their own names.
+  - `npm run profiles:check` validates them against the real export structure: Deckify only, layout key by key, unconfigured playlist
+    keys, no images or personal data. `npm run pack` refuses to build without them.
+- **Verification:** automated tests cover the switcher, the server command, the page, the layouts, the real exports, the checker and
+  packaging. The physical MK.2 review is pending.

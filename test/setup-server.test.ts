@@ -4,6 +4,7 @@ import { networkInterfaces } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { DUPLICATE_REQUEST_WINDOW_MS, ExperienceSwitcher, type ExperienceDevice } from "../src/experiences/experiences";
 import { isDeckifySetupUrl, SESSION_HEADER, SETUP_ASSETS, DeckifySetupServer } from "../src/setup/setup-server";
 import { LAUNCH_CODE_LIFETIME_MS, SESSION_IDLE_TIMEOUT_MS, SESSION_MAX_LIFETIME_MS, SetupSession } from "../src/setup/session";
 import { SpotifyAccountCommands } from "../src/spotify/account-commands";
@@ -63,14 +64,23 @@ afterEach(async () => {
 	await Promise.all(servers.splice(0).map((server) => server.close()));
 });
 
+/** Stream Decks the fake SDK knows: a standard MK.2, a second MK.2, a Stream Deck + and an unplugged MK.2. */
+const DEVICES: Readonly<Record<string, ExperienceDevice>> = {
+	"mk2-device": { type: 0, isConnected: true },
+	"second-mk2": { type: 0, isConnected: true },
+	"plus-device": { type: 7, isConnected: true },
+	"unplugged-mk2": { type: 0, isConnected: false },
+};
+
 /**
  * Starts a setup server with fakes and opens a session.
  * @param options Options.
  * @param options.listenPort Port to ask for first.
  * @param options.sweepIntervalMs How often ended sessions are swept.
+ * @param options.origin The Stream Deck whose Spotify Account key opens setup.
  * @returns Helpers.
  */
-async function startSetup(options: { listenPort?: number; sweepIntervalMs?: number } = {}) {
+async function startSetup(options: { listenPort?: number; sweepIntervalMs?: number; origin?: string | null } = {}) {
 	const state = new SpotifyAuthState();
 	state.update({ status: "not-configured" });
 	const auth = fakeAuth(state);
@@ -79,8 +89,11 @@ async function startSetup(options: { listenPort?: number; sweepIntervalMs?: numb
 	const opened: string[] = [];
 	const logger = recordingLogger();
 	let now = Date.UTC(2026, 9, 3);
+	// The SDK's profile switch; tests may hold or reject it.
+	const switchToProfile = vi.fn((_deviceId: string, _profile: string) => Promise.resolve());
 	const server = new DeckifySetupServer({
 		commands: new SpotifyAccountCommands({ auth: auth as unknown as SpotifyAuthService, state, saveClientId, openUrl: dashboard, logger }),
+		experiences: new ExperienceSwitcher({ getDevice: (id) => DEVICES[id], switchToProfile, clock: () => now, logger }),
 		state,
 		openUrl: (url) => {
 			opened.push(url);
@@ -93,12 +106,14 @@ async function startSetup(options: { listenPort?: number; sweepIntervalMs?: numb
 		sweepIntervalMs: options.sweepIntervalMs,
 	});
 	servers.push(server);
-	await server.open();
+	const origin = options.origin === null ? undefined : (options.origin ?? "mk2-device");
+	await server.open("start", origin);
 	const port = server.port ?? 0;
 	const launchCode = () => new URL(opened.at(-1) ?? "").hash.replace("#launch=", "");
-	const origin = `http://127.0.0.1:${String(port)}`;
+	const pageOrigin = `http://127.0.0.1:${String(port)}`;
 
 	return {
+		switchToProfile,
 		state,
 		auth,
 		saveClientId,
@@ -107,12 +122,12 @@ async function startSetup(options: { listenPort?: number; sweepIntervalMs?: numb
 		logger,
 		server,
 		port,
-		origin,
+		origin: pageOrigin,
 		launchCode,
 		advance: (ms: number) => (now += ms),
 		/** Exchanges the launch code for a session token. */
 		async session(code = launchCode()) {
-			return call(port, { method: "POST", path: "/api/session", headers: { Origin: origin, "Content-Type": "application/json", "Sec-Fetch-Site": "same-origin" }, body: JSON.stringify({ launchCode: code }) });
+			return call(port, { method: "POST", path: "/api/session", headers: { Origin: pageOrigin, "Content-Type": "application/json", "Sec-Fetch-Site": "same-origin" }, body: JSON.stringify({ launchCode: code }) });
 		},
 		async token() {
 			const reply = await this.session();
@@ -122,7 +137,7 @@ async function startSetup(options: { listenPort?: number; sweepIntervalMs?: numb
 			return call(port, {
 				method: "POST",
 				path: "/api/command",
-				headers: { Origin: origin, "Content-Type": "application/json", [SESSION_HEADER]: token, ...headers },
+				headers: { Origin: pageOrigin, "Content-Type": "application/json", [SESSION_HEADER]: token, ...headers },
 				body: JSON.stringify(body),
 			});
 		},
@@ -286,7 +301,7 @@ describe("session protection", () => {
 		const code = setup.launchCode();
 		const first = await setup.session(code);
 		expect(first.status).toBe(200);
-		expect(first.json()).toEqual({ sessionToken: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/) as unknown, entry: "start" });
+		expect(first.json()).toEqual({ sessionToken: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/) as unknown, entry: "start", experiences: "supported" });
 		expect(first.json().sessionToken).not.toBe(code);
 		// The code is single-use.
 		expect((await setup.session(code)).status).toBe(403);
@@ -485,6 +500,137 @@ describe("state and commands", () => {
 	});
 });
 
+describe("experiences", () => {
+	const choose = (experience: unknown) => ({ type: "choose-experience", experience });
+
+	it("maps each fixed experience ID to its bundled profile, on the Stream Deck that opened setup", async () => {
+		const setup = await startSetup();
+		const token = await setup.token();
+		for (const [id, profile] of [
+			["deckify", "profiles/DECKIFY ⭐ Recommended"],
+			["simple", "profiles/SIMPLE"],
+		]) {
+			const reply = await setup.command(token, choose(id));
+			expect(reply.status, id).toBe(200);
+			expect(reply.json().experience).toEqual({ id, outcome: "requested" });
+			expect(setup.switchToProfile).toHaveBeenLastCalledWith("mk2-device", profile);
+		}
+		expect(setup.switchToProfile).toHaveBeenCalledTimes(2);
+	});
+
+	it("targets whichever Stream Deck opened setup", async () => {
+		const setup = await startSetup({ origin: "second-mk2" });
+		const token = await setup.token();
+		await setup.command(token, choose("deckify"));
+		expect(setup.switchToProfile.mock.calls).toEqual([["second-mk2", "profiles/DECKIFY ⭐ Recommended"]]);
+	});
+
+	it("accepts only a fixed experience ID: no profile names, paths, devices, pages or other SDK commands", async () => {
+		const setup = await startSetup();
+		const token = await setup.token();
+		for (const body of [
+			{ type: "choose-experience" },
+			choose(undefined),
+			choose(""),
+			choose("power"),
+			choose("Deckify"),
+			choose("DECKIFY"),
+			choose("SIMPLE"),
+			choose("DECKIFY ⭐ Recommended"),
+			choose("profiles/SIMPLE"),
+			choose("profiles/DECKIFY ⭐ Recommended"),
+			choose("../../manifest"),
+			choose("C:\\Users\\someone\\My Profile"),
+			choose("my-own-profile"),
+			choose(["deckify"]),
+			choose({ id: "deckify" }),
+			{ ...choose("deckify"), device: "plus-device" },
+			{ ...choose("deckify"), deviceId: "second-mk2" },
+			{ ...choose("deckify"), profile: "profiles/Other" },
+			{ ...choose("deckify"), page: 2 },
+			{ type: "switch-profile", profile: "profiles/SIMPLE" },
+			{ type: "switchToProfile", device: "mk2-device", profile: "profiles/SIMPLE" },
+			{ type: "choose-experience", experience: "deckify", type2: "x" },
+		]) {
+			expect((await setup.command(token, body)).status, JSON.stringify(body)).toBe(400);
+		}
+		expect(setup.switchToProfile).not.toHaveBeenCalled();
+	});
+
+	it("needs the session token and the Setup App's own origin, like every other command", async () => {
+		const setup = await startSetup();
+		const token = await setup.token();
+		expect((await setup.command("x".repeat(43), choose("deckify"))).status).toBe(403);
+		expect((await setup.command(token, choose("deckify"), { Origin: "https://evil.example" })).status).toBe(403);
+		expect((await setup.command(token, choose("deckify"), { "Sec-Fetch-Site": "cross-site" })).status).toBe(403);
+		expect((await setup.command(token, choose("deckify"), { "Content-Type": "text/plain" })).status).toBe(415);
+		expect(setup.switchToProfile).not.toHaveBeenCalled();
+	});
+
+	it("explains an unsupported Stream Deck instead of attempting an incompatible switch", async () => {
+		const setup = await startSetup({ origin: "plus-device" });
+		const session = (await setup.session()).json();
+		expect(session.experiences).toBe("unsupported-device");
+		const reply = (await setup.command(String(session.sessionToken), choose("deckify"))).json();
+		expect(reply.experience).toEqual({ id: "deckify", outcome: "unsupported-device" });
+		expect(setup.switchToProfile).not.toHaveBeenCalled();
+	});
+
+	it("does not switch when the originating Stream Deck is unplugged or unknown", async () => {
+		for (const origin of ["unplugged-mk2", "never-seen", null]) {
+			const setup = await startSetup({ origin });
+			const session = (await setup.session()).json();
+			expect(session.experiences, String(origin)).toBe("device-unavailable");
+			const reply = (await setup.command(String(session.sessionToken), choose("simple"))).json();
+			expect(reply.experience, String(origin)).toEqual({ id: "simple", outcome: "device-unavailable" });
+			expect(setup.switchToProfile).not.toHaveBeenCalled();
+		}
+	});
+
+	it("sends one switch for repeated or concurrent requests, and a new one only when the user chooses again later", async () => {
+		const setup = await startSetup();
+		const token = await setup.token();
+		let release = (): void => undefined;
+		setup.switchToProfile.mockImplementationOnce(() => new Promise<void>((resolve) => (release = resolve)));
+		const first = setup.command(token, choose("deckify"));
+		const second = setup.command(token, choose("deckify"));
+		const other = setup.command(token, choose("simple"));
+		await vi.waitFor(() => expect(setup.switchToProfile).toHaveBeenCalledTimes(1));
+		expect((await other).json().experience).toEqual({ id: "simple", outcome: "busy" });
+		release();
+		expect((await first).json().experience).toEqual({ id: "deckify", outcome: "requested" });
+		expect((await second).json().experience).toEqual({ id: "deckify", outcome: "requested" });
+		// A repeat right afterwards (a double-click that got through) is not sent again.
+		expect((await setup.command(token, choose("deckify"))).json().experience).toEqual({ id: "deckify", outcome: "requested" });
+		expect(setup.switchToProfile).toHaveBeenCalledTimes(1);
+		// Choosing again later is a new, explicit request.
+		setup.advance(DUPLICATE_REQUEST_WINDOW_MS + 1);
+		await setup.command(token, choose("deckify"));
+		expect(setup.switchToProfile).toHaveBeenCalledTimes(2);
+	});
+
+	it("reports a refused switch honestly", async () => {
+		const setup = await startSetup();
+		const token = await setup.token();
+		setup.switchToProfile.mockRejectedValueOnce(new Error("not connected"));
+		expect((await setup.command(token, choose("simple"))).json().experience).toEqual({ id: "simple", outcome: "failed" });
+		// Nothing was sent successfully, so trying again is sent again.
+		expect((await setup.command(token, choose("simple"))).json().experience).toEqual({ id: "simple", outcome: "requested" });
+		expect(setup.switchToProfile).toHaveBeenCalledTimes(2);
+	});
+
+	it("never exposes the device ID to the page or the log", async () => {
+		const setup = await startSetup();
+		const session = await setup.session();
+		const token = String(session.json().sessionToken);
+		const replies = [session.text, (await setup.getState(token)).text, (await setup.command(token, choose("deckify"))).text];
+		for (const text of replies) {
+			expect(text).not.toContain("mk2-device");
+		}
+		expect(setup.logger.lines.join("\n")).not.toContain("mk2-device");
+	});
+});
+
 describe("lifecycle", () => {
 	it("closes when the user finishes", async () => {
 		const setup = await startSetup();
@@ -535,7 +681,7 @@ describe("SetupSession", () => {
 });
 
 describe("Setup App end to end (real page, real local server)", () => {
-	it("walks from the welcome screen to a connected Spotify account over the local API", async () => {
+	it("walks from the welcome screen to a connected Spotify account and a chosen experience over the local API", async () => {
 		const { JSDOM } = await import("jsdom");
 		const setup = await startSetup();
 		setup.auth.connect.mockImplementation(() => {
@@ -561,7 +707,9 @@ describe("Setup App end to end (real page, real local server)", () => {
 				return { ok: reply.status >= 200 && reply.status < 300, status: reply.status, json: () => Promise.resolve(reply.json()) };
 			},
 		});
-		for (const script of ["/setup/onboarding.js", "/setup/setup.js"]) {
+		const scripts = [...page.text.matchAll(/<script src="([^"]+)"><\/script>/g)].map((match) => match[1] ?? "");
+		expect(scripts).toEqual(["/setup/onboarding.js", "/setup/experiences.js", "/setup/setup.js"]);
+		for (const script of scripts) {
 			window.eval((await call(setup.port, { path: script })).text);
 		}
 
@@ -597,7 +745,18 @@ describe("Setup App end to end (real page, real local server)", () => {
 		await vi.waitFor(() => expect(heading()).toContain("You're connected"));
 		expect(doc.getElementById("account-name")?.textContent).toBe("Test Listener");
 
-		click("show-ready");
+		// Choose → Play: the recommended experience is preselected; nothing is switched until the user confirms.
+		click("experience-start");
+		expect(heading()).toBe("Choose your Deckify experience");
+		expect(doc.querySelector('[data-experience="deckify"]')?.getAttribute("aria-checked")).toBe("true");
+		expect(setup.switchToProfile).not.toHaveBeenCalled();
+		click("experience-use");
+		await vi.waitFor(() => expect(heading()).toBe("Finish in Stream Deck"));
+		expect(setup.switchToProfile.mock.calls).toEqual([["mk2-device", "profiles/DECKIFY ⭐ Recommended"]]);
+		click("experience-done");
+		expect(heading()).toBe("Deckify is ready.");
+		expect(doc.getElementById("ready-experience")?.textContent).toBe("DECKIFY · Recommended");
+
 		click("finish");
 		await vi.waitFor(() => expect(setup.server.port).toBeUndefined());
 		await vi.waitFor(() => expect(heading()).toBe("You're all set"));

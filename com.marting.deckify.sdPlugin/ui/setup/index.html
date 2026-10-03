@@ -13,7 +13,8 @@
 		<!--
 			Deckify Setup: the guided Spotify setup, served by the Deckify plugin from 127.0.0.1 only while setup is open. It shows only public
 			account state (status, display name, plan, Client ID, Redirect URI and a structured issue code) and can only ask the plugin for a
-			fixed set of account operations. OAuth tokens never reach this page, it never asks for a Client Secret, it never opens links itself
+			fixed set of account operations, plus one of Deckify's two fixed experiences by ID (the plugin picks the bundled profile and the
+			Stream Deck that opened setup; this page never names either). OAuth tokens never reach this page, it never asks for a Client Secret, it never opens links itself
 			(Open Spotify Dashboard asks the plugin, which only opens the fixed dashboard address), it loads nothing remote, and nothing is
 			written to browser storage or cookies.
 		-->
@@ -216,9 +217,9 @@
 						</div>
 						<div id="connected-issue" class="issue" hidden></div>
 						<div class="actions">
-							<button type="button" id="tour-start" class="primary large" data-action="tour-start">Show me around</button>
-							<button type="button" id="success-later" data-action="show-ready" hidden>Maybe later</button>
-							<button type="button" id="account-done" data-action="finish" hidden>Done</button>
+							<button type="button" id="experience-start" class="primary large" data-action="experience-start">Choose my Deckify experience</button>
+							<button type="button" id="tour-start" data-action="tour-start">Show me around first</button>
+							<button type="button" id="account-done" class="link" data-action="finish" hidden>Done</button>
 						</div>
 						<details class="help" id="account-help">
 							<summary>Account setup help</summary>
@@ -254,7 +255,40 @@
 						<div class="step-nav">
 							<button type="button" data-action="tour-prev" id="tour-prev">Previous</button>
 							<button type="button" class="primary" data-action="tour-next" id="tour-next">Next</button>
-							<button type="button" class="primary" data-action="tour-done" id="tour-done" hidden>Done</button>
+							<button type="button" class="primary" data-action="tour-done" id="tour-done" hidden>Choose my experience</button>
+						</div>
+					</section>
+
+					<!-- Choose an experience: one of Deckify's bundled, editable Stream Deck layouts. Nothing is installed until "Use this experience". -->
+					<section class="view" data-view="experiences" aria-labelledby="experiences-title" hidden>
+						<h2 id="experiences-title" class="display" tabindex="-1">Choose your Deckify experience</h2>
+						<p class="lead">Pick a ready-made layout for your Stream Deck. It's only a starting point: move, remove or add keys any time in the Stream Deck app.</p>
+						<!-- Cards are built by setup.js from experiences.js, the same data the bundled profiles are checked against. -->
+						<div id="experience-list" class="experience-list" role="radiogroup" aria-labelledby="experiences-title"></div>
+						<div id="experience-unsupported" class="issue tone-info" role="status" hidden>
+							<h3><span class="issue-icon" aria-hidden="true">i</span>Ready-made layouts need a 15-key Stream Deck</h3>
+							<p>Deckify's experiences are made for Stream Deck and Stream Deck MK.2. On this device, add Deckify actions to your keys from the Stream Deck actions list instead.</p>
+							<div class="actions">
+								<button type="button" class="primary" data-action="experience-skip">Continue</button>
+							</div>
+						</div>
+						<div id="experience-issue" class="issue" hidden></div>
+						<div id="experience-choose" class="actions">
+							<button type="button" id="experience-use" class="primary large" data-action="experience-use">Use this experience</button>
+							<button type="button" class="link" data-action="experience-skip">Skip for now</button>
+						</div>
+						<p id="experience-note" class="muted">Playlist keys start empty. Select one in the Stream Deck app to choose your own playlist.</p>
+					</section>
+
+					<!-- The profile switch was sent; Stream Deck may ask the user to install the profile first and does not report back. -->
+					<section class="view" data-view="experience-finish" aria-labelledby="experience-finish-title" hidden>
+						<p id="experience-finish-name" class="eyebrow"></p>
+						<h2 id="experience-finish-title" class="display" tabindex="-1">Finish in Stream Deck</h2>
+						<p class="lead">Stream Deck may ask you to install the Deckify profile once. Approve it to continue.</p>
+						<p class="muted">Deckify asked Stream Deck to show this layout on the Stream Deck you opened setup from. If nothing changed, make sure the Stream Deck app is open, then choose the experience again.</p>
+						<div class="actions">
+							<button type="button" class="primary large" data-action="experience-done">Continue</button>
+							<button type="button" data-action="experience-start">Choose a different experience</button>
 						</div>
 					</section>
 
@@ -262,10 +296,16 @@
 					<section class="view" data-view="ready" aria-labelledby="ready-title" hidden>
 						<div class="success-badge" aria-hidden="true">✓</div>
 						<h2 id="ready-title" class="display" tabindex="-1">Deckify is ready.</h2>
-						<p class="lead">Drag Deckify actions from the Stream Deck actions list onto your keys.</p>
+						<p id="ready-experience" class="experience-tag" hidden><span id="ready-experience-name"></span><span id="ready-experience-badge"></span></p>
+						<div id="ready-chosen" hidden>
+							<p class="lead">Your controls are ready on Stream Deck.</p>
+							<p class="muted">The layout is yours to change: move keys, remove them or add more Deckify actions in the Stream Deck app.</p>
+						</div>
+						<p id="ready-manual" class="lead">Drag Deckify actions from the Stream Deck actions list onto your keys.</p>
 						<p class="muted">You can open Deckify Setup again any time from the Spotify Account key's settings.</p>
 						<div class="actions">
 							<button type="button" class="primary large" data-action="finish">Done</button>
+							<button type="button" id="ready-change" data-action="experience-start">Choose a different experience</button>
 						</div>
 					</section>
 
@@ -308,6 +348,7 @@
 		</div>
 
 		<script src="/setup/onboarding.js"></script>
+		<script src="/setup/experiences.js"></script>
 		<script src="/setup/setup.js"></script>
 	</body>
 </html>

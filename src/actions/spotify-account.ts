@@ -37,10 +37,23 @@ export type SpotifyAccountActionOptions = {
 	/** Opens a URL in the default browser; only ever called with the Spotify Developer Dashboard address. */
 	readonly openUrl: (url: string) => Promise<void>;
 
-	/** Opens the Deckify Setup App in the default browser. */
-	readonly openSetup: (entry: SetupEntry) => Promise<void>;
+	/**
+	 * Opens the Deckify Setup App in the default browser. `originDeviceId` is the Stream Deck whose Spotify Account key opened it, taken from
+	 * the SDK event (never from the Property Inspector's message); Deckify's experiences are installed on that device only.
+	 */
+	readonly openSetup: (entry: SetupEntry, originDeviceId: string | undefined) => Promise<void>;
 	readonly logger?: Logger;
 };
+
+/**
+ * The Stream Deck an inspector message came from, as the SDK reports it for the action instance.
+ * @param ev The event.
+ * @returns The device ID; otherwise `undefined`.
+ */
+function originDeviceId(ev: InspectorMessageEvent): string | undefined {
+	const id: unknown = (ev as { readonly action?: { readonly device?: { readonly id?: unknown } } }).action?.device?.id;
+	return typeof id === "string" && id !== "" ? id : undefined;
+}
 
 /**
  * "Spotify Account" key: shows the shared Spotify connection state on every instance and connects/verifies on press.
@@ -52,7 +65,7 @@ export class SpotifyAccountAction extends SingletonAction {
 	readonly #auth: SpotifyAuthService;
 	readonly #state: SpotifyAuthState;
 	readonly #commands: SpotifyAccountCommands;
-	readonly #openSetup: (entry: SetupEntry) => Promise<void>;
+	readonly #openSetup: (entry: SetupEntry, originDeviceId: string | undefined) => Promise<void>;
 	readonly #logger: Logger;
 
 	/**
@@ -142,7 +155,7 @@ export class SpotifyAccountAction extends SingletonAction {
 		if (type === `${MESSAGE_PREFIX}open-setup`) {
 			const entry: SetupEntry = typeof payload === "object" && payload !== null && "entry" in payload && payload.entry === "account" ? "account" : "start";
 			try {
-				await this.#openSetup(entry);
+				await this.#openSetup(entry, originDeviceId(ev));
 			} catch (err) {
 				this.#logger.error("Could not open Deckify Setup.", err);
 				await this.#sendInspectorState(this.#state.snapshot, { message: "Deckify Setup could not be opened. Check the Deckify log.", issue: "unknown" });

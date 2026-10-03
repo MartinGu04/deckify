@@ -45,7 +45,7 @@ const LAUNCH_CODE = "L".repeat(43);
 const SESSION_TOKEN = "S".repeat(43);
 
 /** Every command the page may send. */
-const ALLOWED_COMMANDS = ["save-client-id", "connect", "retry-connect", "cancel-connect", "disconnect", "open-dashboard", "finish"];
+const ALLOWED_COMMANDS = ["save-client-id", "connect", "retry-connect", "cancel-connect", "disconnect", "open-dashboard", "choose-experience", "finish"];
 
 type Options = {
 	/** How `navigator.clipboard.writeText` behaves; `"missing"` leaves the Clipboard API out. */
@@ -58,6 +58,8 @@ type Options = {
 	hash?: string;
 	/** Whether the server accepts the launch code. */
 	sessionOk?: boolean;
+	/** What the server says about the Stream Deck that opened setup. */
+	experiences?: "supported" | "unsupported-device" | "device-unavailable";
 };
 
 type Recorded = { method: string; path: string; headers: Record<string, string>; body: unknown; init: Record<string, unknown> };
@@ -128,6 +130,8 @@ async function openSetup(options: Options = {}) {
 		requests: [] as Recorded[],
 		holdCommands: false,
 		sessionAlive: options.sessionOk !== false,
+		/** How the plugin answers a chosen experience. */
+		experienceOutcome: "requested",
 		onCommand: undefined as ((command: Record<string, unknown>) => CommandResult | undefined) | undefined,
 	};
 	const respond = (status: number, body: unknown) => ({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(body) });
@@ -141,7 +145,7 @@ async function openSetup(options: Options = {}) {
 		switch (url.pathname) {
 			case "/api/session":
 				return (body as { launchCode?: string }).launchCode === LAUNCH_CODE && server.sessionAlive
-					? respond(200, { sessionToken: SESSION_TOKEN, entry: options.entry ?? "start" })
+					? respond(200, { sessionToken: SESSION_TOKEN, entry: options.entry ?? "start", experiences: options.experiences ?? "supported" })
 					: respond(403, { error: "session-expired" });
 			case "/api/state": {
 				if (!authorized) {
@@ -161,7 +165,11 @@ async function openSetup(options: Options = {}) {
 					return new Promise(() => undefined);
 				}
 				const result = server.onCommand?.(body as Record<string, unknown>);
-				return respond(200, (body as { type: string }).type === "finish" ? { finished: true } : payload(result));
+				const command = body as { type: string; experience?: string };
+				if (command.type === "choose-experience") {
+					return respond(200, { ...payload(), experience: { id: command.experience, outcome: server.experienceOutcome } });
+				}
+				return respond(200, command.type === "finish" ? { finished: true } : payload(result));
 			}
 			default:
 				return respond(404, {});
@@ -736,7 +744,7 @@ describe("copy Redirect URI", () => {
 });
 
 describe("connected", () => {
-	it("celebrates a new connection, making Show me around the optional primary next step", async () => {
+	it("celebrates a new connection, making Choose my Deckify experience the next step and the tour optional", async () => {
 		const app = await openSetup();
 		await app.receive(DISCONNECTED);
 		app.click("connect");
@@ -749,18 +757,20 @@ describe("connected", () => {
 		expect(app.el("account-premium").textContent).toBe("Yes");
 		expect(app.el("account-status").textContent).toBe("Connected");
 		expect(app.el("status-text").textContent).toBe("Connected");
+		const [choose] = app.buttons("experience-start");
+		expect(choose?.textContent).toBe("Choose my Deckify experience");
+		expect(choose?.classList.contains("primary")).toBe(true);
 		const [tour] = app.buttons("tour-start");
-		expect(tour?.textContent).toBe("Show me around");
-		expect(tour?.classList.contains("primary")).toBe(true);
-		const [later] = app.buttons("show-ready");
-		expect(later?.textContent).toBe("Maybe later");
-		expect(later?.classList.contains("primary")).toBe(false);
+		expect(tour?.textContent).toBe("Show me around first");
+		expect(tour?.classList.contains("primary")).toBe(false);
+		expect(app.buttons("show-ready")).toHaveLength(0);
 		expect(app.buttons("disconnect")).toHaveLength(1);
 		expect(app.document.activeElement?.id).toBe("connected-title");
 
-		// The tour is optional.
-		app.click("show-ready");
-		expect(app.screen()).toBe("ready");
+		// The tour is optional: the experience chooser is one click away.
+		app.click("experience-start");
+		expect(app.screen()).toBe("experiences");
+		expect(app.commands()).toEqual([{ type: "connect" }]);
 	});
 
 	it("shows the account view, not setup, when reopened while connected", async () => {
@@ -770,6 +780,16 @@ describe("connected", () => {
 		expect(app.heading()).toBe("Connected to Spotify");
 		expect(app.shown(app.el("success-text"))).toBe(false);
 		expect(app.buttons("tour-start")[0]?.classList.contains("primary")).toBe(false);
+		expect(app.buttons("tour-start")[0]?.textContent).toBe("Show me around");
+		// People who set up before can still pick an experience from here.
+		// Hierarchy: choosing an experience is primary, the tour secondary, Done a low-emphasis text action that is still offered.
+		const emphasis = (button: HTMLButtonElement | undefined) => (button?.classList.contains("primary") ? "primary" : button?.classList.contains("link") ? "text" : "secondary");
+		const actions = [...app.view().querySelectorAll<HTMLButtonElement>(".actions button")].filter(app.shown).slice(0, 3);
+		expect(actions.map((button) => [button.textContent, emphasis(button)])).toEqual([
+			["Choose a Deckify experience", "primary"],
+			["Show me around", "secondary"],
+			["Done", "text"],
+		]);
 		expect(app.buttons("finish").map((button) => button.textContent)).toEqual(["Done"]);
 		expect(app.view().querySelector("details.help summary")?.textContent).toBe("Account setup help");
 
@@ -809,7 +829,7 @@ describe("connected", () => {
 });
 
 describe("tour and finish", () => {
-	it("pages through Now Playing, Like, Playlists and Volume, then shows that Deckify is ready", async () => {
+	it("pages through Now Playing, Like, Playlists and Volume, then continues to the experience chooser", async () => {
 		const app = await openSetup();
 		await app.receive(AUTHORIZING);
 		await app.receive(CONNECTED);
@@ -835,11 +855,11 @@ describe("tour and finish", () => {
 		app.click("tour-next");
 		expect(page()).toMatchObject({ title: "Volume", counter: "4 of 4", body: "Control Spotify's own device volume, not the Windows mixer." });
 		expect(app.buttons("tour-next")).toHaveLength(0);
+		expect(app.buttons("tour-done")[0]?.textContent).toBe("Choose my experience");
 
 		app.click("tour-done");
-		expect(app.screen()).toBe("ready");
-		expect(app.heading()).toBe("Deckify is ready.");
-		expect(app.text()).toContain("Drag Deckify actions from the Stream Deck actions list onto your keys.");
+		expect(app.screen()).toBe("experiences");
+		expect(app.heading()).toBe("Choose your Deckify experience");
 		// The tour itself is local: it never asked Deckify for anything.
 		expect(app.commands()).toEqual([]);
 	});
@@ -861,6 +881,7 @@ describe("tour and finish", () => {
 		app.click("tour-next");
 		app.click("tour-next");
 		app.click("tour-done");
+		app.click("experience-skip");
 		app.click("finish");
 		await settle();
 		expect(app.commands().at(-1)).toEqual({ type: "finish" });
@@ -880,6 +901,216 @@ describe("tour and finish", () => {
 			expect(asset, page.icon).toBeDefined();
 			expect(manifest.Actions.map((action) => `${action.Icon}.svg`)).toContain(asset?.file);
 		}
+	});
+});
+
+type Catalog = {
+	ACTIONS: Record<string, { name: string; uuid: string; icon: string }>;
+	EXPERIENCES: { id: string; label: string; description: string; recommended: boolean; layout: (string | null)[][] }[];
+	DEFAULT_EXPERIENCE: string;
+};
+
+/**
+ * Loads experiences.js on its own.
+ * @returns Its exports.
+ */
+async function loadCatalog(): Promise<Catalog> {
+	const dom = new JSDOM("", { runScripts: "outside-only" });
+	dom.window.eval(await readFile(path.join(PLUGIN, "ui", "setup", "experiences.js"), "utf8"));
+	return (dom.window as unknown as { DeckifyExperiences: Catalog }).DeckifyExperiences;
+}
+
+/**
+ * Opens the Setup App on the experience chooser, right after connecting.
+ * @param options Environment options.
+ * @returns The app.
+ */
+async function openChooser(options: Options = {}) {
+	const app = await openSetup(options);
+	await app.receive(AUTHORIZING);
+	await app.receive(CONNECTED);
+	app.click("experience-start");
+	return app;
+}
+
+describe("choosing an experience", () => {
+	const cards = (app: Awaited<ReturnType<typeof openSetup>>) => [...app.el("experience-list").querySelectorAll<HTMLButtonElement>(".experience-card")];
+	const checked = (app: Awaited<ReturnType<typeof openSetup>>) => cards(app).map((card) => card.getAttribute("aria-checked"));
+
+	it("offers exactly two layout choices, DECKIFY first, recommended and selected, then SIMPLE", async () => {
+		const app = await openChooser();
+		expect(app.screen()).toBe("experiences");
+		expect(app.heading()).toBe("Choose your Deckify experience");
+		expect(app.el("experience-list").getAttribute("role")).toBe("radiogroup");
+		expect(cards(app).map((card) => card.querySelector(".experience-name")?.textContent)).toEqual(["DECKIFY", "SIMPLE"]);
+		expect(cards(app).map((card) => card.querySelector(".experience-description")?.textContent)).toEqual([
+			"The complete Deckify experience.",
+			"The essentials. Clean and focused.",
+		]);
+		expect(cards(app).map((card) => card.getAttribute("role"))).toEqual(["radio", "radio"]);
+		expect(cards(app).map((card) => card.dataset.experience)).toEqual(["deckify", "simple"]);
+		expect(checked(app)).toEqual(["true", "false"]);
+		// Exactly one badge, on DECKIFY.
+		expect(cards(app).map((card) => card.querySelector(".experience-badge")?.textContent ?? null)).toEqual(["Recommended", null]);
+		expect(app.text()).not.toMatch(/power/i);
+		expect(app.buttons("experience-use").map((button) => [button.textContent, button.classList.contains("primary")])).toEqual([["Use this experience", true]]);
+		// Layouts, not plans: no prices, tiers or feature checklists.
+		expect(app.text()).not.toMatch(/\$|€|£|price|per month|\/mo\b|plan\b|tier|free trial|upgrade/i);
+		// Nothing is installed by opening or browsing the chooser.
+		expect(app.commands()).toEqual([]);
+	});
+
+	it("previews each experience's exact 5 × 3 layout with Deckify's own action icons", async () => {
+		const app = await openChooser();
+		const catalog = await loadCatalog();
+		for (const [index, card] of cards(app).entries()) {
+			const experience = catalog.EXPERIENCES[index];
+			const tiles = [...card.querySelectorAll<HTMLElement>(".deck-key")];
+			expect(tiles).toHaveLength(15);
+			const drawn = tiles.map((tile) => tile.dataset.key ?? null);
+			expect(drawn).toEqual(experience?.layout.flat());
+			for (const tile of tiles) {
+				const icon = tile.querySelector("img");
+				if (tile.dataset.key === undefined) {
+					expect(icon).toBeNull();
+					expect(tile.classList.contains("empty")).toBe(true);
+				} else {
+					expect(icon?.getAttribute("src")).toBe(catalog.ACTIONS[tile.dataset.key]?.icon);
+					expect(SETUP_ASSETS[icon?.getAttribute("src") ?? ""], tile.dataset.key).toBeDefined();
+					expect(icon?.getAttribute("alt")).toBe("");
+				}
+			}
+			// Screen readers get the layout in words.
+			expect(card.querySelector(".sr-only")?.textContent).toMatch(/^Top row: .+\. Middle row: .+\. Bottom row: .+\.$/);
+			expect(card.querySelector(".deck-preview")?.getAttribute("aria-hidden")).toBe("true");
+		}
+		// No Spotify artwork or song metadata in a preview.
+		expect(app.el("experience-list").textContent).not.toMatch(/spotify:|open\.spotify|album|artist/i);
+	});
+
+	it("selects with a click or the arrow keys without sending anything", async () => {
+		const app = await openChooser();
+		app.click("experience-select", 1);
+		expect(checked(app)).toEqual(["false", "true"]);
+		expect(app.document.activeElement).toBe(cards(app)[1]);
+		app.el("experience-list").dispatchEvent(new app.window.KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+		expect(checked(app)).toEqual(["true", "false"]);
+		app.el("experience-list").dispatchEvent(new app.window.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+		expect(checked(app)).toEqual(["false", "true"]);
+		app.el("experience-list").dispatchEvent(new app.window.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+		expect(checked(app)).toEqual(["true", "false"]);
+		expect(app.commands().filter((command) => command.type === "choose-experience")).toEqual([]);
+	});
+
+	it("sends only the experience ID, once, then asks the user to finish in Stream Deck without claiming success", async () => {
+		const app = await openChooser();
+		app.server.holdCommands = true;
+		app.click("experience-select", 1);
+		const use = app.click("experience-use");
+		// A double-click (or any click while the request is on its way) sends nothing more.
+		use.click();
+		app.click("experience-select", 0);
+		expect(use.disabled).toBe(true);
+		const sent = app.commands().filter((command) => command.type === "choose-experience");
+		expect(sent).toEqual([{ type: "choose-experience", experience: "simple" }]);
+		expect(checked(app)).toEqual(["false", "true"]);
+
+		app.server.holdCommands = false;
+		const fresh = await openChooser();
+		fresh.click("experience-use");
+		await settle();
+		expect(fresh.screen()).toBe("experience-finish");
+		expect(fresh.heading()).toBe("Finish in Stream Deck");
+		expect(fresh.el("experience-finish-name").textContent).toBe("DECKIFY");
+		expect(fresh.text()).toContain("Stream Deck may ask you to install the Deckify profile once. Approve it to continue.");
+		// No fake progress, no claim that the profile was installed.
+		expect(fresh.text()).not.toMatch(/\d+ ?%|installed|success/i);
+		expect(fresh.view().querySelector(".spinner, progress")).toBeNull();
+		expect(fresh.commands().filter((command) => command.type === "choose-experience")).toEqual([{ type: "choose-experience", experience: "deckify" }]);
+	});
+
+	it("ends on a ready screen naming the experience, with a way back to the chooser", async () => {
+		const app = await openChooser();
+		app.click("experience-use");
+		await settle();
+		app.click("experience-done");
+		expect(app.screen()).toBe("ready");
+		expect(app.heading()).toBe("Deckify is ready.");
+		expect(app.el("ready-experience").textContent).toBe("DECKIFY · Recommended");
+		expect(app.text()).toContain("Your controls are ready on Stream Deck.");
+		expect(app.text()).not.toContain("Drag Deckify actions");
+		expect(app.buttons("finish").map((button) => [button.textContent, button.classList.contains("primary")])).toEqual([["Done", true]]);
+
+		app.click("experience-start");
+		expect(app.screen()).toBe("experiences");
+		expect(checked(app)).toEqual(["true", "false"]);
+		app.click("experience-select", 1);
+		app.click("experience-use");
+		await settle();
+		app.click("experience-done");
+		expect(app.el("ready-experience").textContent).toBe("SIMPLE");
+		expect(app.commands().filter((command) => command.type === "choose-experience").map((command) => command.experience)).toEqual(["deckify", "simple"]);
+	});
+
+	it("can be skipped, keeping the drag-and-drop ready screen", async () => {
+		const app = await openChooser();
+		app.click("experience-skip");
+		expect(app.screen()).toBe("ready");
+		expect(app.shown(app.el("ready-experience"))).toBe(false);
+		expect(app.text()).toContain("Drag Deckify actions from the Stream Deck actions list onto your keys.");
+		expect(app.buttons("experience-start").map((button) => button.textContent)).toEqual(["Choose a Deckify experience"]);
+		expect(app.commands().filter((command) => command.type === "choose-experience")).toEqual([]);
+	});
+
+	it("explains a Stream Deck the layouts don't fit instead of offering to install them", async () => {
+		const app = await openChooser({ experiences: "unsupported-device" });
+		expect(app.shown(app.el("experience-unsupported"))).toBe(true);
+		expect(app.el("experience-unsupported").textContent).toContain("Stream Deck and Stream Deck MK.2");
+		expect(app.buttons("experience-use")).toHaveLength(0);
+		expect(cards(app).every((card) => card.disabled)).toBe(true);
+		app.click("experience-skip");
+		expect(app.screen()).toBe("ready");
+		expect(app.buttons("experience-start")).toHaveLength(0);
+		expect(app.commands().filter((command) => command.type === "choose-experience")).toEqual([]);
+	});
+
+	it("switches to that explanation if the plugin reports an unsupported device", async () => {
+		const app = await openChooser();
+		app.server.experienceOutcome = "unsupported-device";
+		app.click("experience-use");
+		await settle();
+		expect(app.screen()).toBe("experiences");
+		expect(app.shown(app.el("experience-unsupported"))).toBe(true);
+		expect(app.buttons("experience-use")).toHaveLength(0);
+	});
+
+	it("says when Stream Deck can't be reached or refuses, and lets the user try again", async () => {
+		const app = await openChooser();
+		app.server.experienceOutcome = "device-unavailable";
+		app.click("experience-use");
+		await settle();
+		expect(app.screen()).toBe("experiences");
+		expect(app.el("experience-issue").textContent).toContain("Deckify can't reach your Stream Deck");
+		expect(app.buttons("experience-use")[0]?.disabled).toBe(false);
+
+		app.server.experienceOutcome = "failed";
+		app.click("experience-use");
+		await settle();
+		expect(app.el("experience-issue").getAttribute("role")).toBe("alert");
+		expect(app.el("experience-issue").textContent).toContain("Stream Deck didn't accept the request");
+
+		app.server.experienceOutcome = "requested";
+		app.click("experience-use");
+		await settle();
+		expect(app.screen()).toBe("experience-finish");
+	});
+
+	it("leaves the chooser if Spotify disconnects", async () => {
+		const app = await openChooser();
+		await app.receive(DISCONNECTED);
+		expect(app.screen()).toBe("setup");
+		await app.receive(CONNECTED);
+		expect(app.screen()).toBe("connected");
 	});
 });
 
@@ -958,15 +1189,22 @@ describe("security and privacy of the page", () => {
 		app.click("tour-next");
 		app.click("tour-next");
 		app.click("tour-done");
+		app.click("experience-select", 1);
+		app.click("experience-use");
+		await settle();
+		app.click("experience-done");
 		app.click("finish");
 		await settle();
 
 		const commands = app.commands();
-		expect(commands.map((command) => command.type)).toEqual(["open-dashboard", "save-client-id", "connect", "retry-connect", "finish"]);
+		expect(commands.map((command) => command.type)).toEqual(["open-dashboard", "save-client-id", "connect", "retry-connect", "choose-experience", "finish"]);
+		const extraKeys: Record<string, string> = { "save-client-id": "clientId", "choose-experience": "experience" };
 		for (const command of commands) {
 			expect(ALLOWED_COMMANDS).toContain(command.type);
-			expect(Object.keys(command).filter((key) => key !== "type" && !(command.type === "save-client-id" && key === "clientId"))).toEqual([]);
+			expect(Object.keys(command).filter((key) => key !== "type" && key !== extraKeys[String(command.type)])).toEqual([]);
 		}
+		// Only the experience ID: no profile name, file path or device.
+		expect(commands.find((command) => command.type === "choose-experience")).toEqual({ type: "choose-experience", experience: "simple" });
 		const wire = JSON.stringify(app.server.requests.map((request) => [request.path, request.body]));
 		expect(findSecrets(wire)).toEqual([]);
 		expect(wire).not.toMatch(/https?:\/\/|token|secret|verifier/i);
@@ -975,7 +1213,7 @@ describe("security and privacy of the page", () => {
 
 	it("loads only its own local scripts, styles and images", async () => {
 		const app = await openSetup();
-		expect(app.scripts).toEqual(["/setup/onboarding.js", "/setup/setup.js"]);
+		expect(app.scripts).toEqual(["/setup/onboarding.js", "/setup/experiences.js", "/setup/setup.js"]);
 		const links = [...app.document.querySelectorAll("link[href], script[src], img[src]")].map((node) => node.getAttribute("href") ?? node.getAttribute("src") ?? "");
 		for (const link of links) {
 			expect(link, link).toMatch(/^\/setup\//);
@@ -1101,6 +1339,9 @@ describe("onboarding model", () => {
 		expect(model.chooseView(CONNECTED, model.initialUi("account"))).toEqual({ view: "connected", variant: "compact" });
 		expect(model.chooseView(CONNECTED, { ...auto, celebrate: true })).toEqual({ view: "connected", variant: "success" });
 		expect(model.chooseView(CONNECTED, { ...auto, route: "ready" })).toEqual({ view: "ready" });
+		expect(model.chooseView(CONNECTED, { ...auto, route: "experiences" })).toEqual({ view: "experiences" });
+		expect(model.chooseView(CONNECTED, { ...auto, route: "experience-finish" })).toEqual({ view: "experience-finish" });
+		expect(model.chooseView(DISCONNECTED, { ...auto, route: "experiences" })).toEqual({ view: "setup", step: 4 });
 		expect(model.chooseView({ ...DISCONNECTED, status: "reauthorization-required" }, auto)).toEqual({ view: "reconnect", variant: "permissions" });
 		expect(model.chooseView(NOT_CONFIGURED, { ...auto, route: "setup", step: 99 })).toEqual({ view: "setup", step: 4 });
 	});
@@ -1113,5 +1354,10 @@ describe("onboarding model", () => {
 		expect(model.onStateChange(auto, undefined, CONNECTED)).toMatchObject({ celebrate: false });
 		expect(model.onStateChange({ ...auto, route: "tour", celebrate: true }, CONNECTED, DISCONNECTED)).toMatchObject({ route: "auto", celebrate: false });
 		expect(model.onStateChange({ ...auto, route: "ready" }, CONNECTED, DISCONNECTED)).toMatchObject({ route: "auto" });
+		for (const route of ["experiences", "experience-finish"]) {
+			expect(model.onStateChange({ ...auto, route }, CONNECTED, DISCONNECTED)).toMatchObject({ route: "auto" });
+			expect(model.onStateChange({ ...auto, route }, CONNECTED, CONNECTED)).toMatchObject({ route });
+		}
+		expect(auto).toMatchObject({ experience: null });
 	});
 });

@@ -3,7 +3,7 @@
 // functions only; nothing here touches a page, the plugin, the network or browser storage.
 //
 // The plugin is authoritative: it decides the status and the issue code. This file only turns them into words and next steps, and keeps
-// the purely visual, per-session navigation state (setup step, tour page) that is forgotten when the page closes.
+// the purely visual, per-session navigation state (setup step, tour page, chosen experience) that is forgotten when the page closes.
 "use strict";
 
 (() => {
@@ -243,13 +243,18 @@
 		return index < 0 ? { action, label: undefined } : { action: action.slice(0, index), label: action.slice(index + 1) };
 	}
 
+	/** Screens that need a connected account; they are left when the connection ends. */
+	const CONNECTED_ROUTES = Object.freeze(["tour", "experiences", "experience-finish", "ready"]);
+
 	/**
 	 * The navigation state when a page opens.
 	 * @param {"start" | "account"} [entry] Where to start: the welcome screen, or straight at the account (Client ID / connection) part.
-	 * @returns {{route: "auto" | "account" | "setup" | "tour" | "ready", step: number, tourPage: number, celebrate: boolean}} Fresh state.
+	 * @returns {{route: string, step: number, tourPage: number, celebrate: boolean, experience: string | null}} Fresh state. `route` is one of
+	 * "auto", "account", "setup", "tour", "experiences", "experience-finish" and "ready"; `experience` is the experience the user chose in
+	 * this session (shown on the ready screen), if any.
 	 */
 	function initialUi(entry) {
-		return { route: entry === "account" ? "account" : "auto", step: 1, tourPage: 0, celebrate: false };
+		return { route: entry === "account" ? "account" : "auto", step: 1, tourPage: 0, celebrate: false, experience: null };
 	}
 
 	/**
@@ -270,7 +275,7 @@
 			}
 		} else {
 			result.celebrate = false;
-			if (result.route === "tour" || result.route === "ready") {
+			if (CONNECTED_ROUTES.includes(result.route)) {
 				result.route = "auto";
 			}
 		}
@@ -298,6 +303,12 @@
 			case "connected":
 				if (ui.route === "tour") {
 					return { view: "tour" };
+				}
+				if (ui.route === "experiences") {
+					return { view: "experiences" };
+				}
+				if (ui.route === "experience-finish") {
+					return { view: "experience-finish" };
 				}
 				if (ui.route === "ready") {
 					return { view: "ready" };

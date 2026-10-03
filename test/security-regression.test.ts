@@ -277,7 +277,11 @@ describe("security regression checks", () => {
 
 	it("keeps the Deckify Setup App to its own server, away from Spotify, links, HTML injection, storage and credentials", async () => {
 		const setup = (await inspectorSources()).filter((s) => s.file.startsWith("com.marting.deckify.sdPlugin/ui/setup/"));
-		expect(setup.map((s) => s.file).sort()).toEqual(["com.marting.deckify.sdPlugin/ui/setup/index.html", "com.marting.deckify.sdPlugin/ui/setup/setup.js"]);
+		expect(setup.map((s) => s.file).sort()).toEqual([
+			"com.marting.deckify.sdPlugin/ui/setup/experiences.js",
+			"com.marting.deckify.sdPlugin/ui/setup/index.html",
+			"com.marting.deckify.sdPlugin/ui/setup/setup.js",
+		]);
 		expect(
 			matching(setup, /api\.spotify\.com|accounts\.spotify\.com|XMLHttpRequest|sendBeacon|WebSocket|EventSource|window\.open|location\s*=|location\.(href|assign|replace)|innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\(|localStorage|sessionStorage|indexedDB|document\.cookie/),
 		).toEqual([]);
@@ -301,6 +305,29 @@ describe("security regression checks", () => {
 		expect(matching(await sources(), /0\.0\.0\.0|host: "::"|INADDR_ANY/)).toEqual([]);
 		expect(matching(setup, /from "\.\.\/spotify\/(auth|storage)|accessToken|refreshToken|codeVerifier|getAccessToken/)).toEqual([]);
 		expect(matching(setup, /logger\.(debug|info|warn|error)\([^)]*(launchCode|token|url\b)/i)).toEqual([]);
+	});
+
+	it("switches only to Deckify's bundled profiles, only on the Stream Deck that opened setup", async () => {
+		const src = (await sources()).filter((s) => s.file.startsWith("src/"));
+		const strip = (line: string) => line.replace(/^\S+:\d+: /, "");
+		// One call into the SDK, behind the switcher; nothing else reaches Stream Deck's profile API.
+		expect(codeOnly(matching(src, /profiles\.switchToProfile|switchToProfile\(/)).map((line) => `${line.split(":")[0] ?? ""}: ${strip(line)}`)).toEqual([
+			"src/experiences/experiences.ts: await this.#switchToProfile(deviceId, profile);",
+			"src/plugin.ts: switchToProfile: (deviceId, profile) => streamDeck.profiles.switchToProfile(deviceId, profile),",
+		]);
+		const experiences = (await readFile(path.join(ROOT, "src/experiences/experiences.ts"), "utf8")).replaceAll("\r\n", "\n");
+		// The profile is always looked up from the fixed table by a validated ID.
+		expect(experiences).toContain("this.#send(deviceId, EXPERIENCE_PROFILES[id], key)");
+		expect(experiences.match(/this\.#send\(/g)).toHaveLength(1);
+		// The device is the session's origin (from the SDK event that opened setup), never a value from the request.
+		const server = (await readFile(path.join(ROOT, "src/setup/setup-server.ts"), "utf8")).replaceAll("\r\n", "\n");
+		expect(matching([{ file: "src/setup/setup-server.ts", text: server }], /#experiences\.choose\(/).map(strip)).toEqual([
+			"const outcome = await this.#experiences.choose(experience, session.originDeviceId);",
+		]);
+		expect(server).toContain("const experience = parseExperienceCommand(body);");
+		const account = (await readFile(path.join(ROOT, "src/actions/spotify-account.ts"), "utf8")).replaceAll("\r\n", "\n");
+		expect(account).toContain("await this.#openSetup(entry, originDeviceId(ev));");
+		expect(account).toContain("(ev as { readonly action?: { readonly device?: { readonly id?: unknown } } }).action?.device?.id");
 	});
 
 	it("loads no remote scripts or styles in the Property Inspector", async () => {

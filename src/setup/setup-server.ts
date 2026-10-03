@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { parseExperienceId, type ExperienceId, type ExperienceOutcome, type ExperienceSupport } from "../experiences/experiences";
 import { silentLogger, type Logger } from "../shared/logger";
 import { parseSpotifyAccountCommand, type ClientIdProblem, type PublicSpotifyAccountPayload, type SpotifyAccountCommand } from "../spotify/account-commands";
 import { SPOTIFY_REDIRECT_PORT } from "../spotify/config";
@@ -39,11 +40,22 @@ export const SETUP_ASSETS: Readonly<Record<string, { readonly file: string; read
 	[`${SETUP_PATH}/setup.css`]: { file: "ui/setup/setup.css", type: "text/css; charset=utf-8" },
 	[`${SETUP_PATH}/setup.js`]: { file: "ui/setup/setup.js", type: "text/javascript; charset=utf-8" },
 	[`${SETUP_PATH}/onboarding.js`]: { file: "ui/shared/onboarding.js", type: "text/javascript; charset=utf-8" },
+	[`${SETUP_PATH}/experiences.js`]: { file: "ui/setup/experiences.js", type: "text/javascript; charset=utf-8" },
 	[`${SETUP_PATH}/icon.svg`]: { file: "ui/setup/icon.svg", type: "image/svg+xml" },
 	[`${SETUP_PATH}/icons/now-playing.svg`]: { file: "imgs/actions/playback/now-playing-icon.svg", type: "image/svg+xml" },
 	[`${SETUP_PATH}/icons/like.svg`]: { file: "imgs/actions/library/like-icon.svg", type: "image/svg+xml" },
 	[`${SETUP_PATH}/icons/playlists.svg`]: { file: "imgs/actions/playlist/add-icon.svg", type: "image/svg+xml" },
 	[`${SETUP_PATH}/icons/volume.svg`]: { file: "imgs/actions/volume/volume-up-icon.svg", type: "image/svg+xml" },
+	// Key icons of the experience layout previews.
+	[`${SETUP_PATH}/icons/account.svg`]: { file: "imgs/actions/spotify-account/icon.svg", type: "image/svg+xml" },
+	[`${SETUP_PATH}/icons/previous.svg`]: { file: "imgs/actions/playback/previous-icon.svg", type: "image/svg+xml" },
+	[`${SETUP_PATH}/icons/play-pause.svg`]: { file: "imgs/actions/playback/play-pause-icon.svg", type: "image/svg+xml" },
+	[`${SETUP_PATH}/icons/next.svg`]: { file: "imgs/actions/playback/next-icon.svg", type: "image/svg+xml" },
+	[`${SETUP_PATH}/icons/volume-down.svg`]: { file: "imgs/actions/volume/volume-down-icon.svg", type: "image/svg+xml" },
+	[`${SETUP_PATH}/icons/mute.svg`]: { file: "imgs/actions/volume/mute-icon.svg", type: "image/svg+xml" },
+	[`${SETUP_PATH}/icons/volume-up.svg`]: { file: "imgs/actions/volume/volume-up-icon.svg", type: "image/svg+xml" },
+	[`${SETUP_PATH}/icons/add-to-playlist.svg`]: { file: "imgs/actions/playlist/add-icon.svg", type: "image/svg+xml" },
+	[`${SETUP_PATH}/icons/play-playlist.svg`]: { file: "imgs/actions/playlist/play-icon.svg", type: "image/svg+xml" },
 });
 
 /** Content Security Policy of every response: the page may load only its own files and talk only to this server. */
@@ -73,10 +85,38 @@ export type SetupAccountCommands = {
 };
 
 /**
+ * The experience operations the Setup App server needs (see `ExperienceSwitcher`). The device is always the one that opened setup.
+ */
+export type SetupExperiences = {
+	support(deviceId: string | undefined): ExperienceSupport;
+	choose(id: ExperienceId, deviceId: string | undefined): Promise<ExperienceOutcome>;
+};
+
+/**
+ * Parses the one experience command: exactly `{ type: "choose-experience", experience: "deckify" | "simple" }`. Anything else
+ * (a profile name, a path, a device ID, an extra field) is rejected.
+ * @param body Untrusted request body.
+ * @returns The experience; otherwise `undefined`.
+ */
+export function parseExperienceCommand(body: unknown): ExperienceId | undefined {
+	if (typeof body !== "object" || body === null || Array.isArray(body)) {
+		return undefined;
+	}
+	const keys = Object.keys(body).sort();
+	if (keys.length !== 2 || keys[0] !== "experience" || keys[1] !== "type" || (body as { type?: unknown }).type !== "choose-experience") {
+		return undefined;
+	}
+	return parseExperienceId((body as { experience?: unknown }).experience);
+}
+
+/**
  * Dependencies of {@link DeckifySetupServer}.
  */
 export type DeckifySetupServerOptions = {
 	readonly commands: SetupAccountCommands;
+
+	/** Installs Deckify's bundled experiences on the Stream Deck that opened setup. */
+	readonly experiences: SetupExperiences;
 
 	/** Shared account state; every change is pushed to a waiting Setup App. */
 	readonly state: Pick<SpotifyAuthState, "subscribe">;
@@ -103,12 +143,14 @@ export type DeckifySetupServerOptions = {
  * Serves the Deckify Setup App on `127.0.0.1` and a dynamic port, for one setup session at a time.
  *
  * The browser page is untrusted presentation: it receives only the public account state and may request only the fixed Spotify account
- * commands (plus "finish"). OAuth stays in the auth service and its own callback listener on port 43821. Every request must come to
+ * commands, the choice of one of Deckify's fixed experiences (applied to the Stream Deck that opened setup, which the page never names),
+ * and "finish". OAuth stays in the auth service and its own callback listener on port 43821. Every request must come to
  * `127.0.0.1:<port>` (DNS rebinding), every API request must carry the session token, and every API POST must come from the Setup App's own
  * origin (CSRF). The server stops when the session finishes, is replaced, idles or expires.
  */
 export class DeckifySetupServer {
 	readonly #commands: SetupAccountCommands;
+	readonly #experiences: SetupExperiences;
 	readonly #state: Pick<SpotifyAuthState, "subscribe">;
 	readonly #openUrl: (url: string) => Promise<void>;
 	readonly #pluginDir: string;
@@ -133,6 +175,7 @@ export class DeckifySetupServer {
 	 */
 	constructor(options: DeckifySetupServerOptions) {
 		this.#commands = options.commands;
+		this.#experiences = options.experiences;
 		this.#state = options.state;
 		this.#openUrl = options.openUrl;
 		this.#pluginDir = options.pluginDir ?? fileURLToPath(new URL("../", import.meta.url));
@@ -154,11 +197,12 @@ export class DeckifySetupServer {
 	/**
 	 * Starts a new setup session (ending any previous one) and opens the Setup App in the default browser.
 	 * @param entry Where the Setup App starts.
+	 * @param originDeviceId The Stream Deck whose Spotify Account key opened setup; experiences are installed there and nowhere else.
 	 */
-	async open(entry: "start" | "account" = "start"): Promise<void> {
+	async open(entry: "start" | "account" = "start", originDeviceId?: string): Promise<void> {
 		const port = await this.#ensureListening();
 		this.#session?.end();
-		const session = new SetupSession(entry, this.#clock(), this.#createSecret);
+		const session = new SetupSession(entry, this.#clock(), this.#createSecret, originDeviceId);
 		this.#session = session;
 		const url = `http://${SETUP_HOST}:${port}${SETUP_PATH}#launch=${session.launchCode ?? ""}`;
 		if (!isDeckifySetupUrl(url)) {
@@ -351,7 +395,7 @@ export class DeckifySetupServer {
 			send(res, 403, { error: "session-expired" });
 			return;
 		}
-		send(res, 200, { sessionToken: token, entry: session.entry });
+		send(res, 200, { sessionToken: token, entry: session.entry, experiences: this.#experiences.support(session.originDeviceId) });
 	}
 
 	/**
@@ -383,7 +427,7 @@ export class DeckifySetupServer {
 	}
 
 	/**
-	 * `POST /api/command`: runs one allowlisted account command, or finishes the session.
+	 * `POST /api/command`: runs one allowlisted account command, chooses one of the fixed experiences, or finishes the session.
 	 * @param req Request.
 	 * @param res Response.
 	 * @param port Server port.
@@ -401,6 +445,17 @@ export class DeckifySetupServer {
 			res.once("finish", () => {
 				void this.close();
 			});
+			return;
+		}
+		if (typeof body === "object" && body !== null && "type" in body && body.type === "choose-experience") {
+			const experience = parseExperienceCommand(body);
+			const session = this.#session;
+			if (experience === undefined || session === undefined) {
+				send(res, 400, { error: "unknown-command" });
+				return;
+			}
+			const outcome = await this.#experiences.choose(experience, session.originDeviceId);
+			send(res, 200, { version: this.#version, ...this.#commands.payload(), experience: { id: experience, outcome } });
 			return;
 		}
 		const command = parseSpotifyAccountCommand(body);

@@ -41,6 +41,7 @@ flowchart LR
 | Actions | `src/actions/` | One class per action UUID. Each turns shared state into a key image and title and handles presses. |
 | Property Inspectors | `com.marting.deckify.sdPlugin/ui/` | Local HTML + JavaScript pages for the Spotify Account (a compact entry point to Deckify Setup), Volume and playlist settings. No remote scripts, no browser storage; they talk only to the plugin. |
 | Deckify Setup | `src/setup/`, `ui/setup/` | The guided Spotify setup in the default browser, served by the plugin on `127.0.0.1` while open. See [Deckify Setup](#deckify-setup). |
+| Experiences | `src/experiences/`, `ui/setup/experiences.js`, `profiles/` | Two bundled, editable Stream Deck profiles the user picks in Deckify Setup. See [Experiences](#experiences). |
 | Manifest | `com.marting.deckify.sdPlugin/manifest.json` | Plugin and action definitions. The plugin and action UUIDs are permanent. |
 
 The legacy **Deckify Status** action (`com.marting.deckify.status`) is still registered so existing keys keep working, but it is hidden from
@@ -107,7 +108,7 @@ entry point (status, account summary, **Set up Deckify** / **Open Deckify Setup*
   43821; if that port is offered, it is released and another is chosen. Spotify's OAuth callback stays on its own one-shot listener at
   `http://127.0.0.1:43821/callback`.
 - **Files:** it serves only a fixed list of files (`SETUP_ASSETS`: the page, its script and stylesheet, the shared onboarding model, the
-  favicon and four action icons). Request paths are never mapped onto the file system.
+  experience layouts, the favicon and Deckify's action icons). Request paths are never mapped onto the file system.
 - **Opening:** the plugin opens `http://127.0.0.1:<port>/setup#launch=<code>` through the same `openUrl` path as other links, after
   checking it against a strict pattern.
 - **Session:**
@@ -119,8 +120,8 @@ entry point (status, account summary, **Set up Deckify** / **Open Deckify Setup*
   - A session ends when the user presses **Done**, when setup is opened again (the old token stops working), after ten idle minutes or
     after two hours. The server then stops. Reloading the page needs a new link from Stream Deck.
 - **API:** `GET /api/state?after=<version>` returns the public account state, waiting up to 25 seconds for a change.
-  `POST /api/command` runs one of the fixed account commands, or `finish`. Nothing else is exposed: no URLs, files, shell or generic
-  plugin commands.
+  `POST /api/command` runs one of the fixed account commands, `choose-experience` with one of two fixed IDs, or `finish`. Nothing else
+  is exposed: no URLs, files, profile names, device IDs, shell or generic plugin commands.
 - **Checks on every request:** the `Host` header must be exactly `127.0.0.1:<port>`. API requests must carry the session token; POSTs must
   come from the page's own origin (`Origin`, `Sec-Fetch-Site`) as `application/json`, with bodies of at most 4 KB. There are no CORS
   headers. Every response is `no-store` and carries a strict Content Security Policy (`'self'` only), `nosniff`, `no-referrer` and
@@ -133,6 +134,25 @@ entry point (status, account summary, **Set up Deckify** / **Open Deckify Setup*
     process running as the same Windows user is out of scope: it could already read that user's files and DPAPI-protected data.
   - The page is treated as untrusted presentation. It never receives tokens or the encryption key, so even a fully compromised page can
     only do what the user could do with the setup buttons.
+## Experiences
+
+Code: `src/experiences/experiences.ts` (plugin side), `com.marting.deckify.sdPlugin/ui/setup/experiences.js` (layouts and previews),
+`com.marting.deckify.sdPlugin/profiles/` (the exports) and `scripts/profiles.mjs` (checks). Details, layouts and how the exports are made:
+[profiles.md](profiles.md).
+
+- **What they are:** DECKIFY ⭐ Recommended and SIMPLE, two editable starting layouts for the 15-key Stream Deck / MK.2, bundled as
+  real Stream Deck profile exports and registered in the manifest's `Profiles` (`DeviceType 0`, `Readonly`, `AutoInstall` and
+  `DontAutoSwitchWhenInstalled` all `false`).
+- **Choosing:** after Spotify connects, Deckify Setup offers **Choose my Deckify experience** (the tour stays optional and ends at the
+  chooser). The page sends only the experience ID.
+- **Switching:** `ExperienceSwitcher` maps the ID to its fixed profile name and calls the SDK's `switchToProfile` for the device whose
+  Spotify Account key opened setup. That device comes from the SDK event and stays in the plugin. Other devices get a friendly message
+  instead. Concurrent and repeated requests are collapsed.
+- **Honesty:** Stream Deck may ask the user to install the profile and doesn't report back, so Deckify says "Finish in Stream Deck" and
+  never claims the profile was installed. It stores nothing about the choice.
+- **Kept in sync:** the previews, the plugin's mapping, the manifest and the bundled files are compared by tests, `npm run profiles:check`
+  and `npm run pack`. The checks also reject personal data and configured playlist keys.
+
 ## Windows media bridge (`native/media-bridge/`)
 
 - **What it is:** a small Rust program (`bin/native/deckify-media-bridge.exe`), started once, hidden (no console window), with no shell.
