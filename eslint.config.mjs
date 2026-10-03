@@ -37,6 +37,20 @@ export default defineConfig(
 		},
 	},
 	{
+		// The promo film runs in a browser page (ES modules), except the bridge injected into Deckify Setup (a classic script).
+		files: ["film/src/**/*.js"],
+		languageOptions: {
+			sourceType: "module",
+			globals: globals.browser,
+		},
+	},
+	{
+		files: ["film/src/setup-bridge.js"],
+		languageOptions: {
+			sourceType: "script",
+		},
+	},
+	{
 		// Property Inspector scripts run in Stream Deck's embedded browser.
 		files: ["*.sdPlugin/ui/**/*.js"],
 		languageOptions: {

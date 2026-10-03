@@ -1,0 +1,19 @@
+{
+	"name": "deckify-promo-film",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Deckify product promo film: a deterministic, timeline-driven HTML film rendered frame by frame to 16:9 and 9:16 masters.",
+	"type": "module",
+	"scripts": {
+		"preview": "node scripts/serve.mjs",
+		"soundtrack": "node scripts/soundtrack.mjs",
+		"render:desktop": "node scripts/render.mjs --format desktop",
+		"render:mobile": "node scripts/render.mjs --format mobile",
+		"render:draft": "node scripts/render.mjs --format desktop --scale 0.5 --fps 30",
+		"render": "npm run soundtrack && npm run render:desktop && npm run render:mobile"
+	},
+	"devDependencies": {
+		"@fontsource/inter": "^5.3.0",
+		"playwright-core": "^1.63.0"
+	}
+}
