@@ -23,7 +23,7 @@ are not committed.
 
 ## Still to capture
 
-### 1. Physical MK.2 hero GIF (required before a public release)
+### 1. Physical MK.2 hero GIF (for the README and the Marketplace listing)
 
 A short, real capture of a Stream Deck MK.2 running Deckify.
 

@@ -38,8 +38,8 @@ Deckify is a Stream Deck plugin for Windows that turns your keys into a Spotify 
 - **Fast control:** commands reach the Spotify app on your PC instantly, and Spotify on your phone or speakers through Spotify Connect.
 - **Actions basic media keys can't do:** like songs, add them to a playlist (without duplicates) and start your playlists.
 
-> **Status:** Deckify works today and has been tested on a Stream Deck MK.2. Version 1.0 is in final release preparation; there is no
-> downloadable release yet. See [Getting started](#getting-started).
+> **Status:** Deckify has been tested on a Stream Deck MK.2. It is distributed as a ready-to-install package on the
+> [Releases page](https://github.com/MartinGu04/deckify/releases). See [Getting started](#getting-started).
 
 ## Why Deckify
 
@@ -119,12 +119,13 @@ Deckify never asks for the **Client Secret**. Don't copy or enter it anywhere.
 
 ### 3. Install Deckify
 
-Deckify doesn't have a public release yet. When it does, installing will take two steps:
+1. Open the [Releases page](https://github.com/MartinGu04/deckify/releases).
+2. Download `com.marting.deckify.streamDeckPlugin` from the latest release's assets.
+3. Double-click it.
+4. The Stream Deck app installs Deckify, and the **Deckify** category appears in the actions list.
+5. Continue with Deckify Setup below.
 
-1. Download `com.marting.deckify.streamDeckPlugin` from the repository's Releases page.
-2. Double-click it. The Stream Deck app installs it, and the **Deckify** category appears in the actions list.
-
-Until then, Deckify can be built from source; see [docs/development.md](docs/development.md).
+To build Deckify from source instead, see [docs/development.md](docs/development.md).
 
 ### 4. Connect Spotify
 
@@ -347,8 +348,7 @@ No. Deckify is an independent project. It isn't made, endorsed or supported by S
 - choosing the playback device;
 - queue controls;
 - layouts tuned for Stream Deck +, XL and Neo;
-- a public release and Elgato Marketplace listing, once the remaining [launch audit](docs/public-launch-audit.md) items are done
-  (real product media).
+- an Elgato Marketplace listing, once the remaining [launch audit](docs/public-launch-audit.md) items are done (real product media).
 
 ## Documentation
 
@@ -358,7 +358,7 @@ No. Deckify is an independent project. It isn't made, endorsed or supported by S
 | [Experiences](docs/profiles.md) | The two bundled starter layouts, how they are made and checked. |
 | [Privacy](docs/privacy.md) | What Deckify stores, sends and logs. |
 | [Security policy](SECURITY.md) | Supported versions and how to report vulnerabilities. |
-| [Development](docs/development.md) | Building, testing, packaging, CI and logs. |
+| [Development](docs/development.md) | Building, testing, packaging, CI, releases and logs. |
 | [Development history](docs/development-history.md) | Phases 1–9, the v1.0 cleanup and the decisions behind them. |
 | [Public-launch audit](docs/public-launch-audit.md) | Spotify and Elgato compliance status and launch blockers. |
 | [Marketplace readiness](docs/marketplace-readiness.md) | The Elgato Marketplace checklist. |

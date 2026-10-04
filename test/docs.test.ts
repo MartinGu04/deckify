@@ -109,11 +109,16 @@ describe("README facts", () => {
 		}
 	});
 
-	it("claims no public release, download or Marketplace listing that doesn't exist", async () => {
+	it("installs from the Releases page, without linking a release, download or Marketplace listing that may not exist yet", async () => {
 		const readme = await read("README.md");
 		expect(readme).not.toMatch(/marketplace\.elgato\.com|\/releases\/(download|latest|tag)|img\.shields\.io\/(github\/(downloads|v|release|stars)|codecov|coverage)/i);
 		expect(readme).not.toMatch(/\[[^\]]*download[^\]]*\]\(/i);
-		expect(readme.replace(/\n>\s*/g, " ")).toMatch(/no (downloadable|public) release yet/i);
+		const install = readme.slice(readme.indexOf("### 3. Install Deckify"), readme.indexOf("### 4. Connect Spotify"));
+		expect(install).toContain("](https://github.com/MartinGu04/deckify/releases)");
+		expect(install).toContain("`com.marting.deckify.streamDeckPlugin`");
+		for (const file of await markdownFiles()) {
+			expect((await read(file)).replace(/\n>?\s*/g, " "), file).not.toMatch(/no (downloadable|public) release yet|release preparation|coming soon/i);
+		}
 	});
 
 	it("doesn't put Spotify's logo or the development-era Deckify mark in the README or public media", async () => {

@@ -66,11 +66,14 @@ jobs:
       - name: Native tests (protocol, Spotify-only session selection, dispatch)
         run: npm run native:test
 
-      - name: Native lint (rustfmt, clippy)
+      # Separate steps: PowerShell only fails a step on its last command's exit code.
+      - name: Native format check (rustfmt)
         working-directory: native/media-bridge
-        run: |
-          cargo fmt --check
-          cargo clippy --locked --all-targets -- -D warnings
+        run: cargo fmt --check
+
+      - name: Native lint (clippy)
+        working-directory: native/media-bridge
+        run: cargo clippy --locked --all-targets -- -D warnings
 
       - name: Build and package (release helper bundled and verified in the .streamDeckPlugin)
         run: npm run pack
