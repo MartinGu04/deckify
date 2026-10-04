@@ -17,6 +17,10 @@ Images and captures for the README, releases and (later) the Marketplace listing
 | --- | --- |
 | `deck-layout-overview.svg` | An **illustration** (not a photo) of an example 5×3 layout, built by `scripts/export-deck-overview.mjs` from the key images Deckify ships. It contains no Spotify artwork and no track data, and it is regenerated when the key artwork changes (`npm run assets`). |
 
+The 24-second promo film (16:9 and 9:16) is rendered, not captured: it is built from the key images above, the real Deckify Setup page
+and the B1 logo, with fictional demo data. Its source and render steps are in [film/README.md](../../film/README.md); the rendered files
+are not committed.
+
 ## Still to capture
 
 ### 1. Physical MK.2 hero GIF (required before a public release)

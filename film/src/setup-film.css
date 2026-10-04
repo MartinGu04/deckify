@@ -1,0 +1,38 @@
+/*
+ * Presentation-only additions to the real Deckify Setup page for the film. Layout, colours, copy and components are untouched; this only
+ * swaps the system font for Inter (Segoe UI is not available on the render machine), lets the card float on the film's stage, and hides
+ * focus rings left behind by scripted clicks.
+ */
+@font-face { font-family: "Inter"; font-weight: 400; src: url("/fonts/inter-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 500; src: url("/fonts/inter-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 600; src: url("/fonts/inter-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 700; src: url("/fonts/inter-latin-700-normal.woff2") format("woff2"); }
+
+:root {
+	--font: "Segoe UI Variable Text", "Segoe UI", "Inter", system-ui, sans-serif;
+}
+
+html,
+body,
+.backdrop {
+	background: transparent !important;
+	overflow: hidden;
+}
+
+*,
+*::before,
+*::after {
+	transition: none !important;
+}
+
+button:focus-visible,
+h2:focus-visible,
+.copy-value:focus {
+	outline: none !important;
+	box-shadow: none !important;
+}
+
+.film-pressed {
+	transform: scale(0.96);
+	filter: brightness(1.12);
+}
