@@ -102,7 +102,7 @@ Now Playing's icon), that both states are legible, and how the 135×135 official
 
 | Item | Status | Notes |
 | --- | --- | --- |
-| Licence | ⛔ | No licence file. Without one, nobody may reuse the code. Choosing one needs the owner's explicit decision; Phase 7 adds none. |
+| Licence | ✅ (v1.0) | **MIT License**, chosen by the owner: [`LICENSE`](../LICENSE), Copyright (c) 2026 Martin Gusin, standard MIT terms. It covers Deckify's original source code and documentation only. [`NOTICE.md`](../NOTICE.md) excludes the Deckify name, logo, symbol and brand identity (all rights reserved except where explicitly permitted), Spotify's trademarks, logos, icons and official brand assets (Spotify's terms and brand guidelines), and Elgato / Stream Deck names, trademarks and brand assets (their owners' terms); it grants no third-party trademark rights. `package.json` and the Windows helper's `Cargo.toml` declare `MIT` (checked by a test). |
 | Security policy | ✅ (Phase 7) | `SECURITY.md`. Enable GitHub private vulnerability reporting when the repository becomes public. |
 | Privacy | ✅ (Phase 7) | `docs/privacy.md`, checked against the code: no telemetry, Spotify is the only network destination. |
 | Media | 🟡 | No real screenshots or hardware captures yet. The capture plan is in [`media/README.md`](media/README.md). The README has no image placeholders or broken links. |
@@ -129,6 +129,10 @@ On the production B1 build (`a13b8e9`), the owner checked Deckify on a physical 
   successful press.
 - **Elgato metadata:** Windows 10+ only, Stream Deck 7.1+, Node.js 24, keypad actions only (unchanged).
 - **Phase 7:** brand, attribution assets, hidden legacy action, security policy and privacy documentation (see above).
+- **Licence:** the owner chose the MIT License for Deckify's original source code and documentation (`LICENSE`). The Deckify brand
+  (name, logo, symbol, `assets/brand/`) is excluded and all rights reserved except where explicitly permitted; Spotify and
+  Elgato / Stream Deck trademarks and brand assets stay under their owners' terms, and no third-party trademark rights are granted
+  ([`NOTICE.md`](../NOTICE.md)).
 
 ## Still open before v1.0
 
@@ -136,9 +140,9 @@ On the production B1 build (`a13b8e9`), the owner checked Deckify on a physical 
 
 1. The **physical MK.2 review** of the v1.0 release package (listed in the v1.0 pull request), including the Like key with Spotify's
    icons.
-2. **Licence:** choose one, or deliberately decide to publish without one (a decision for the owner; no licence file is added).
 
-**Before making the repository public:** the licence decision, and enabling GitHub private vulnerability reporting.
+**Before making the repository public:** enabling GitHub private vulnerability reporting. (The licence is decided: MIT, see
+[Resolved for v1.0](#resolved-for-v10).)
 
 **Before submitting to the Marketplace:** everything above, the [Marketplace media](#marketplace-media-pending), and re-checking Spotify's
 developer terms for distributing an app that each user connects with their own Client ID.

@@ -19,7 +19,7 @@ const manifest = async () => JSON.parse(await read("com.marting.deckify.sdPlugin
 
 async function markdownFiles(): Promise<string[]> {
 	const docs = (await readdir(path.join(ROOT, "docs"), { recursive: true })).filter((f) => f.endsWith(".md")).map((f) => path.join("docs", f));
-	return ["README.md", "SECURITY.md", "assets/brand/README.md", ...docs].map((f) => f.replaceAll("\\", "/"));
+	return ["README.md", "SECURITY.md", "NOTICE.md", "assets/brand/README.md", ...docs].map((f) => f.replaceAll("\\", "/"));
 }
 
 /** Markdown without fenced code blocks and inline code, where example links are not real links. */
@@ -130,6 +130,27 @@ describe("README facts", () => {
 			const text = await read(file);
 			// Spotify access / refresh tokens, 32-hex Client IDs or secrets, and secret assignments.
 			expect(text, file).not.toMatch(/\b(BQ|AQ)[\w-]{40,}|(?<![0-9a-f])[0-9a-f]{32}(?![0-9a-f])|client_secret\s*[=:]|Bearer [\w-]{20,}/i);
+		}
+	});
+});
+
+describe("licence", () => {
+	it("is the standard MIT License, declared as MIT by the npm and Rust packages", async () => {
+		const licence = await read("LICENSE");
+		expect(licence.startsWith("MIT License\n\nCopyright (c) 2026 Martin Gusin\n\nPermission is hereby granted, free of charge,")).toBe(true);
+		expect((JSON.parse(await read("package.json")) as { license: string }).license).toBe("MIT");
+		const lock = JSON.parse(await read("package-lock.json")) as { packages: Record<string, { license?: string }> };
+		expect(lock.packages[""]?.license).toBe("MIT");
+		expect(await read("native/media-bridge/Cargo.toml")).toMatch(/^license = "MIT"$/m);
+	});
+
+	it("links the README to the licence and to the notice that excludes brand and third-party assets", async () => {
+		const readme = await read("README.md");
+		expect(readme).toContain("](LICENSE)");
+		expect(readme).toContain("](NOTICE.md)");
+		const notice = await read("NOTICE.md");
+		for (const scope of ["## The Deckify brand", "assets/brand/", "Spotify", "Elgato", "grants no rights in any third-party trademark"]) {
+			expect(notice, scope).toContain(scope);
 		}
 	});
 });

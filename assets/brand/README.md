@@ -3,6 +3,9 @@
 Deckify's approved brand is **B1 · Frame D**: a violet D frame around a 2×2 grid of Stream Deck-style keys, meaning "D + a deck of keys".
 The design history and the final geometry are in [docs/brand-review](../../docs/brand-review/README.md#final-b1-geometry).
 
+The Deckify name, logo, symbol and brand identity are not licensed under the MIT License that covers Deckify's code and documentation:
+all rights reserved, except where explicitly permitted. See the [licensing notice](../../NOTICE.md#the-deckify-brand).
+
 **Colours:**
 
 - Deckify violet `#7C5CFF`: the mark and Deckify's key accents.

@@ -3,7 +3,7 @@ name = "deckify-media-bridge"
 version = "0.1.0"
 edition = "2024"
 description = "Deckify's Windows media-session helper: sends Play/Pause/Next/Previous to the local Spotify app via GSMTC."
-license = "UNLICENSED"
+license = "MIT"
 publish = false
 
 [dependencies]
