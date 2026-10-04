@@ -18,6 +18,7 @@ Fast local controls. Live Spotify state. Volume, library and playlists — direc
 ![Stream Deck 7.1+](https://img.shields.io/badge/Stream%20Deck-7.1%2B-2B2D31)
 ![Spotify Premium required](https://img.shields.io/badge/Spotify-Premium%20required-2B2D31)
 ![TypeScript and Rust](https://img.shields.io/badge/built%20with-TypeScript%20%C2%B7%20Rust-3178C6)
+[![MIT License](https://img.shields.io/badge/licence-MIT-2B2D31)](LICENSE)
 
 Unlike plain media keys, Deckify only ever controls Spotify, shows live Spotify state on your keys,<br>and reaches Spotify on your phone or speakers too.
 
@@ -347,7 +348,7 @@ No. Deckify is an independent project. It isn't made, endorsed or supported by S
 - queue controls;
 - layouts tuned for Stream Deck +, XL and Neo;
 - a public release and Elgato Marketplace listing, once the remaining [launch audit](docs/public-launch-audit.md) items are done
-  (licence and real product media).
+  (real product media).
 
 ## Documentation
 
@@ -363,11 +364,20 @@ No. Deckify is an independent project. It isn't made, endorsed or supported by S
 | [Marketplace readiness](docs/marketplace-readiness.md) | The Elgato Marketplace checklist. |
 | [Brand](assets/brand/README.md) · [brand review](docs/brand-review/README.md) | The Deckify brand masters, and how the B1 mark was chosen. |
 | [Media](docs/media/README.md) | Capture requirements for screenshots and the hardware demo. |
+| [Licence](LICENSE) · [licensing notice](NOTICE.md) | MIT for code and documentation; what the MIT License doesn't cover. |
 
 ## Contributing
 
 Building and testing are covered in [docs/development.md](docs/development.md). `npm run check` must pass, and plugin and action UUIDs
 must never change.
+
+## Licence
+
+Deckify's original source code and documentation are released under the [MIT License](LICENSE).
+
+The MIT License doesn't cover the Deckify name, logo, symbol or brand identity ([`assets/brand/`](assets/brand/README.md)): all rights
+reserved, except where explicitly permitted. It also grants no rights in third-party trademarks or brand assets: Spotify's and Elgato /
+Stream Deck's names, trademarks, logos and icons remain subject to their owners' terms. See the [licensing notice](NOTICE.md).
 
 ---
 
