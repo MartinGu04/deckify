@@ -111,6 +111,46 @@ npm run pack          # builds the native helper (Windows), bundles, packs and v
   4. runs `npm run check`, including the test that drives the real helper;
   5. uploads the `.streamDeckPlugin` as a build artifact.
 
+## Releases
+
+Releases are built and published by `.github/workflows/release.yml` when a version tag is pushed. Nobody uploads a package by hand, and
+nothing is published to GitHub Packages: Deckify ships only as the `.streamDeckPlugin` release asset.
+
+**Versions.** One release version, in two formats, all checked against the tag:
+
+| File | Field | `v1.0.0` needs | Why this format |
+| --- | --- | --- | --- |
+| `package.json`, `package-lock.json` | `version` | `1.0.0` | npm requires a three-part semantic version. |
+| `com.marting.deckify.sdPlugin/manifest.json` | `Version` | `1.0.0.0` | Stream Deck uses a four-part version; the fourth part stays `0`. |
+
+`native/media-bridge/Cargo.toml` has its own `version` (`0.1.0`): the Windows helper is an internal crate that ships only inside the
+plugin package and is never published, so it is not a release version and is not checked.
+
+**Making a release:**
+
+1. On a branch, set the new version in all three files (`npm version <x.y.z> --no-git-tag-version` updates both npm files; edit the
+   manifest by hand), and add the release notes as `docs/releases/v<x.y.z>.md`. They become the GitHub Release text. Merge to `main`.
+2. Tag the merge commit on `main` and push the tag:
+
+   ```powershell
+   git tag v1.2.3
+   git push origin v1.2.3
+   ```
+
+3. The workflow does the rest:
+   1. **Build** (Windows, read-only token):
+      - checks that the tag is on `main`, that it matches every version above, and that its release notes exist
+        (`node scripts/release-check.mjs <tag>`);
+      - `npm ci`, then the Rust tests, `cargo fmt --check` and `cargo clippy -D warnings` with the pinned toolchain;
+      - `npm run pack` (helper build, bundled profile checks and package verification), then `npm run check`;
+      - checks that `dist/com.marting.deckify.streamDeckPlugin` exists, has the tag's version and bundles the Windows media bridge
+        (`node scripts/release-check.mjs <tag> --package`).
+   2. **Publish** (the only job with write access, and it runs no project code): creates the GitHub Release for the tag with the GitHub
+      CLI, titled *Deckify v1.2.3*, with the release notes and the package as its asset.
+
+If any check fails, nothing is published. Fix the problem on `main`, delete the tag (`git push --delete origin v1.2.3` and
+`git tag -d v1.2.3`) and tag again. The workflow never replaces an existing release.
+
 ## Logs
 
 | Log | Location |
@@ -223,6 +263,6 @@ assets/brand/               Deckify brand masters (B1) and the Marketplace app i
 assets/spotify-like-icon/   Spotify's official Like icons, unmodified (embedded in the Like key images; hashes pinned by tests)
 docs/                       architecture, privacy, history, launch audits, brand review, media capture guide
 scripts/                    asset generators, smoke test, dev-only token expiry helper, native build, pack + package verification,
-                            bundled profile checks and import (profiles.mjs)
+                            bundled profile checks and import (profiles.mjs), release checks (release-check.mjs)
 test/                       Vitest suite (Spotify HTTP fully mocked)
 ```

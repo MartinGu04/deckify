@@ -23,8 +23,10 @@ import { checkBundledProfiles, PROFILE_EXTENSION } from "./profiles.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const PLUGIN_FOLDER = "com.marting.deckify.sdPlugin";
-const PACKAGE_NAME = "com.marting.deckify.streamDeckPlugin";
-const HELPER_ENTRY = `${PLUGIN_FOLDER}/bin/native/deckify-media-bridge.exe`;
+/** The package's file name, written to dist/. */
+export const PACKAGE_NAME = "com.marting.deckify.streamDeckPlugin";
+/** Where the Windows media bridge sits inside the package. */
+export const HELPER_ENTRY =`${PLUGIN_FOLDER}/bin/native/deckify-media-bridge.exe`;
 /** Where the manifest sits inside the package. */
 export const MANIFEST_ENTRY = `${PLUGIN_FOLDER}/manifest.json`;
 

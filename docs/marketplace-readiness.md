@@ -70,7 +70,8 @@ metadata on keys (the picker links every playlist back to Spotify), and Spotify'
 **Still open:**
 
 1. The Development Mode / Client ID model for public users: re-check Spotify's developer terms.
-2. Build with `npm run pack` on Windows (CI does this), install the package on a clean machine, and run the physical MK.2 review.
+2. Build with `npm run pack` on Windows (CI and the release workflow do this), install the package on a clean machine, and run the
+   physical MK.2 review.
 
 **Marketplace media pending:** capture the real product media, then compose the 1920×960 thumbnail and gallery from it with the B1
 logo. The brand, plugin icon, category icon, key accent and 288×288 app icon are done.
