@@ -4,7 +4,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default defineConfig(
-	globalIgnores(["node_modules/", "dist/", "*.sdPlugin/bin/", "*.sdPlugin/logs/", "marketplace/out/"]),
+	globalIgnores(["node_modules/", "dist/", "*.sdPlugin/bin/", "*.sdPlugin/logs/", "marketplace/out/", "review-film/out/"]),
 	eslint.configs.recommended,
 	{
 		files: ["src/**/*.ts", "test/**/*.ts"],
@@ -48,6 +48,14 @@ export default defineConfig(
 		files: ["film/src/setup-bridge.js"],
 		languageOptions: {
 			sourceType: "script",
+		},
+	},
+	{
+		// The review film runs in a browser page (ES modules).
+		files: ["review-film/src/**/*.js"],
+		languageOptions: {
+			sourceType: "module",
+			globals: globals.browser,
 		},
 	},
 	{

@@ -79,7 +79,8 @@ metadata on keys (the picker links every playlist back to Spotify), and Spotify'
    physical MK.2 review.
 
 **Marketplace media:** the 1920×960 thumbnail and gallery v2 are in `marketplace/upload-ready/` (see [marketplace/](../marketplace/README.md)).
-Marketplace also asked for a separate functional demo video; the promo film in [film/](../film/README.md) needs updating to v1.0 first.
+Marketplace also asked for a separate functional demo video: the 74-second review film in [review-film/](../review-film/README.md), edited
+from real Windows and Stream Deck MK.2 recordings, with a timestamped breakdown of the footage behind every claim.
 The brand, plugin icon, category icon, key accent and 288×288 app icon are done.
 
 **After v1.0 (not blockers):** Phase 10 dynamic visuals and Stream Deck + support are planned for v1.1; macOS isn't supported in v1.0.
