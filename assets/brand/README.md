@@ -45,8 +45,8 @@ if a committed file differs from the generator.
 Deckify's functional key images (play, volume, playlist, ...) use the same violet. They come from `scripts/export-key-icons.mjs` and the
 hand-drawn SVGs in `imgs/actions/`.
 
-The Marketplace thumbnail and gallery images (1920×960) aren't made yet. They need real product media; see
-[docs/media](../../docs/media/README.md).
+The Marketplace thumbnail and gallery images (1920×960) are built from real Deckify UI by the pipeline in
+[marketplace/](../../marketplace/README.md); the upload-ready files are in `marketplace/upload-ready/`.
 
 ## Not brand assets
 

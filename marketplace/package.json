@@ -1,0 +1,16 @@
+{
+	"name": "deckify-marketplace-media",
+	"version": "2.0.0",
+	"private": true,
+	"description": "Deckify's Elgato Marketplace thumbnail and gallery (1920×960), composed from real Deckify UI with a collision-checked layout.",
+	"type": "module",
+	"scripts": {
+		"render": "node scripts/render.mjs",
+		"render:check": "node scripts/render.mjs --check"
+	},
+	"devDependencies": {
+		"@fontsource/inter": "^5.3.0",
+		"esbuild": "^0.25.0",
+		"playwright-core": "^1.63.0"
+	}
+}
