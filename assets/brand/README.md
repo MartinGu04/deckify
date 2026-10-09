@@ -26,7 +26,7 @@ if a committed file differs from the generator.
 | `deckify-logo-on-dark.svg` | The same lockup for **dark** backgrounds (white wordmark), transparent. |
 | `deckify-glyph-20.svg` | 20×20 pixel-grid glyph for action-list icons, white on transparent. |
 | `deckify-glyph-28.svg` | 28×28 pixel-grid glyph for the category icon, white on transparent. |
-| `marketplace/deckify-app-icon-288.png` | Elgato Marketplace app icon, 288×288: the symbol on the charcoal tile. |
+| `marketplace/deckify-app-icon-288.png` | Elgato Marketplace app icon, 288×288: the symbol on the charcoal tile, pixel-fitted for 288 px (`appIconSvg` in `scripts/brand.mjs`): the same B1 proportions with whole-pixel edges, four identical keys and optical centring. |
 
 **Wordmark:**
 
