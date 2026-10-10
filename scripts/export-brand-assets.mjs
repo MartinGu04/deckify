@@ -5,7 +5,7 @@
  *   assets/brand/deckify-symbol.svg, deckify-symbol-mono.svg     symbol (violet; one-colour charcoal), transparent
  *   assets/brand/deckify-logo.svg, deckify-logo-on-dark.svg      symbol + DECKIFY, for light / dark backgrounds, transparent
  *   assets/brand/deckify-glyph-20.svg, deckify-glyph-28.svg      pixel-grid glyphs, white on transparent
- *   assets/brand/marketplace/deckify-app-icon-288.png            Marketplace app icon (symbol on the charcoal tile)
+ *   assets/brand/marketplace/deckify-app-icon-288.png            Marketplace app icon (symbol on the charcoal tile, pixel-fitted)
  *   imgs/plugin/marketplace.png (256) + marketplace@2x.png (512) Stream Deck plugin icon (symbol on the charcoal tile)
  *   imgs/plugin/category-icon.svg                                category icon = deckify-glyph-28.svg
  *   imgs/actions/status/icon.svg                                 Deckify Status action icon = deckify-glyph-20.svg
@@ -17,7 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 
-import { brandMasters, glyph20Svg, glyph28Svg, statusKeySvg, tileSvg } from "./brand.mjs";
+import { appIconSvg, brandMasters, glyph20Svg, glyph28Svg, statusKeySvg, tileSvg } from "./brand.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const BRAND = path.join(ROOT, "assets", "brand");
@@ -40,7 +40,7 @@ export function brandSvgFiles() {
  */
 export function brandPngFiles() {
 	return {
-		"assets/brand/marketplace/deckify-app-icon-288.png": [288, tileSvg(288)],
+		"assets/brand/marketplace/deckify-app-icon-288.png": [288, appIconSvg(288)],
 		"com.marting.deckify.sdPlugin/imgs/plugin/marketplace.png": [256, tileSvg(256)],
 		"com.marting.deckify.sdPlugin/imgs/plugin/marketplace@2x.png": [512, tileSvg(512)],
 		"com.marting.deckify.sdPlugin/imgs/actions/status/deckify.png": [72, statusKeySvg(72)],

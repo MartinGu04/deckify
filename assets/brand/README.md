@@ -26,7 +26,7 @@ if a committed file differs from the generator.
 | `deckify-logo-on-dark.svg` | The same lockup for **dark** backgrounds (white wordmark), transparent. |
 | `deckify-glyph-20.svg` | 20×20 pixel-grid glyph for action-list icons, white on transparent. |
 | `deckify-glyph-28.svg` | 28×28 pixel-grid glyph for the category icon, white on transparent. |
-| `marketplace/deckify-app-icon-288.png` | Elgato Marketplace app icon, 288×288: the symbol on the charcoal tile. |
+| `marketplace/deckify-app-icon-288.png` | Elgato Marketplace app icon, 288×288: the symbol on the charcoal tile, pixel-fitted for 288 px (`appIconSvg` in `scripts/brand.mjs`): the same B1 proportions with whole-pixel edges, four identical keys and optical centring. |
 
 **Wordmark:**
 
@@ -45,8 +45,8 @@ if a committed file differs from the generator.
 Deckify's functional key images (play, volume, playlist, ...) use the same violet. They come from `scripts/export-key-icons.mjs` and the
 hand-drawn SVGs in `imgs/actions/`.
 
-The Marketplace thumbnail and gallery images (1920×960) aren't made yet. They need real product media; see
-[docs/media](../../docs/media/README.md).
+The Marketplace thumbnail and gallery images (1920×960) are built from real Deckify UI by the pipeline in
+[marketplace/](../../marketplace/README.md); the upload-ready files are in `marketplace/upload-ready/`.
 
 ## Not brand assets
 

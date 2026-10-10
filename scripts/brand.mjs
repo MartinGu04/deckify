@@ -110,6 +110,52 @@ export function tileSvg(size) {
 }
 
 /**
+ * The Marketplace app icon: the same B1 symbol on the same charcoal tile as {@link tileSvg}, drawn for one pixel size.
+ *
+ * The symbol's proportions are unchanged; only its rendering is refined for the size:
+ * - Crisp: the frame is a whole number of pixels thick, and the stem, top, bottom, counter and the bowl's outermost points sit on whole
+ *   pixels, so the straight edges and the bowl's sides aren't blurred by anti-aliasing.
+ * - Even: the four keys are the same whole-pixel size with a whole-pixel gap, placed so their clearance to the stem and to the bowl stays
+ *   balanced (the B1 rule) after rounding.
+ * - Optically centred: a D carries its weight on the stem side, so a box-centred D looks shifted left. The mark moves right by 1.4 % of
+ *   the tile, halfway from box-centred to ink-centred.
+ * @param {number} size Size in pixels.
+ * @returns {string} SVG document.
+ */
+export function appIconSvg(size) {
+	const frame = Math.round((15 * size * 0.61) / 80);
+	const s = frame / 15; // pixels per unit of the 100-unit grid
+	const T = Math.round((size - 80 * s) / 2);
+	const B = T + Math.round(80 * s);
+	const L = Math.round((size - 78 * s) / 2 + size * 0.014);
+	const right = Math.round(L + 78 * s);
+	const cx = right - 40 * s; // bowl centre: the outer bowl's extreme lands on a whole pixel
+	const cy = (T + B) / 2;
+	const r = 6 * s;
+	const CL = L + frame;
+	const CT = T + frame;
+	const CB = B - frame;
+	const outer = `M${round(L + r)} ${T}H${round(cx)}C${round(cx + 24 * s)} ${T} ${right} ${round(cy - 22 * s)} ${right} ${round(cy)}C${right} ${round(cy + 22 * s)} ${round(cx + 24 * s)} ${B} ${round(cx)} ${B}H${round(L + r)}A${round(r)} ${round(r)} 0 0 1 ${L} ${round(B - r)}V${round(T + r)}A${round(r)} ${round(r)} 0 0 1 ${round(L + r)} ${T}Z`;
+	const inner = 25 * s;
+	const counter = `M${CL} ${CT}H${round(cx)}C${round(cx + 15 * s)} ${CT} ${round(cx + inner)} ${round(cy - 14 * s)} ${round(cx + inner)} ${round(cy)}C${round(cx + inner)} ${round(cy + 14 * s)} ${round(cx + 15 * s)} ${CB} ${round(cx)} ${CB}H${CL}Z`;
+
+	const k = Math.round(KEY.size * s);
+	const gap = Math.round(KEY.gap * s);
+	const rx = KEY.radius * s;
+	const grid = 2 * k + gap;
+	const top = Math.round(cy - grid / 2);
+	// Clearance from the grid's top-right key corner to the counter's bowl, and from the grid to the stem: pick the whole-pixel position
+	// where they are closest to equal.
+	const bowlClearance = (x) => inner - (Math.hypot(x + grid - rx - cx, top + rx - cy) + rx);
+	const left = [...Array(9).keys()].map((i) => Math.round(KEY.x * s + L - 12 * s) - 4 + i).sort((a, b) => Math.abs(a - CL - bowlClearance(a)) - Math.abs(b - CL - bowlClearance(b)))[0];
+	const keys = [left, left + k + gap].flatMap((x) => [top, top + k + gap].map((y) => `<rect x="${x}" y="${y}" width="${k}" height="${k}" rx="${round(rx)}" fill="${VIOLET}"/>`));
+	return doc(
+		`width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"`,
+		`<rect width="${size}" height="${size}" rx="${round(size * 0.2)}" fill="${CHARCOAL}"/><path fill="${VIOLET}" fill-rule="evenodd" d="${outer} ${counter}"/>${keys.join("")}`,
+	);
+}
+
+/**
  * The "Deckify" key image of the Deckify Status action: the symbol near the top of a dark key (the title goes underneath).
  * @param {number} size Size in pixels.
  * @returns {string} SVG document.

@@ -70,14 +70,15 @@ notifications. Output: `docs/media/remote-connect.gif` or `.mp4`.
 
 ### 5. Marketplace thumbnail and gallery (1920×960)
 
-- **Rule:** Elgato's Marketplace thumbnail must show the product and its functionality, so it waits for the captures above. A brand-only
-  image is not a thumbnail.
-- **Format:** each image is a 1920×960 PNG with English text.
-- **Content:**
-  - real media only: the MK.2 capture (1), the Stream Deck app (2) and the playlist picker (3);
-  - the B1 logo from `assets/brand/`, with no Spotify logo used as decoration and no claim of endorsement;
-  - no fabricated device or screenshot.
-- **Output:** `assets/brand/marketplace/deckify-thumbnail-1920x960.png` and `deckify-gallery-<n>-1920x960.png`.
+**Gallery v2 exists:** the thumbnail and four gallery images in `marketplace/upload-ready/`, built by [marketplace/](../../marketplace/README.md)
+from Deckify's own key views and captures of the real Deckify Setup page, with a measured, collision-checked layout. They don't use a
+camera or Stream Deck app capture yet:
+
+- When the MK.2 capture (1) exists, it can replace the plain key panel on the thumbnail and the overview image.
+- The Stream Deck app (2) and the playlist picker (3) can join the gallery once captured.
+
+Rules that stay: 1920×960 PNG, English text, the B1 logo from `assets/brand/`, no Spotify logo used as decoration, no claim of
+endorsement, no fabricated device or screenshot.
 
 The 288×288 Marketplace app icon already exists (`assets/brand/marketplace/deckify-app-icon-288.png`).
 

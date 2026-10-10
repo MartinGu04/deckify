@@ -1,0 +1,211 @@
+/*
+ * Deckify review film: one 1920×1080 stage in Deckify's tokens (violet #7C5CFF, charcoal #15171C, white), type in Inter.
+ *
+ * Layout zones (film.js places everything in them, and its check() fails a render that breaks them):
+ *   desktop shots:  media zone x 96–1824, y 64–848; caption zone x 96–1824, y 888–1016
+ *   portrait shots: copy zone x 140–820, y 160–920; media zone x 900–1780, y 60–1020
+ *   cards:          centred, inside x 160–1760
+ */
+@font-face { font-family: "Inter"; font-weight: 400; src: url("/fonts/inter-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 500; src: url("/fonts/inter-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 600; src: url("/fonts/inter-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 700; src: url("/fonts/inter-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 800; src: url("/fonts/inter-latin-800-normal.woff2") format("woff2"); }
+
+:root {
+	--violet: #7c5cff;
+	--violet-text: #a48fff;
+	--charcoal: #15171c;
+	--text: #f2f2f6;
+	--muted: #9d9daa;
+}
+
+* {
+	box-sizing: border-box;
+	margin: 0;
+}
+
+html,
+body {
+	width: 1920px;
+	height: 1080px;
+	overflow: hidden;
+	background: #000;
+	font-family: "Inter", sans-serif;
+	color: var(--text);
+	-webkit-font-smoothing: antialiased;
+}
+
+#stage {
+	position: relative;
+	width: 1920px;
+	height: 1080px;
+	overflow: hidden;
+	background: linear-gradient(180deg, #121217 0%, #0b0b0e 100%);
+}
+
+/* A soft violet pool of light behind the subject; it drifts slightly with each shot. */
+#glow {
+	position: absolute;
+	inset: 0;
+	background:
+		radial-gradient(900px 620px at var(--gx, 50%) var(--gy, 46%), rgba(124, 92, 255, 0.16), transparent 70%),
+		radial-gradient(1400px 900px at 50% 120%, rgba(21, 23, 28, 0.9), transparent 70%);
+}
+
+#fade {
+	position: absolute;
+	inset: 0;
+	background: #000;
+	opacity: 0;
+}
+
+.shot {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	will-change: opacity;
+}
+
+/* ---- Media ---- */
+.group {
+	position: absolute;
+	transform-origin: 50% 50%;
+}
+
+.panel {
+	position: absolute;
+	overflow: hidden;
+	border-radius: 18px;
+	background: #000;
+	box-shadow:
+		0 0 0 1px rgba(255, 255, 255, 0.09),
+		0 30px 80px rgba(0, 0, 0, 0.55);
+}
+
+.panel img {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+/* ---- Captions ---- */
+.caption {
+	position: absolute;
+	left: 96px;
+	right: 96px;
+	top: 888px;
+}
+
+.label {
+	display: flex;
+	align-items: baseline;
+	gap: 14px;
+	font-size: 22px;
+	font-weight: 700;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--violet-text);
+	white-space: nowrap;
+}
+
+.label .source {
+	font-weight: 500;
+	letter-spacing: 0.02em;
+	text-transform: none;
+	color: var(--muted);
+}
+
+.label .source::before {
+	content: "·";
+	margin-right: 14px;
+	color: var(--muted);
+}
+
+.line {
+	margin-top: 14px;
+	font-size: 46px;
+	font-weight: 700;
+	line-height: 1.15;
+	letter-spacing: -0.015em;
+	white-space: nowrap;
+}
+
+.portrait .caption {
+	left: 140px;
+	right: auto;
+	width: 680px;
+	top: 0;
+}
+
+.portrait .label {
+	flex-direction: column;
+	gap: 10px;
+}
+
+.portrait .label .source::before {
+	content: none;
+}
+
+.portrait .line {
+	margin-top: 26px;
+	font-size: 60px;
+	line-height: 1.12;
+	white-space: normal;
+}
+
+/* ---- Cards ---- */
+.card {
+	position: absolute;
+	left: 160px;
+	right: 160px;
+	top: 0;
+	bottom: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+}
+
+.chapter .number {
+	font-size: 30px;
+	font-weight: 700;
+	letter-spacing: 0.2em;
+	color: var(--violet-text);
+}
+
+.chapter .title {
+	margin-top: 18px;
+	font-size: 112px;
+	font-weight: 800;
+	letter-spacing: -0.03em;
+	line-height: 1;
+}
+
+.logo {
+	width: 760px;
+	height: auto;
+	overflow: visible;
+}
+
+.tagline {
+	margin-top: 56px;
+	font-size: 54px;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+}
+
+.small {
+	margin-top: 22px;
+	font-size: 30px;
+	font-weight: 500;
+	color: var(--muted);
+}
+
+.fine {
+	margin-top: 64px;
+	font-size: 22px;
+	font-weight: 500;
+	color: #7d7d89;
+}

@@ -1,0 +1,17 @@
+{
+	"name": "deckify-review-film",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Deckify's functional demo film for Elgato Marketplace review, edited from real Windows and Stream Deck MK.2 recordings.",
+	"type": "module",
+	"scripts": {
+		"prepare-clips": "node scripts/prepare.mjs",
+		"soundtrack": "node scripts/soundtrack.mjs",
+		"render": "node scripts/render.mjs",
+		"review": "node scripts/review.mjs"
+	},
+	"devDependencies": {
+		"@fontsource/inter": "^5.3.0",
+		"playwright-core": "^1.63.0"
+	}
+}
